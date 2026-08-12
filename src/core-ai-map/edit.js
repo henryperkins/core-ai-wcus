@@ -8,7 +8,9 @@ import {
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
+import metadata from './block.json';
 import './editor.scss';
+import { withCurrentDefaults } from './normalize';
 
 const updateItem = ( items, index, key, value ) =>
 	items.map( ( item, itemIndex ) =>
@@ -18,6 +20,7 @@ const updateItem = ( items, index, key, value ) =>
 export default function Edit( { attributes, setAttributes } ) {
 	const {
 		eyebrow,
+		reviewedDate,
 		hint,
 		title,
 		intro,
@@ -26,11 +29,15 @@ export default function Edit( { attributes, setAttributes } ) {
 		offlineEnabled,
 		recompose,
 		shapes,
-		blocks,
-		actors,
-		stories,
-		panels,
+		blocks: savedBlocks,
+		actors: savedActors,
+		stories: savedStories,
+		panels: savedPanels,
 	} = attributes;
+	const blocks = withCurrentDefaults( metadata, 'blocks', savedBlocks );
+	const actors = withCurrentDefaults( metadata, 'actors', savedActors );
+	const stories = withCurrentDefaults( metadata, 'stories', savedStories );
+	const panels = withCurrentDefaults( metadata, 'panels', savedPanels );
 
 	const blockProps = useBlockProps( {
 		className: 'core-ai-map-editor',
@@ -79,6 +86,17 @@ export default function Edit( { attributes, setAttributes } ) {
 							setAttributes( { hint: value } )
 						}
 					/>
+					<TextControl
+						label={ __( 'Reviewed date', 'core-ai-map' ) }
+						help={ __(
+							'Shown in the kiosk header so visitors know when the factual copy was reviewed.',
+							'core-ai-map'
+						) }
+						value={ reviewedDate }
+						onChange={ ( value ) =>
+							setAttributes( { reviewedDate: value } )
+						}
+					/>
 				</PanelBody>
 
 				<PanelBody title={ __( 'Behavior', 'core-ai-map' ) }>
@@ -123,6 +141,10 @@ export default function Edit( { attributes, setAttributes } ) {
 					/>
 					<ToggleControl
 						label={ __( 'Enable offline caching', 'core-ai-map' ) }
+						help={ __(
+							'Offline caching requires HTTPS (or localhost), is limited to the kiosk permalink, and stays disabled on a site homepage.',
+							'core-ai-map'
+						) }
 						checked={ offlineEnabled }
 						onChange={ ( value ) =>
 							setAttributes( { offlineEnabled: value } )
@@ -171,6 +193,15 @@ export default function Edit( { attributes, setAttributes } ) {
 							<TextControl
 								label={ __( 'Status badge', 'core-ai-map' ) }
 								value={ item.badge }
+								disabled={ item.id === 'mcp' }
+								help={
+									item.id === 'mcp'
+										? __(
+												'Fixed to the reviewed WordPress project status.',
+												'core-ai-map'
+										  )
+										: undefined
+								}
 								onChange={ ( value ) =>
 									setAttributes( {
 										blocks: updateItem(
@@ -317,57 +348,14 @@ export default function Edit( { attributes, setAttributes } ) {
 									} )
 								}
 							/>
-							<TextControl
-								label={ __( 'Link URL', 'core-ai-map' ) }
-								type="url"
-								value={ panel.href }
-								onChange={ ( value ) =>
-									setAttributes( {
-										panels: updateItem(
-											panels,
-											index,
-											'href',
-											value
-										),
-									} )
-								}
-							/>
-							<TextControl
-								label={ __( 'Link label', 'core-ai-map' ) }
-								value={ panel.linkLabel }
-								onChange={ ( value ) =>
-									setAttributes( {
-										panels: updateItem(
-											panels,
-											index,
-											'linkLabel',
-											value
-										),
-									} )
-								}
-							/>
-							<TextControl
-								label={ __(
-									'QR code image URL',
+							<p className="core-ai-map-editor__note">
+								{ __(
+									'The verified destination and its local QR code ship together and are not independently editable.',
 									'core-ai-map'
 								) }
-								help={ __(
-									'Leave empty to show the hatched placeholder from the design.',
-									'core-ai-map'
-								) }
-								type="url"
-								value={ panel.qr }
-								onChange={ ( value ) =>
-									setAttributes( {
-										panels: updateItem(
-											panels,
-											index,
-											'qr',
-											value
-										),
-									} )
-								}
-							/>
+								<br />
+								<code>{ panel.href }</code>
+							</p>
 						</div>
 					) ) }
 				</PanelBody>

@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name:       Core AI Living Map
- * Description:       An interactive Core AI project map for a landscape iPad kiosk.
- * Version:           0.2.0
- * Requires at least: 6.8
+ * Plugin Name:       Core AI Living Block Map
+ * Description:       An interactive map of the building blocks connecting WordPress and AI.
+ * Version:           3.1.1
+ * Requires at least: 7.0
  * Requires PHP:      7.4
  * Author:            The WordPress Contributors
  * License:           GPL-2.0-or-later
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CORE_AI_MAP_VERSION', '0.2.0' );
+define( 'CORE_AI_MAP_VERSION', '3.1.1' );
 define( 'CORE_AI_MAP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'CORE_AI_MAP_URL', plugin_dir_url( __FILE__ ) );
 
@@ -48,6 +48,108 @@ function core_ai_map_is_kiosk_page() {
 }
 
 /**
+ * Marks only an anonymous kiosk response as eligible for page-level offline
+ * caching. The service worker refuses HTML without this explicit signal.
+ *
+ * @param array $headers Response headers.
+ * @return array Filtered response headers.
+ */
+function core_ai_map_mark_public_kiosk_response( $headers ) {
+	if ( core_ai_map_is_kiosk_page() && ! is_user_logged_in() ) {
+		$headers['X-Core-AI-Map-Public'] = '1';
+	}
+
+	return $headers;
+}
+add_filter( 'wp_headers', 'core_ai_map_mark_public_kiosk_response' );
+
+/**
+ * Returns a service-worker scope limited to one non-root kiosk permalink.
+ *
+ * A root scope would let this kiosk worker intercept unrelated WordPress
+ * pages. Offline mode therefore stands down when the map is used as the site
+ * homepage or when the URL cannot be proven to belong to this installation.
+ *
+ * @param string $url Candidate kiosk URL.
+ * @return string Safe path scope, or an empty string when offline mode must be disabled.
+ */
+function core_ai_map_get_kiosk_scope( $url ) {
+	$home_url  = home_url( '/' );
+	$home_host = wp_parse_url( $home_url, PHP_URL_HOST );
+	$url_host  = wp_parse_url( $url, PHP_URL_HOST );
+	$path      = wp_parse_url( $url, PHP_URL_PATH );
+	$home_path = wp_parse_url( $home_url, PHP_URL_PATH );
+	$home_path = $home_path ? trailingslashit( $home_path ) : '/';
+
+	$decoded_path = $path ? rawurldecode( $path ) : '';
+
+	if (
+		! $path ||
+		$home_host !== $url_host ||
+		'/' !== substr( $path, -1 ) ||
+		preg_match( '#(?:^|/|\\\\)\.{1,2}(?:/|\\\\|$)#', $decoded_path )
+	) {
+		return '';
+	}
+
+	if ( 0 !== strpos( $path, $home_path ) || untrailingslashit( $path ) === untrailingslashit( $home_path ) ) {
+		return '';
+	}
+
+	return trailingslashit( $path );
+}
+
+/**
+ * Signs a generated kiosk scope so the public worker endpoint cannot be used
+ * to widen its reach to arbitrary WordPress paths.
+ *
+ * @param string $scope Page-scoped service-worker path.
+ * @return string Scope signature.
+ */
+function core_ai_map_sign_kiosk_scope( $scope ) {
+	return hash_hmac( 'sha256', $scope, wp_salt( 'auth' ) );
+}
+
+/**
+ * Reads an untrusted public query argument only when it is a scalar string.
+ *
+ * @param string $key Query argument name.
+ * @return string Unslashed string value, or an empty string.
+ */
+function core_ai_map_get_query_string( $key ) {
+	if ( ! isset( $_GET[ $key ] ) || ! is_string( $_GET[ $key ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		return '';
+	}
+
+	return wp_unslash( $_GET[ $key ] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+}
+
+/**
+ * Validates a signed worker scope without rewriting percent-encoded path data.
+ *
+ * @param string $scope Candidate scope exactly as signed by the renderer.
+ * @param string $token HMAC signature.
+ * @return bool Whether the public worker request is valid.
+ */
+function core_ai_map_is_valid_kiosk_scope_request( $scope, $token ) {
+	$decoded_scope = rawurldecode( $scope );
+	$home_path     = wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+	$home_path     = $home_path ? trailingslashit( $home_path ) : '/';
+
+	return ! (
+		! $scope ||
+		'/' !== substr( $scope, 0, 1 ) ||
+		'/' !== substr( $scope, -1 ) ||
+		preg_match( '/[\x00-\x1f\x7f]/', $decoded_scope ) ||
+		preg_match( '#(?:^|/|\\\\)\.{1,2}(?:/|\\\\|$)#', $decoded_scope ) ||
+		! preg_match( '/\A[a-f0-9]{64}\z/D', $token ) ||
+		! hash_equals( core_ai_map_sign_kiosk_scope( $scope ), $token ) ||
+		0 !== strpos( $scope, $home_path ) ||
+		untrailingslashit( $scope ) === untrailingslashit( $home_path )
+	);
+}
+
+/**
  * Prints installable web-app metadata only on the kiosk page.
  */
 function core_ai_map_print_web_app_metadata() {
@@ -56,10 +158,13 @@ function core_ai_map_print_web_app_metadata() {
 	}
 
 	$start_url    = get_permalink();
+	$scope        = core_ai_map_get_kiosk_scope( $start_url );
 	$manifest_url = add_query_arg(
 		array(
 			'_core_ai_map_manifest' => '1',
 			'start'                 => $start_url,
+			'_core_ai_map_scope'    => $scope,
+			'_core_ai_map_token'    => $scope ? core_ai_map_sign_kiosk_scope( $scope ) : '',
 		),
 		home_url( '/' )
 	);
@@ -70,7 +175,7 @@ function core_ai_map_print_web_app_metadata() {
 	<meta name="theme-color" content="#3858e9">
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-	<meta name="apple-mobile-web-app-title" content="<?php esc_attr_e( 'Core AI Map', 'core-ai-map' ); ?>">
+	<meta name="apple-mobile-web-app-title" content="<?php esc_attr_e( 'Living Block Map', 'core-ai-map' ); ?>">
 	<?php
 }
 add_action( 'wp_head', 'core_ai_map_print_web_app_metadata', 1 );
@@ -90,10 +195,17 @@ function core_ai_map_serve_web_app_asset() {
 			exit;
 		}
 
-		$scope = wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+		$scope = core_ai_map_get_query_string( '_core_ai_map_scope' );
+		$token = core_ai_map_get_query_string( '_core_ai_map_token' );
+
+		if ( ! core_ai_map_is_valid_kiosk_scope_request( $scope, $token ) ) {
+			status_header( 403 );
+			exit;
+		}
+
 		header( 'Content-Type: application/javascript; charset=UTF-8' );
 		header( 'Cache-Control: no-cache, must-revalidate' );
-		header( 'Service-Worker-Allowed: ' . ( $scope ? $scope : '/' ) );
+		header( 'Service-Worker-Allowed: ' . $scope );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
 		readfile( $service_worker );
 		exit;
@@ -104,19 +216,25 @@ function core_ai_map_serve_web_app_asset() {
 	}
 
 	$home_url  = home_url( '/' );
-	$start_url = isset( $_GET['start'] ) ? esc_url_raw( wp_unslash( $_GET['start'] ) ) : $home_url;
+	$start_url = esc_url_raw( core_ai_map_get_query_string( 'start' ) );
+	$start_url = $start_url ? $start_url : $home_url;
 	$home_host = wp_parse_url( $home_url, PHP_URL_HOST );
 
 	if ( ! $start_url || $home_host !== wp_parse_url( $start_url, PHP_URL_HOST ) ) {
 		$start_url = $home_url;
 	}
 
-	$scope = wp_parse_url( $home_url, PHP_URL_PATH );
+	$scope = core_ai_map_get_kiosk_scope( $start_url );
+
+	if ( ! $scope ) {
+		$scope = wp_parse_url( $home_url, PHP_URL_PATH );
+		$scope = $scope ? trailingslashit( $scope ) : '/';
+	}
 
 	$manifest = array(
-		'name'             => __( 'WordPress Core AI Living Map', 'core-ai-map' ),
-		'short_name'       => __( 'Core AI Map', 'core-ai-map' ),
-		'description'      => __( 'Explore the open-source projects making WordPress AI-ready.', 'core-ai-map' ),
+		'name'             => __( 'WordPress Core AI Living Block Map', 'core-ai-map' ),
+		'short_name'       => __( 'Living Block Map', 'core-ai-map' ),
+		'description'      => __( 'Explore how the building blocks connecting WordPress and AI work together.', 'core-ai-map' ),
 		'start_url'        => $start_url,
 		'scope'            => $scope ? $scope : '/',
 		'display'          => 'fullscreen',

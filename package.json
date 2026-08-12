@@ -1,7 +1,7 @@
 {
 	"name": "core-ai-map",
-	"version": "0.2.0",
-	"description": "An interactive Core AI boundary map for a landscape iPad kiosk.",
+	"version": "3.1.1",
+	"description": "An interactive Living Block Map of the building blocks connecting WordPress and AI.",
 	"author": "The WordPress Contributors",
 	"license": "GPL-2.0-or-later",
 	"main": "build/index.js",
@@ -15,6 +15,7 @@
 	"scripts": {
 		"build": "wp-scripts build --experimental-modules --webpack-copy-php --blocks-manifest",
 		"format": "wp-scripts format",
+		"generate:qr": "node scripts/generate-qr.mjs",
 		"lint:css": "wp-scripts lint-style",
 		"lint:js": "wp-scripts lint-js",
 		"packages-update": "wp-scripts packages-update",
@@ -30,6 +31,10 @@
 		"@wordpress/interactivity": "6.52.0"
 	},
 	"devDependencies": {
-		"@wordpress/scripts": "34.0.0"
+		"@fontsource-variable/eb-garamond": "^5.3.0",
+		"@fontsource-variable/inter": "^5.3.0",
+		"@fontsource/ibm-plex-mono": "^5.3.0",
+		"@wordpress/scripts": "34.0.0",
+		"qrcode": "1.5.4"
 	}
 }

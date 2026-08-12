@@ -1,0 +1,16 @@
+{
+	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
+	"landingPage": "/living-block-map/",
+	"login": false,
+	"steps": [
+		{
+			"step": "activatePlugin",
+			"pluginPath": "/wordpress/wp-content/plugins/core-ai-wcus",
+			"pluginName": "Core AI Living Block Map"
+		},
+		{
+			"step": "runPHP",
+			"code": "<?php require '/wordpress/wp-load.php'; update_option( 'permalink_structure', '/%postname%/' ); $page = get_page_by_path( 'living-block-map', OBJECT, 'page' ); if ( ! $page ) { wp_insert_post( array( 'post_title' => 'Core AI Living Block Map', 'post_name' => 'living-block-map', 'post_status' => 'publish', 'post_type' => 'page', 'post_content' => '<!-- wp:core-ai/core-ai-map /-->' ) ); } flush_rewrite_rules();"
+		}
+	]
+}

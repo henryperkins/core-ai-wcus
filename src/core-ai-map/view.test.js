@@ -33,6 +33,7 @@ const LAYOUT = {
 		},
 		park: [ 'mcp', 'abilities', 'bench' ],
 		shelfY: 512,
+		shelfStart: 3,
 		edges: [
 			'M504 266 L556 266',
 			'M792 266 L900 266',
@@ -64,7 +65,7 @@ const LAYOUT = {
 	},
 };
 
-describe( 'Core AI boundary map', () => {
+describe( 'Core AI Living Block Map', () => {
 	let context;
 	let currentElement;
 	let root;
@@ -80,6 +81,7 @@ describe( 'Core AI boundary map', () => {
 	beforeEach( () => {
 		jest.useFakeTimers();
 		document.body.innerHTML = `
+			<header><a href="/elsewhere">Theme navigation</a></header>
 			<section
 				class="core-ai-map"
 				data-inactivity-timeout="90000"
@@ -101,8 +103,12 @@ describe( 'Core AI boundary map', () => {
 		root = document.querySelector( '.core-ai-map' );
 		context = {
 			screen: 'attract',
-			story: 'uses-ai',
+			story: '',
 			inspect: '',
+			previewIndex: 0,
+			previewPhase: 'assembling',
+			attractPhase: 'assembling',
+			flowPhase: 'settled',
 			idleStoryIndex: 0,
 			isOffline: false,
 			suggestion: 0,
@@ -110,6 +116,12 @@ describe( 'Core AI boundary map', () => {
 			recompose: true,
 			shapes: true,
 			storyIds: [ 'uses-ai', 'uses-wp' ],
+			storyCopy: {
+				'uses-ai': 'A plugin asks the AI Client for a capability.',
+				'uses-wp':
+					'An authorized assistant calls in through WordPress.',
+			},
+			benchTitles: { evidence: 'Pass or fail. Never a percentage' },
 			neutral: {
 				plugin: [ 268, 160 ],
 				client: [ 556, 160 ],
@@ -120,19 +132,42 @@ describe( 'Core AI boundary map', () => {
 				assistant: [ 24, 176 ],
 				provider: [ 1150, 330 ],
 			},
-			shelfX: [ 256, 384, 512, 640, 768, 896 ],
+			loose: {
+				plugin: [ -38, 26, -1.4 ],
+			},
+			shelfX: [ 250, 436, 622, 808, 994, 1170 ],
 			layout: LAYOUT,
 			suggestions: [
 				{ label: 'Alt text', text: 'Two people reviewing a site' },
 				{ label: 'Post title', text: 'A quieter way to explain AI' },
 			],
-			phases: [ 'Suggested', 'Review', 'Applied' ],
+			phases: [ 'Needs review', 'Applied' ],
 		};
 		currentElement = root;
 
 		getContext.mockImplementation( () => context );
 		getElement.mockImplementation( () => ( { ref: currentElement } ) );
 		useEffect.mockReset();
+	} );
+
+	it( 'removes covered theme chrome from the accessibility tree while mounted', () => {
+		const effects = [];
+		const themeHeader = document.querySelector( 'body > header' );
+		currentElement = root;
+		useEffect.mockImplementation( ( callback ) => {
+			effects.push( callback );
+		} );
+
+		mapStore.callbacks.useKiosk();
+		const cleanupKiosk = effects[ 0 ]();
+
+		expect( themeHeader.inert ).toBe( true );
+		expect( themeHeader.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+
+		cleanupKiosk();
+
+		expect( themeHeader.inert ).toBe( false );
+		expect( themeHeader.hasAttribute( 'aria-hidden' ) ).toBe( false );
 	} );
 
 	afterEach( () => {
@@ -154,7 +189,7 @@ describe( 'Core AI boundary map', () => {
 		);
 	} );
 
-	it( 'slides a story member into place and parks a non-member', () => {
+	it( 'slides a story member into place and parks a non-member without scaling it', () => {
 		context.screen = 'map';
 		context.story = 'uses-ai';
 
@@ -163,10 +198,11 @@ describe( 'Core AI boundary map', () => {
 		expect( mapStore.state.isCardActive ).toBe( true );
 		expect( mapStore.state.cardStep ).toBe( '3' );
 
-		// mcp is park slot 0, so it lands on the first shelf position.
+		// uses-ai starts its compact shelf in slot 3, leaving space around the
+		// active workflow while using the full 176px card width.
 		context.cardId = 'mcp';
 		expect( mapStore.state.cardTransform ).toBe(
-			'translate(134px, 112px) scale(0.5)'
+			'translate(686px, 112px)'
 		);
 		expect( mapStore.state.isCardParked ).toBe( true );
 		expect( mapStore.state.isCardActive ).toBe( false );
@@ -186,6 +222,7 @@ describe( 'Core AI boundary map', () => {
 		// Recomposition off falls back to the resting connector paths.
 		context.storyId = 'uses-ai';
 		context.variant = 'rest';
+		context.flowPhase = 'transition';
 		expect( mapStore.state.isEdgeLive ).toBe( true );
 
 		context.variant = 'edges';
@@ -204,25 +241,42 @@ describe( 'Core AI boundary map', () => {
 		expect( mapStore.state.isRuleLit ).toBe( true );
 	} );
 
-	it( 'runs the token motion only for the story that owns it', () => {
+	it( 'keeps post-engagement paths visible but only animates during the one-shot transition', () => {
 		context.screen = 'map';
 		context.story = 'uses-wp';
-		expect( mapStore.state.areTokensLive ).toBe( true );
-
-		// Sparks stand down while the tokens carry the motion.
-		context.screen = 'attract';
+		context.flowPhase = 'settled';
 		context.storyId = 'uses-wp';
 		context.variant = 'edges';
-		expect( mapStore.state.isSparkLive ).toBe( false );
 
-		context.story = 'uses-ai';
-		context.storyId = 'uses-ai';
-		expect( mapStore.state.areTokensLive ).toBe( false );
-		expect( mapStore.state.isSparkLive ).toBe( true );
+		const settled = {
+			pathVisible: mapStore.state.isPathVisible,
+			edgeLive: mapStore.state.isEdgeLive,
+			sparkLive: mapStore.state.isSparkLive,
+			tokensLive: mapStore.state.areTokensLive,
+		};
 
-		// A path belonging to another story stays dark.
-		context.storyId = 'uses-wp';
-		expect( mapStore.state.isSparkLive ).toBe( false );
+		context.flowPhase = 'transition';
+		const transition = {
+			pathVisible: mapStore.state.isPathVisible,
+			edgeLive: mapStore.state.isEdgeLive,
+			sparkLive: mapStore.state.isSparkLive,
+			tokensLive: mapStore.state.areTokensLive,
+		};
+
+		expect( { settled, transition } ).toEqual( {
+			settled: {
+				pathVisible: true,
+				edgeLive: false,
+				sparkLive: false,
+				tokensLive: false,
+			},
+			transition: {
+				pathVisible: true,
+				edgeLive: true,
+				sparkLive: false,
+				tokensLive: true,
+			},
+		} );
 	} );
 
 	it( 'shows role strips for story members and for the open block', () => {
@@ -231,10 +285,12 @@ describe( 'Core AI boundary map', () => {
 
 		context.cardId = 'mcp';
 		expect( mapStore.state.isStripLive ).toBe( true );
+		expect( mapStore.state.isStripHidden ).toBe( false );
 		expect( mapStore.state.stripTop ).toBe( '-58px' );
 
 		context.cardId = 'bench';
 		expect( mapStore.state.isStripLive ).toBe( false );
+		expect( mapStore.state.isStripHidden ).toBe( true );
 		expect( mapStore.state.stripTop ).toBe( '158px' );
 
 		context.screen = 'inspect';
@@ -246,46 +302,100 @@ describe( 'Core AI boundary map', () => {
 		expect( mapStore.state.isStripLive ).toBe( false );
 	} );
 
-	it( 'cycles the AI Plugin suggestion through its three phases', () => {
+	it( 'applies the AI Plugin suggestion and advances it when the story replays', () => {
+		context.story = 'uses-ai';
 		context.suggestion = 0;
-		expect( mapStore.state.suggestionPhase ).toBe( 'Suggested' );
+		expect( mapStore.state.suggestionPhase ).toBe( 'Needs review' );
 		expect( mapStore.state.suggestionLabel ).toBe( 'Alt text' );
-		expect( mapStore.state.isSuggestionReviewing ).toBe( false );
+		expect( mapStore.state.isSuggestionApplied ).toBe( false );
 
-		context.suggestion = 1;
-		expect( mapStore.state.suggestionPhase ).toBe( 'Review' );
-		expect( mapStore.state.isSuggestionReviewing ).toBe( true );
-
-		context.suggestion = 2;
+		mapStore.actions.applySuggestion();
+		expect( context.suggestion ).toBe( 1 );
+		expect( mapStore.state.suggestionPhase ).toBe( 'Applied' );
 		expect( mapStore.state.isSuggestionApplied ).toBe( true );
 
-		// A full cycle moves on to the next suggestion.
-		context.suggestion = 3;
+		mapStore.actions.replayStory();
+		expect( context.suggestion ).toBe( 2 );
+		expect( mapStore.state.suggestionPhase ).toBe( 'Needs review' );
 		expect( mapStore.state.suggestionLabel ).toBe( 'Post title' );
+		expect( context.announcement ).toBe(
+			'The story flow replayed with the next AI Plugin suggestion.'
+		);
+
+		context.story = 'uses-wp';
+		mapStore.actions.replayStory();
+		expect( context.announcement ).toBe( 'The story flow replayed.' );
 	} );
 
-	it( 'opens and closes a detail panel without losing keyboard focus', () => {
+	it( 'does not turn Escape into an undocumented map reset', () => {
+		const effects = [];
+		context.screen = 'map';
+		context.story = 'uses-wp';
+		currentElement = root;
+		useEffect.mockImplementation( ( callback ) => {
+			effects.push( callback );
+		} );
+		mapStore.callbacks.useKiosk();
+		const cleanupKiosk = effects[ 0 ]();
+
+		root.dispatchEvent(
+			new window.KeyboardEvent( 'keydown', {
+				bubbles: true,
+				key: 'Escape',
+			} )
+		);
+
+		expect( context.screen ).toBe( 'map' );
+		expect( context.story ).toBe( 'uses-wp' );
+		cleanupKiosk();
+	} );
+
+	it( 'retains the selected story through the inspector and returns focus to its card', () => {
 		const blockButton = root.querySelector( '.core-ai-map__block-body' );
 		const closeButton = root.querySelector( '.core-ai-map__details-close' );
 
 		context.screen = 'map';
+		context.story = 'uses-wp';
 		context.cardId = 'client';
 		currentElement = blockButton;
+		blockButton.focus();
 		mapStore.actions.inspectCard();
+		expect( document.activeElement ).not.toBe( blockButton );
 		jest.advanceTimersByTime( 80 );
 
-		expect( context.screen ).toBe( 'inspect' );
-		expect( context.inspect ).toBe( 'client' );
-		expect( context.story ).toBe( '' );
-		expect( document.activeElement ).toBe( closeButton );
+		const whileInspecting = {
+			screen: context.screen,
+			inspect: context.inspect,
+			story: context.story,
+			activeElement: document.activeElement,
+		};
 
 		currentElement = closeButton;
 		mapStore.actions.closeInspect();
 		jest.advanceTimersByTime( 40 );
 
-		expect( context.screen ).toBe( 'map' );
-		expect( context.inspect ).toBe( '' );
-		expect( document.activeElement ).toBe( blockButton );
+		expect( {
+			whileInspecting,
+			afterClose: {
+				screen: context.screen,
+				inspect: context.inspect,
+				story: context.story,
+				activeElement: document.activeElement,
+			},
+		} ).toEqual( {
+			whileInspecting: {
+				screen: 'inspect',
+				inspect: 'client',
+				story: 'uses-wp',
+				activeElement: closeButton,
+			},
+			afterClose: {
+				screen: 'map',
+				inspect: '',
+				story: 'uses-wp',
+				activeElement: blockButton,
+			},
+		} );
 	} );
 
 	it( 'toggles a story off when its rail button is pressed again', () => {
@@ -299,6 +409,9 @@ describe( 'Core AI boundary map', () => {
 
 		mapStore.actions.selectStory();
 		expect( context.story ).toBe( 'uses-ai' );
+		expect( context.announcement ).toContain(
+			'A plugin asks the AI Client for a capability.'
+		);
 
 		mapStore.actions.selectStory();
 		expect( context.story ).toBe( '' );
@@ -308,6 +421,7 @@ describe( 'Core AI boundary map', () => {
 		context.screen = 'inspect';
 		context.inspect = 'client';
 		context.story = '';
+		context.suggestion = 1;
 		currentElement = root.querySelector( '.core-ai-map__reset' );
 
 		mapStore.actions.reset();
@@ -315,7 +429,9 @@ describe( 'Core AI boundary map', () => {
 
 		expect( context.screen ).toBe( 'attract' );
 		expect( context.inspect ).toBe( '' );
-		expect( context.story ).toBe( 'uses-ai' );
+		expect( context.story ).toBe( '' );
+		expect( context.previewIndex ).toBe( 0 );
+		expect( context.suggestion ).toBe( 0 );
 		expect( document.activeElement ).toBe(
 			root.querySelector( '.core-ai-map__prompt' )
 		);
@@ -345,7 +461,285 @@ describe( 'Core AI boundary map', () => {
 		cleanupKiosk();
 	} );
 
-	it( 'cycles stories while the attract screen is showing', () => {
+	it( 'waits for the scoped service worker before asking it to cache an anonymous page', async () => {
+		const effects = [];
+		const postMessage = jest.fn();
+		const active = { state: 'activated', postMessage };
+		const register = jest.fn().mockResolvedValue( { active } );
+		const getRegistrations = jest.fn().mockResolvedValue( [] );
+		const originalServiceWorker = navigator.serviceWorker;
+		const originalSecureContext = window.isSecureContext;
+		const originalGetEntriesByType = performance.getEntriesByType;
+		const observedScript = `${ window.location.origin }/wp-includes/js/navigation.js?ver=1`;
+		const observedRest = `${ window.location.origin }/wp-json/wp/v2/users/me`;
+		Object.defineProperty( performance, 'getEntriesByType', {
+			configurable: true,
+			value: jest
+				.fn()
+				.mockReturnValue( [
+					{ name: observedScript },
+					{ name: observedRest },
+				] ),
+		} );
+
+		Object.defineProperty( navigator, 'serviceWorker', {
+			configurable: true,
+			value: {
+				controller: active,
+				getRegistrations,
+				ready: Promise.resolve( { active } ),
+				register,
+			},
+		} );
+		Object.defineProperty( window, 'isSecureContext', {
+			configurable: true,
+			value: true,
+		} );
+		root.dataset.offlineEnabled = 'true';
+		root.dataset.cachePage = 'true';
+		root.dataset.cachePageUrl = 'https://example.test/living-block-map/';
+		root.dataset.serviceWorkerUrl = '/?_core_ai_map_sw=1';
+		root.dataset.serviceWorkerScope = '/living-block-map/';
+		root.dataset.assetUrls = '[]';
+		currentElement = root;
+		useEffect.mockImplementation( ( callback ) =>
+			effects.push( callback )
+		);
+		mapStore.callbacks.useKiosk();
+		const cleanupKiosk = effects[ 0 ]();
+
+		try {
+			await Promise.resolve();
+			await Promise.resolve();
+			await Promise.resolve();
+			await Promise.resolve();
+			expect( register ).toHaveBeenCalledWith(
+				expect.stringContaining( '_core_ai_map_sw=1' ),
+				{ scope: '/living-block-map/' }
+			);
+			expect( postMessage ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					type: 'CACHE_CORE_AI_MAP',
+					pageUrl: 'https://example.test/living-block-map/',
+					assets: expect.arrayContaining( [ observedScript ] ),
+				} )
+			);
+			expect( postMessage.mock.calls.at( -1 )[ 0 ].assets ).not.toContain(
+				observedRest
+			);
+		} finally {
+			cleanupKiosk();
+			Object.defineProperty( performance, 'getEntriesByType', {
+				configurable: true,
+				value: originalGetEntriesByType,
+			} );
+			Object.defineProperty( navigator, 'serviceWorker', {
+				configurable: true,
+				value: originalServiceWorker,
+			} );
+			Object.defineProperty( window, 'isSecureContext', {
+				configurable: true,
+				value: originalSecureContext,
+			} );
+		}
+	} );
+
+	it( 'shows offline state when the service worker marks cached HTML', () => {
+		const effects = [];
+		const originalOnLine = Object.getOwnPropertyDescriptor(
+			navigator,
+			'onLine'
+		);
+		Object.defineProperty( navigator, 'onLine', {
+			configurable: true,
+			value: true,
+		} );
+		const marker = document.createElement( 'meta' );
+		marker.name = 'core-ai-map-offline';
+		marker.content = 'true';
+		document.head.append( marker );
+		currentElement = root;
+		useEffect.mockImplementation( ( callback ) =>
+			effects.push( callback )
+		);
+		mapStore.callbacks.useKiosk();
+		const cleanupKiosk = effects[ 0 ]();
+
+		try {
+			expect( context.isOffline ).toBe( true );
+		} finally {
+			cleanupKiosk();
+			marker.remove();
+			if ( originalOnLine ) {
+				Object.defineProperty( navigator, 'onLine', originalOnLine );
+			}
+		}
+	} );
+
+	it( 'cleans up the same kiosk post worker after its permalink changes', async () => {
+		const effects = [];
+		const postMessage = jest.fn();
+		const unregister = jest.fn().mockResolvedValue( true );
+		const oldWorker = {
+			postMessage,
+			scriptURL: `${ window.location.origin }/?_core_ai_map_sw=1&_core_ai_map_scope=%2Fold%2F`,
+		};
+		const getRegistrations = jest.fn().mockResolvedValue( [
+			{
+				active: oldWorker,
+				scope: `${ window.location.origin }/old/`,
+				unregister,
+			},
+		] );
+		const originalServiceWorker = navigator.serviceWorker;
+		const originalSecureContext = window.isSecureContext;
+
+		Object.defineProperty( navigator, 'serviceWorker', {
+			configurable: true,
+			value: { getRegistrations },
+		} );
+		Object.defineProperty( window, 'isSecureContext', {
+			configurable: true,
+			value: true,
+		} );
+		root.dataset.offlineEnabled = 'false';
+		root.dataset.serviceWorkerUrl = '/?_core_ai_map_sw=1';
+		root.dataset.serviceWorkerScope = '/new/';
+		root.dataset.kioskKey = 'post-7';
+		window.localStorage.setItem(
+			'coreAiMapWorker:post-7',
+			JSON.stringify( { scope: `${ window.location.origin }/old/` } )
+		);
+		currentElement = root;
+		useEffect.mockImplementation( ( callback ) =>
+			effects.push( callback )
+		);
+		mapStore.callbacks.useKiosk();
+		const cleanupKiosk = effects[ 0 ]();
+
+		try {
+			await Promise.resolve();
+			await Promise.resolve();
+			await Promise.resolve();
+			await Promise.resolve();
+			expect( postMessage ).toHaveBeenCalledWith( {
+				type: 'CLEAR_CORE_AI_MAP',
+			} );
+			expect( unregister ).toHaveBeenCalledTimes( 1 );
+			expect(
+				window.localStorage.getItem( 'coreAiMapWorker:post-7' )
+			).toBeNull();
+		} finally {
+			cleanupKiosk();
+			window.localStorage.clear();
+			Object.defineProperty( navigator, 'serviceWorker', {
+				configurable: true,
+				value: originalServiceWorker,
+			} );
+			Object.defineProperty( window, 'isSecureContext', {
+				configurable: true,
+				value: originalSecureContext,
+			} );
+		}
+	} );
+
+	it( 'retires the previous permalink worker before enabling the new scope', async () => {
+		const effects = [];
+		const oldPostMessage = jest.fn();
+		const unregister = jest.fn().mockResolvedValue( true );
+		const newPostMessage = jest.fn();
+		const newWorker = { state: 'activated', postMessage: newPostMessage };
+		const register = jest.fn().mockResolvedValue( {
+			active: newWorker,
+			scope: `${ window.location.origin }/new/`,
+		} );
+		const getRegistrations = jest.fn().mockResolvedValue( [
+			{
+				active: {
+					postMessage: oldPostMessage,
+					scriptURL: `${ window.location.origin }/?_core_ai_map_sw=1&_core_ai_map_scope=%2Fold%2F`,
+				},
+				scope: `${ window.location.origin }/old/`,
+				unregister,
+			},
+		] );
+		const originalServiceWorker = navigator.serviceWorker;
+		const originalSecureContext = window.isSecureContext;
+		const originalGetEntriesByType = performance.getEntriesByType;
+		const observedAuthenticatedAsset = `${ window.location.origin }/wp-content/private-dashboard.js`;
+		Object.defineProperty( performance, 'getEntriesByType', {
+			configurable: true,
+			value: jest
+				.fn()
+				.mockReturnValue( [ { name: observedAuthenticatedAsset } ] ),
+		} );
+
+		Object.defineProperty( navigator, 'serviceWorker', {
+			configurable: true,
+			value: {
+				getRegistrations,
+				ready: Promise.resolve( { active: newWorker } ),
+				register,
+			},
+		} );
+		Object.defineProperty( window, 'isSecureContext', {
+			configurable: true,
+			value: true,
+		} );
+		root.dataset.offlineEnabled = 'true';
+		root.dataset.cachePage = 'false';
+		root.dataset.serviceWorkerUrl = '/?_core_ai_map_sw=1';
+		root.dataset.serviceWorkerScope = '/new/';
+		root.dataset.kioskKey = 'post-7';
+		root.dataset.assetUrls = '[]';
+		window.localStorage.setItem(
+			'coreAiMapWorker:post-7',
+			JSON.stringify( { scope: `${ window.location.origin }/old/` } )
+		);
+		currentElement = root;
+		useEffect.mockImplementation( ( callback ) =>
+			effects.push( callback )
+		);
+		mapStore.callbacks.useKiosk();
+		const cleanupKiosk = effects[ 0 ]();
+
+		try {
+			for ( let tick = 0; tick < 8; tick++ ) {
+				await Promise.resolve();
+			}
+			expect( oldPostMessage ).toHaveBeenCalledWith( {
+				type: 'CLEAR_CORE_AI_MAP',
+			} );
+			expect( unregister ).toHaveBeenCalledTimes( 1 );
+			expect( register ).toHaveBeenCalledWith(
+				expect.stringContaining( '_core_ai_map_sw=1' ),
+				{ scope: '/new/' }
+			);
+			expect( newPostMessage ).toHaveBeenCalledWith(
+				expect.objectContaining( { type: 'CACHE_CORE_AI_MAP' } )
+			);
+			expect(
+				newPostMessage.mock.calls.at( -1 )[ 0 ].assets
+			).not.toContain( observedAuthenticatedAsset );
+		} finally {
+			cleanupKiosk();
+			window.localStorage.clear();
+			Object.defineProperty( performance, 'getEntriesByType', {
+				configurable: true,
+				value: originalGetEntriesByType,
+			} );
+			Object.defineProperty( navigator, 'serviceWorker', {
+				configurable: true,
+				value: originalServiceWorker,
+			} );
+			Object.defineProperty( window, 'isSecureContext', {
+				configurable: true,
+				value: originalSecureContext,
+			} );
+		}
+	} );
+
+	it( 'cycles attract previews while interactive story selection remains empty', () => {
 		const effects = [];
 
 		context.screen = 'attract';
@@ -357,12 +751,280 @@ describe( 'Core AI boundary map', () => {
 		mapStore.callbacks.useKiosk();
 		const cleanupKiosk = effects[ 0 ]();
 
-		jest.advanceTimersByTime( 9000 );
-		expect( context.story ).toBe( 'uses-wp' );
-
-		jest.advanceTimersByTime( 9000 );
-		expect( context.story ).toBe( 'uses-ai' );
+		jest.advanceTimersByTime( 6500 );
+		expect( context.previewIndex ).toBe( 1 );
+		expect( context.story ).toBe( '' );
 
 		cleanupKiosk();
+	} );
+
+	it( 'walks each attract preview through assemble, draw, signal, and settled phases before advancing', () => {
+		const effects = [];
+
+		context.screen = 'attract';
+		currentElement = root;
+		useEffect.mockImplementation( ( callback ) => {
+			effects.push( callback );
+		} );
+
+		mapStore.callbacks.useKiosk();
+		const cleanupKiosk = effects[ 0 ]();
+
+		try {
+			expect( context.attractPhase ).toBe( 'assembling' );
+
+			jest.advanceTimersByTime( 560 );
+			expect( context.attractPhase ).toBe( 'drawing' );
+
+			jest.advanceTimersByTime( 440 );
+			expect( context.attractPhase ).toBe( 'signalling' );
+			context.previewId = 0;
+			expect( mapStore.state.isPreviewSignalLive ).toBe( true );
+
+			jest.advanceTimersByTime( 1900 );
+			expect( context.attractPhase ).toBe( 'settled' );
+			expect( mapStore.state.isPreviewSignalLive ).toBe( false );
+
+			context.cardId = 'plugin';
+			expect( mapStore.state.cardTransform ).toBe(
+				'translate(0px, 32px) scale(1)'
+			);
+
+			jest.advanceTimersByTime( 2300 );
+			expect( context.attractPhase ).toBe( 'releasing' );
+			expect( mapStore.state.cardTransform ).toBe(
+				'translate(-38px, 26px) rotate(-1.4deg)'
+			);
+
+			jest.advanceTimersByTime( 1300 );
+			expect( context.previewIndex ).toBe( 1 );
+			expect( context.story ).toBe( '' );
+		} finally {
+			cleanupKiosk();
+		}
+	} );
+
+	it( 'keeps the active attract preview composed with its path and caption under reduced motion', () => {
+		window.matchMedia.mockImplementation( () => ( { matches: true } ) );
+
+		try {
+			context.screen = 'attract';
+			context.previewIndex = 0;
+			context.previewId = 0;
+			context.previewPhase = 'settled';
+			context.cardId = 'plugin';
+
+			expect( mapStore.state.cardTransform ).toBe(
+				'translate(0px, 32px) scale(1)'
+			);
+			expect( mapStore.state.isPreviewPathVisible ).toBe( true );
+			expect( mapStore.state.isPreviewTextVisible ).toBe( true );
+			expect( mapStore.state.isPreviewSignalLive ).toBe( false );
+		} finally {
+			window.matchMedia.mockImplementation( () => ( {
+				matches: false,
+			} ) );
+		}
+	} );
+
+	it( 'removes hidden screens and the story rail from the tab order', () => {
+		context.screen = 'attract';
+		expect( mapStore.state.isNotAttract ).toBe( false );
+		expect( mapStore.state.isRailHidden ).toBe( true );
+		expect( mapStore.state.isCanvasHidden ).toBe( true );
+
+		context.screen = 'map';
+		expect( mapStore.state.isNotAttract ).toBe( true );
+		expect( mapStore.state.isRailHidden ).toBe( false );
+		expect( mapStore.state.isCanvasHidden ).toBe( false );
+
+		context.screen = 'inspect';
+		expect( mapStore.state.isRailHidden ).toBe( true );
+		expect( mapStore.state.isCanvasHidden ).toBe( true );
+	} );
+
+	it( 'selects Abilities detail tabs through context state', () => {
+		const anatomyTab = document.createElement( 'button' );
+		anatomyTab.setAttribute( 'role', 'tab' );
+		root.append( anatomyTab );
+		context.screen = 'inspect';
+		context.inspect = 'abilities';
+		context.abilitiesTab = 'what';
+		context.tabId = 'anatomy';
+		currentElement = anatomyTab;
+
+		mapStore.actions.selectAbilityTab?.();
+
+		expect( {
+			tab: context.abilitiesTab,
+			selected: mapStore.state.isAbilityTabSelected,
+		} ).toEqual( {
+			tab: 'anatomy',
+			selected: true,
+		} );
+		expect( anatomyTab.tabIndex ).toBe( 0 );
+	} );
+
+	it( 'uses roving focus for the Abilities tabs with arrow, Home, and End keys', () => {
+		const effects = [];
+		const tablist = document.createElement( 'div' );
+		tablist.innerHTML = `
+			<button role="tab" data-core-ai-abilities-tab="overview" tabindex="0">Overview</button>
+			<button role="tab" data-core-ai-abilities-tab="anatomy" tabindex="-1">Anatomy</button>
+			<button role="tab" data-core-ai-abilities-tab="permissions" tabindex="-1">Permissions</button>
+		`;
+		root.append( tablist );
+		const tabs = [ ...tablist.querySelectorAll( '[role="tab"]' ) ];
+
+		context.screen = 'inspect';
+		context.inspect = 'abilities';
+		context.abilitiesTab = 'overview';
+		currentElement = root;
+		useEffect.mockImplementation( ( callback ) => {
+			effects.push( callback );
+		} );
+		mapStore.callbacks.useKiosk();
+		const cleanupKiosk = effects[ 0 ]();
+
+		try {
+			tabs[ 0 ].focus();
+			tabs[ 0 ].dispatchEvent(
+				new window.KeyboardEvent( 'keydown', {
+					bubbles: true,
+					key: 'ArrowRight',
+				} )
+			);
+			expect( context.abilitiesTab ).toBe( 'anatomy' );
+			expect( document.activeElement ).toBe( tabs[ 1 ] );
+			expect( tabs.map( ( tab ) => tab.tabIndex ) ).toEqual( [
+				-1, 0, -1,
+			] );
+
+			tabs[ 1 ].dispatchEvent(
+				new window.KeyboardEvent( 'keydown', {
+					bubbles: true,
+					key: 'End',
+				} )
+			);
+			expect( context.abilitiesTab ).toBe( 'permissions' );
+			expect( document.activeElement ).toBe( tabs[ 2 ] );
+
+			tabs[ 2 ].dispatchEvent(
+				new window.KeyboardEvent( 'keydown', {
+					bubbles: true,
+					key: 'Home',
+				} )
+			);
+			expect( context.abilitiesTab ).toBe( 'overview' );
+			expect( document.activeElement ).toBe( tabs[ 0 ] );
+		} finally {
+			cleanupKiosk();
+		}
+	} );
+
+	it( 'scopes global keyboard handling to the map that owns the event target', () => {
+		const effects = [];
+		const outsideButton = document.createElement( 'button' );
+		document.body.append( outsideButton );
+		context.screen = 'inspect';
+		context.inspect = 'client';
+		currentElement = root;
+		useEffect.mockImplementation( ( callback ) => {
+			effects.push( callback );
+		} );
+		mapStore.callbacks.useKiosk();
+		const cleanupKiosk = effects[ 0 ]();
+
+		try {
+			outsideButton.dispatchEvent(
+				new window.KeyboardEvent( 'keydown', {
+					bubbles: true,
+					key: 'Escape',
+				} )
+			);
+			expect( context.screen ).toBe( 'inspect' );
+
+			root.querySelector( '.core-ai-map__details-close' ).dispatchEvent(
+				new window.KeyboardEvent( 'keydown', {
+					bubbles: true,
+					key: 'Escape',
+				} )
+			);
+			expect( context.screen ).toBe( 'map' );
+		} finally {
+			cleanupKiosk();
+		}
+	} );
+
+	it( 'restores focus to the WP-Bench card after opening the run loop from its inspector', () => {
+		const card = root.querySelector( '.core-ai-map__block-body' );
+		const inspector = root.querySelector( '.core-ai-map__details' );
+		const runButton = document.createElement( 'button' );
+		inspector.append( runButton );
+
+		context.screen = 'map';
+		context.cardId = 'bench';
+		currentElement = card;
+		mapStore.actions.inspectCard();
+		jest.advanceTimersByTime( 80 );
+
+		currentElement = runButton;
+		mapStore.actions.openBench();
+		expect( context.screen ).toBe( 'bench' );
+
+		currentElement = root.querySelector( '.core-ai-map__reset' );
+		mapStore.actions.closeBench();
+		jest.advanceTimersByTime( 40 );
+
+		expect( context.screen ).toBe( 'map' );
+		expect( document.activeElement ).toBe( card );
+	} );
+
+	it( 'opens WP-Bench at the sandbox and selects its evidence stage', () => {
+		context.screen = 'map';
+		context.benchStage = '';
+		currentElement = root;
+
+		mapStore.actions.openBench?.();
+		context.stageId = 'evidence';
+		mapStore.actions.selectBenchStage?.();
+
+		expect( {
+			screen: context.screen,
+			stage: context.benchStage,
+			selected: mapStore.state.isBenchStageSelected,
+		} ).toEqual( {
+			screen: 'bench',
+			stage: 'evidence',
+			selected: true,
+		} );
+		expect( context.benchPathsLive ).toBe( true );
+		expect( context.announcement ).toBe(
+			'WP-Bench stage selected: Pass or fail. Never a percentage.'
+		);
+
+		jest.advanceTimersByTime( 2900 );
+		expect( context.benchPathsLive ).toBe( false );
+	} );
+
+	it( 'changes WP-Bench detail without replaying the run-loop path animation', () => {
+		context.screen = 'map';
+		context.benchStage = '';
+		currentElement = root;
+
+		mapStore.actions.openBench();
+		expect( context.benchPathsLive ).toBe( true );
+
+		jest.advanceTimersByTime( 2900 );
+		expect( context.benchPathsLive ).toBe( false );
+
+		context.stageId = 'evidence';
+		mapStore.actions.selectBenchStage();
+
+		expect( context.benchStage ).toBe( 'evidence' );
+		expect( context.benchPathsLive ).toBe( false );
+		expect( context.announcement ).toBe(
+			'WP-Bench stage selected: Pass or fail. Never a percentage.'
+		);
 	} );
 } );

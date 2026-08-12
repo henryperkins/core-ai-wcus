@@ -2,11 +2,11 @@
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "apiVersion": 3,
   "name": "core-ai/core-ai-map",
-  "version": "0.2.0",
-  "title": "Core AI Boundary Map",
+  "version": "3.1.1",
+  "title": "Core AI Living Block Map",
   "category": "design",
   "icon": "wordpress",
-  "description": "An interactive Core AI boundary map for a landscape iPad kiosk.",
+  "description": "An interactive Living Block Map of the building blocks connecting WordPress and AI.",
   "keywords": [
     "AI",
     "kiosk",
@@ -17,9 +17,13 @@
       "type": "string",
       "default": "WordPress Core AI"
     },
+    "reviewedDate": {
+      "type": "string",
+      "default": "Reviewed 12 Aug 2026"
+    },
     "hint": {
       "type": "string",
-      "default": "Explore how WordPress’s AI building blocks connect"
+      "default": "Tap any block to see what it does"
     },
     "title": {
       "type": "string",
@@ -27,7 +31,7 @@
     },
     "intro": {
       "type": "string",
-      "default": "See WordPress call AI, let authorized agents call WordPress, and test what they build."
+      "default": "See where the building blocks live and how they work together."
     },
     "prompt": {
       "type": "string",
@@ -35,7 +39,7 @@
     },
     "inactivityTimeout": {
       "type": "number",
-      "default": 90
+      "default": 60
     },
     "offlineEnabled": {
       "type": "boolean",
@@ -56,7 +60,7 @@
           "id": "plugin",
           "name": "AI Plugin",
           "tagline": "Turn the foundations into useful features",
-          "badge": "Experimental plugin"
+          "badge": "Experimental reference plugin"
         },
         {
           "id": "client",
@@ -80,12 +84,12 @@
           "id": "mcp",
           "name": "MCP Adapter",
           "tagline": "Let authorized assistants work with WordPress",
-          "badge": "Open adapter"
+          "badge": "WordPress plugin · not in Core"
         },
         {
           "id": "bench",
-          "name": "WP Bench",
-          "tagline": "Test how well agents perform WordPress work",
+          "name": "WP-Bench",
+          "tagline": "See whether the code an agent writes actually runs",
           "badge": "Early benchmark"
         }
       ]
@@ -115,6 +119,12 @@
           "id": "provider",
           "name": "AI provider",
           "tagline": "The site owner’s choice",
+          "badge": "Not WordPress"
+        },
+        {
+          "id": "task",
+          "name": "A WordPress task",
+          "tagline": "Plugin or theme work",
           "badge": "Not WordPress"
         }
       ]
@@ -146,7 +156,7 @@
         {
           "id": "uses-ai",
           "title": "WordPress uses AI",
-          "copy": "A plugin asks for a capability. The AI Client routes the request, and Connectors decides which provider the site is allowed to reach."
+          "copy": "A plugin asks the AI Client for a capability. The AI Client chooses a compatible model from a provider the site owner configured through Connectors."
         },
         {
           "id": "uses-wp",
@@ -156,12 +166,12 @@
         {
           "id": "learns",
           "title": "An agent learns WordPress",
-          "copy": "Agent Skills attaches current WordPress guidance to a coding assistant before it starts work. This happens outside the site — nothing inside WordPress runs."
+          "copy": "Agent Skills attaches current WordPress guidance to a coding agent, which then starts the task. All of this happens outside the site — nothing inside WordPress runs."
         },
         {
           "id": "tests",
           "title": "WordPress tests the result",
-          "copy": "WP Bench runs what the agent produced inside a sandboxed WordPress and grades it. Evidence, not a leaderboard."
+          "copy": "WP-Bench runs what the agent produced inside a sandboxed WordPress, and WordPress itself decides whether it passed. Evidence, not vibes."
         }
       ]
     },
@@ -193,18 +203,18 @@
           "notes": [
             {
               "heading": "Under the hood",
-              "text": "The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion."
+              "text": "The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. One public flag for client exposure, filtering in wp_get_abilities(), and filters around execution are landing in WordPress 7.1, which ships 19 August 2026 — read the Anatomy panel as forward-looking until then."
             }
           ],
           "href": "https://developer.wordpress.org/apis/abilities-api/",
           "linkLabel": "developer.wordpress.org/apis/abilities-api",
-          "qr": ""
+          "qr": "qr/abilities.svg"
         },
         {
           "id": "client",
           "badge": "Core API · 7.0",
           "title": "AI Client",
-          "lede": "A plugin describes the capability and the kind of result it needs. WordPress routes the request to a suitable model from a provider the site owner has connected.",
+          "lede": "A plugin asks for a capability and the kind of result it needs. The AI Client chooses a compatible model from a provider the site owner configured through Connectors.",
           "connectHeading": "How it connects",
           "connectLayout": "chain",
           "connect": [
@@ -222,18 +232,18 @@
           "notes": [
             {
               "heading": "Under the hood",
-              "text": "A WordPress wrapper around the provider-agnostic PHP AI Client, which handles provider communication, model selection, and normalized results. Consuming plugins never integrate a provider directly."
+              "text": "A WordPress wrapper around the provider-agnostic PHP AI Client, which handles provider communication, model selection, and normalized results. Consuming plugins never integrate a provider directly. Core’s client is PHP only: for editor JavaScript, register a REST endpoint per feature. Check support before showing any AI interface — the checks are free, and a 7.0 site may have no provider configured at all."
             }
           ],
           "href": "https://developer.wordpress.org/reference/functions/wp_ai_client_prompt/",
           "linkLabel": "developer.wordpress.org/reference/functions/wp_ai_client_prompt",
-          "qr": ""
+          "qr": "qr/client.svg"
         },
         {
           "id": "connectors",
           "badge": "Core API · 7.0",
           "title": "Connectors",
-          "lede": "Where a site owner connects WordPress to outside services. Connectors handles discovery, credentials, connection status, and approvals — so the site decides what AI it can reach.",
+          "lede": "Where a site owner connects WordPress to outside services. Connectors handles provider discovery, configuration, credentials, installation status, and connection status.",
           "connectHeading": "Connection states",
           "connectLayout": "grid",
           "connect": [
@@ -255,22 +265,22 @@
           "notes": [
             {
               "heading": "Providers",
-              "text": "Provider plugins register themselves with the AI Client and appear under Settings → Connectors. The map stays vendor-neutral: no provider owns a position on the canvas."
+              "text": "Provider plugins register themselves with the AI Client and appear under Settings → Connectors. A plugin can ask what a site actually has before offering a feature. The map stays vendor-neutral: no provider owns a position on the canvas."
             },
             {
               "heading": "Under the hood",
               "text": "Introduced in WordPress 7.0 as a standardized framework for registering and managing connections to external services, starting with AI providers."
             }
           ],
-          "href": "https://make.wordpress.org/core/",
+          "href": "https://make.wordpress.org/core/2026/03/18/introducing-the-connectors-api-in-wordpress-7-0/",
           "linkLabel": "make.wordpress.org/core → Connectors API in 7.0",
-          "qr": ""
+          "qr": "qr/connectors.svg"
         },
         {
           "id": "plugin",
           "badge": "Experimental reference plugin",
           "title": "AI Plugin",
-          "lede": "Where the foundations become things people can use: alt text, summaries, titles, editorial notes, image generation. Every feature is opt-in and manually triggered.",
+          "lede": "Where the foundations become things people can use: alt text, summaries, titles, editorial notes, image generation. Nothing is on by default: you enable one experiment at a time.",
           "connectHeading": "How it connects",
           "connectLayout": "chain",
           "connect": [
@@ -291,18 +301,18 @@
           "notes": [
             {
               "heading": "Under the hood",
-              "text": "Also a reference implementation: it shows plugin authors how Abilities, the AI Client, and Connectors fit together, including connector approvals, request logging, and key encryption."
+              "text": "Also a reference implementation: it shows plugin authors how Abilities, the AI Client, and Connectors fit together. Requires WordPress 7.0. Connector approvals, request logging, and encrypting provider keys at rest are experimental governance features of this plugin, not of Connectors itself."
             }
           ],
           "href": "https://wordpress.org/plugins/ai/",
           "linkLabel": "wordpress.org/plugins/ai",
-          "qr": ""
+          "qr": "qr/plugin.svg"
         },
         {
           "id": "mcp",
-          "badge": "Open adapter",
+          "badge": "WordPress plugin · not in Core",
           "title": "MCP Adapter",
-          "lede": "Translation at the edge of the site. It exposes eligible abilities to authorized outside assistants as MCP tools, resources, and prompts — and translates their calls back into WordPress work.",
+          "lede": "Translation at the edge of the site. It exposes the abilities their authors marked public to authorized outside assistants as MCP tools, resources, and prompts — and translates their calls back into WordPress work.",
           "connectHeading": "How it connects",
           "connectLayout": "chain",
           "connect": [
@@ -323,18 +333,18 @@
           "notes": [
             {
               "heading": "Under the hood",
-              "text": "HTTP and STDIO transports, configurable servers, validation, permission checks, error handling, and observability. It does not create the underlying action, and it is not the model — WordPress still owns execution."
+              "text": "An official WordPress package installed as a plugin, not part of Core: HTTP and STDIO transports against the MCP specification the adapter currently targets (2025-11-25), configurable servers, validation, permission checks, error handling, and observability. Today it answers calls; it does not make them. It does not create the underlying action, and it is not the model — WordPress still owns execution."
             }
           ],
           "href": "https://github.com/WordPress/mcp-adapter",
           "linkLabel": "github.com/WordPress/mcp-adapter",
-          "qr": ""
+          "qr": "qr/mcp.svg"
         },
         {
           "id": "bench",
           "badge": "Early benchmark",
-          "title": "WP Bench",
-          "lede": "A test bench, not part of any live request. It measures what an agent knows about WordPress and whether the code it writes actually runs.",
+          "title": "WP-Bench",
+          "lede": "A test bench, not part of any live request. It measures whether the code an agent writes for WordPress actually runs.",
           "connectHeading": "How it connects",
           "connectLayout": "chain",
           "connect": [
@@ -355,12 +365,12 @@
           "notes": [
             {
               "heading": "Under the hood",
-              "text": "Two dimensions: knowledge of WordPress concepts, APIs, security practices and standards; and execution — generated code run in a real WordPress environment and graded by static analysis and runtime assertions. Dataset size and version coverage are still limited."
+              "text": "One suite, one dimension: 185 execution tests, each a PHP snippet, run inside a real WordPress 7.0 — and WordPress itself runs the assertions that grade it. Passing is all-or-nothing: two of three assertions is a fail. Static analysis only diagnoses, unless the code trips a forbidden pattern. A separate audit throws trivial cheats at each test — an empty function, a bare return — and flags any test a cheat can satisfy."
             }
           ],
           "href": "https://github.com/WordPress/wp-bench",
           "linkLabel": "github.com/WordPress/wp-bench",
-          "qr": ""
+          "qr": "qr/bench.svg"
         },
         {
           "id": "skills",
@@ -384,12 +394,12 @@
           "notes": [
             {
               "heading": "Under the hood",
-              "text": "Covers blocks, themes, plugins, REST, the Interactivity API, Abilities, performance, and security. Installable for several coding assistants, or committed alongside an individual project."
+              "text": "Covers blocks, themes, plugins, REST, the Interactivity API, Abilities, performance, and security. Three of the skills are about Abilities alone: how to register one, how to audit an existing REST surface for candidates, and how to verify a registration against what it claims. Installable for several coding assistants, or committed alongside an individual project."
             }
           ],
           "href": "https://github.com/WordPress/agent-skills",
           "linkLabel": "github.com/WordPress/agent-skills",
-          "qr": ""
+          "qr": "qr/skills.svg"
         }
       ]
     }
