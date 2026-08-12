@@ -22,15 +22,15 @@ return array(
 			),
 			'title' => array(
 				'type' => 'string',
-				'default' => 'How does WordPress become AI-ready?'
+				'default' => 'How do WordPress and AI work together?'
 			),
 			'intro' => array(
 				'type' => 'string',
-				'default' => 'Explore six open-source projects that help people and AI work with WordPress.'
+				'default' => 'See WordPress call AI, let authorized agents call WordPress, and test what they build.'
 			),
 			'prompt' => array(
 				'type' => 'string',
-				'default' => 'Tap to explore the living block map'
+				'default' => 'Add the blocks to the canvas'
 			),
 			'inactivityTimeout' => array(
 				'type' => 'number',
@@ -103,42 +103,38 @@ return array(
 				'type' => 'array',
 				'default' => array(
 					array(
-						'id' => 'create',
-						'label' => 'Create with AI',
-						'description' => 'See how an AI-powered feature can use a common model interface and WordPress capabilities.',
+						'id' => 'uses-ai',
+						'label' => 'WordPress uses AI',
+						'description' => 'A plugin asks for a capability. The AI Client routes the request, and Connectors decides which provider the site is allowed to reach.',
 						'projects' => array(
 							'plugin',
 							'client',
-							'abilities'
+							'connectors'
 						)
 					),
 					array(
-						'id' => 'connect',
-						'label' => 'Let an assistant work with WordPress',
-						'description' => 'Follow the path from agent know-how to a protocol bridge and an authorized site capability.',
+						'id' => 'uses-wp',
+						'label' => 'AI uses WordPress',
+						'description' => 'An authorized assistant calls in through the MCP Adapter, which translates the call into a WordPress ability. Permission still belongs to WordPress.',
 						'projects' => array(
-							'skills',
 							'mcp',
 							'abilities'
 						)
 					),
 					array(
-						'id' => 'build',
-						'label' => 'Build the WordPress way',
-						'description' => 'Combine current WordPress guidance, a provider-independent client, and a working reference plugin.',
+						'id' => 'learns',
+						'label' => 'An agent learns WordPress',
+						'description' => 'Agent Skills attaches current WordPress guidance to a coding assistant before it starts work.',
 						'projects' => array(
-							'skills',
-							'client',
-							'plugin'
+							'skills'
 						)
 					),
 					array(
-						'id' => 'evaluate',
-						'label' => 'Test what agents can build',
-						'description' => 'Use a shared execution benchmark to assess WordPress coding and improve reusable agent guidance.',
+						'id' => 'tests',
+						'label' => 'WordPress tests the result',
+						'description' => 'WP Bench runs what the agent produced inside a sandboxed WordPress and grades it.',
 						'projects' => array(
-							'bench',
-							'skills'
+							'bench'
 						)
 					)
 				)

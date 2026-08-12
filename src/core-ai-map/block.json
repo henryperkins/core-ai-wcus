@@ -7,7 +7,11 @@
 	"category": "design",
 	"icon": "wordpress",
 	"description": "An interactive Core AI project map for a landscape iPad kiosk.",
-	"keywords": [ "AI", "kiosk", "WordCamp" ],
+	"keywords": [
+		"AI",
+		"kiosk",
+		"WordCamp"
+	],
 	"attributes": {
 		"eyebrow": {
 			"type": "string",
@@ -15,15 +19,15 @@
 		},
 		"title": {
 			"type": "string",
-			"default": "How does WordPress become AI-ready?"
+			"default": "How do WordPress and AI work together?"
 		},
 		"intro": {
 			"type": "string",
-			"default": "Explore six open-source projects that help people and AI work with WordPress."
+			"default": "See WordPress call AI, let authorized agents call WordPress, and test what they build."
 		},
 		"prompt": {
 			"type": "string",
-			"default": "Tap to explore the living block map"
+			"default": "Add the blocks to the canvas"
 		},
 		"inactivityTimeout": {
 			"type": "number",
@@ -96,34 +100,47 @@
 			"type": "array",
 			"default": [
 				{
-					"id": "create",
-					"label": "Create with AI",
-					"description": "See how an AI-powered feature can use a common model interface and WordPress capabilities.",
-					"projects": [ "plugin", "client", "abilities" ]
+					"id": "uses-ai",
+					"label": "WordPress uses AI",
+					"description": "A plugin asks for a capability. The AI Client routes the request, and Connectors decides which provider the site is allowed to reach.",
+					"projects": [
+						"plugin",
+						"client",
+						"connectors"
+					]
 				},
 				{
-					"id": "connect",
-					"label": "Let an assistant work with WordPress",
-					"description": "Follow the path from agent know-how to a protocol bridge and an authorized site capability.",
-					"projects": [ "skills", "mcp", "abilities" ]
+					"id": "uses-wp",
+					"label": "AI uses WordPress",
+					"description": "An authorized assistant calls in through the MCP Adapter, which translates the call into a WordPress ability. Permission still belongs to WordPress.",
+					"projects": [
+						"mcp",
+						"abilities"
+					]
 				},
 				{
-					"id": "build",
-					"label": "Build the WordPress way",
-					"description": "Combine current WordPress guidance, a provider-independent client, and a working reference plugin.",
-					"projects": [ "skills", "client", "plugin" ]
+					"id": "learns",
+					"label": "An agent learns WordPress",
+					"description": "Agent Skills attaches current WordPress guidance to a coding assistant before it starts work.",
+					"projects": [
+						"skills"
+					]
 				},
 				{
-					"id": "evaluate",
-					"label": "Test what agents can build",
-					"description": "Use a shared execution benchmark to assess WordPress coding and improve reusable agent guidance.",
-					"projects": [ "bench", "skills" ]
+					"id": "tests",
+					"label": "WordPress tests the result",
+					"description": "WP Bench runs what the agent produced inside a sandboxed WordPress and grades it.",
+					"projects": [
+						"bench"
+					]
 				}
 			]
 		}
 	},
 	"supports": {
-		"align": [ "full" ],
+		"align": [
+			"full"
+		],
 		"anchor": true,
 		"html": false,
 		"interactivity": true,

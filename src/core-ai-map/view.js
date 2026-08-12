@@ -187,6 +187,32 @@ store( 'core-ai/map', {
 		get isDetail() {
 			return getContext().screen === 'detail';
 		},
+		get isUsesAi() {
+			return getContext().activeScenario === 'uses-ai';
+		},
+		get isUsesWp() {
+			return getContext().activeScenario === 'uses-wp';
+		},
+		get isLearns() {
+			return getContext().activeScenario === 'learns';
+		},
+		get isTests() {
+			return getContext().activeScenario === 'tests';
+		},
+		get hideAssistant() {
+			return getContext().activeScenario !== 'uses-wp';
+		},
+		get hideSkills() {
+			return getContext().activeScenario !== 'learns';
+		},
+		get hideAgent() {
+			return ! [ 'learns', 'tests' ].includes(
+				getContext().activeScenario
+			);
+		},
+		get hideProvider() {
+			return getContext().activeScenario !== 'uses-ai';
+		},
 		get isNotDetail() {
 			return getContext().screen !== 'detail';
 		},
