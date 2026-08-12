@@ -487,9 +487,8 @@ store( 'core-ai/map', {
 						scenarioIds[ context.idleScenarioIndex ];
 				};
 
-				const registerServiceWorker = async () => {
+				const syncServiceWorker = async () => {
 					if (
-						root.dataset.offlineEnabled !== 'true' ||
 						! ( 'serviceWorker' in navigator ) ||
 						! window.isSecureContext
 					) {
@@ -497,8 +496,43 @@ store( 'core-ai/map', {
 					}
 
 					try {
-						await navigator.serviceWorker.register(
+						const serviceWorkerUrl = new URL(
 							root.dataset.serviceWorkerUrl,
+							window.location.href
+						).href;
+
+						if ( root.dataset.offlineEnabled !== 'true' ) {
+							const registrations =
+								await navigator.serviceWorker.getRegistrations();
+
+							await Promise.all(
+								registrations.map( ( registration ) => {
+									const workers = [
+										registration.active,
+										registration.waiting,
+										registration.installing,
+									].filter( Boolean );
+									const worker = workers.find(
+										( candidate ) =>
+											candidate.scriptURL ===
+											serviceWorkerUrl
+									);
+
+									if ( ! worker ) {
+										return undefined;
+									}
+
+									worker.postMessage( {
+										type: 'CLEAR_CORE_AI_MAP',
+									} );
+									return registration.unregister();
+								} )
+							);
+							return;
+						}
+
+						await navigator.serviceWorker.register(
+							serviceWorkerUrl,
 							{ scope: root.dataset.serviceWorkerScope || '/' }
 						);
 						const registration =
@@ -539,7 +573,7 @@ store( 'core-ai/map', {
 
 				updateNetworkStatus();
 				requestWakeLock();
-				registerServiceWorker();
+				syncServiceWorker();
 
 				return () => {
 					window.clearTimeout( resetTimer );

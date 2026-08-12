@@ -25,6 +25,23 @@ self.addEventListener( 'activate', ( event ) => {
 } );
 
 self.addEventListener( 'message', ( event ) => {
+	if ( event.data?.type === 'CLEAR_CORE_AI_MAP' ) {
+		event.waitUntil(
+			caches
+				.keys()
+				.then( ( names ) =>
+					Promise.all(
+						names
+							.filter( ( name ) =>
+								name.startsWith( CACHE_PREFIX )
+							)
+							.map( ( name ) => caches.delete( name ) )
+					)
+				)
+		);
+		return;
+	}
+
 	if ( event.data?.type !== 'CACHE_CORE_AI_MAP' ) {
 		return;
 	}
