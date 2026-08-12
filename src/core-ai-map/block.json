@@ -60,8 +60,8 @@
 					"kicker": "Connect to AI providers",
 					"description": "A standard, provider-independent way for WordPress code to request generative AI output.",
 					"technical": "The AI Client gives plugins a uniform PHP API for models with different providers and capabilities, reducing provider-specific integration code.",
-					"status": "WordPress API",
-					"href": "https://github.com/WordPress/wp-ai-client"
+					"status": "In WordPress Core",
+					"href": "https://developer.wordpress.org/reference/functions/wp_ai_client_prompt/"
 				},
 				{
 					"id": "plugin",
@@ -126,6 +126,7 @@
 		"align": [ "full" ],
 		"anchor": true,
 		"html": false,
+		"interactivity": true,
 		"multiple": false
 	},
 	"textdomain": "core-ai-map",

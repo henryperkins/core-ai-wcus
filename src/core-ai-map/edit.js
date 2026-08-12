@@ -65,7 +65,10 @@ export default function Edit( { attributes, setAttributes } ) {
 					/>
 					<RangeControl
 						label={ __( 'Reset after inactivity', 'core-ai-map' ) }
-						help={ __( 'Seconds before the attract screen returns.', 'core-ai-map' ) }
+						help={ __(
+							'Seconds before the attract screen returns.',
+							'core-ai-map'
+						) }
 						value={ inactivityTimeout }
 						onChange={ ( value ) =>
 							setAttributes( { inactivityTimeout: value } )
@@ -87,7 +90,10 @@ export default function Edit( { attributes, setAttributes } ) {
 					initialOpen={ false }
 				>
 					{ projects.map( ( project, index ) => (
-						<div className="core-ai-map-editor__settings" key={ project.id }>
+						<div
+							className="core-ai-map-editor__settings"
+							key={ project.id }
+						>
 							<h3>{ project.name }</h3>
 							<TextControl
 								label={ __( 'Name', 'core-ai-map' ) }
@@ -118,7 +124,10 @@ export default function Edit( { attributes, setAttributes } ) {
 								}
 							/>
 							<TextareaControl
-								label={ __( 'Plain-language description', 'core-ai-map' ) }
+								label={ __(
+									'Plain-language description',
+									'core-ai-map'
+								) }
 								value={ project.description }
 								onChange={ ( value ) =>
 									setAttributes( {
@@ -132,7 +141,10 @@ export default function Edit( { attributes, setAttributes } ) {
 								}
 							/>
 							<TextareaControl
-								label={ __( 'Technical detail', 'core-ai-map' ) }
+								label={ __(
+									'Technical detail',
+									'core-ai-map'
+								) }
 								value={ project.technical }
 								onChange={ ( value ) =>
 									setAttributes( {
@@ -182,7 +194,10 @@ export default function Edit( { attributes, setAttributes } ) {
 					initialOpen={ false }
 				>
 					{ scenarios.map( ( scenario, index ) => (
-						<div className="core-ai-map-editor__settings" key={ scenario.id }>
+						<div
+							className="core-ai-map-editor__settings"
+							key={ scenario.id }
+						>
 							<h3>{ scenario.label }</h3>
 							<TextControl
 								label={ __( 'Label', 'core-ai-map' ) }
