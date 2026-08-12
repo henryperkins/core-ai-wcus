@@ -3,8 +3,8 @@
 Version and design: **3.1.1**. Core AI Living Block Map is one dynamic,
 server-rendered `core-ai/core-ai-map` block for explaining how WordPress and AI
 building blocks fit together on a kiosk. Its server markup is enhanced by the
-WordPress Interactivity API; it is not a standalone application or a deployed
-service.
+WordPress Interactivity API. The repository also contains a reproducible,
+self-hosted WordPress Playground artifact for static-hosted demonstrations.
 
 ## Install and create the kiosk page
 
@@ -27,6 +27,33 @@ fully supported touch layout. Physical iPad touch acceptance is still a
 separate required sign-off.
 
 The reviewed date shown by this release is **Reviewed 12 Aug 2026**.
+
+## Cloudflare Pages Playground exhibit
+
+`playground/blueprint.json` packages this same plugin into a browser-executed
+WordPress Playground kiosk. It pins WordPress 7.0 and PHP 8.3, creates the
+`/living-block-map/` page, disables Playground network access, and keeps each
+visitor's WordPress state in that visitor's browser. The page disables this
+plugin's own offline worker because Playground already owns the virtual site's
+service worker and browser-local persistence.
+
+Build the static Pages artifact from an official WordPress Playground static
+release directory:
+
+```powershell
+npm ci
+npm run plugin-zip
+$env:PLAYGROUND_SOURCE_DIR = 'C:\path\to\wasm-wordpress-net'
+npm run build:playground
+npx wrangler pages deploy dist-playground --project-name=core-ai-living-block-map
+```
+
+The build copies only the assets needed by the pinned runtime plus WordPress
+7.0's static fallback tree. It validates Cloudflare Pages Free's 20,000-file
+and 25 MiB-per-asset limits, removes upstream Google Fonts and analytics, and
+uses a local Blueprint and plugin ZIP. `dist-playground/` is generated and not
+committed. Cloudflare Pages provides the required HTTPS origin; a normal HTTP
+origin cannot run Playground's service worker.
 
 ## What visitors see
 
@@ -59,13 +86,13 @@ Seven committed SVG QR assets live under `assets/qr/`; they are generated
 locally and their destinations are fixed, selectable text in the inspector.
 There are no arbitrary editable QR-image or URL fields.
 
-- Abilities: <https://developer.wordpress.org/apis/abilities-api/>
-- AI Client: <https://developer.wordpress.org/reference/functions/wp_ai_client_prompt/>
-- Connectors: <https://make.wordpress.org/core/2026/03/18/introducing-the-connectors-api-in-wordpress-7-0/>
-- AI Plugin: <https://wordpress.org/plugins/ai/>
-- MCP Adapter: <https://github.com/WordPress/mcp-adapter>
-- WP-Bench: <https://github.com/WordPress/wp-bench>
-- Agent Skills: <https://github.com/WordPress/agent-skills>
+-   Abilities: <https://developer.wordpress.org/apis/abilities-api/>
+-   AI Client: <https://developer.wordpress.org/reference/functions/wp_ai_client_prompt/>
+-   Connectors: <https://make.wordpress.org/core/2026/03/18/introducing-the-connectors-api-in-wordpress-7-0/>
+-   AI Plugin: <https://wordpress.org/plugins/ai/>
+-   MCP Adapter: <https://github.com/WordPress/mcp-adapter>
+-   WP-Bench: <https://github.com/WordPress/wp-bench>
+-   Agent Skills: <https://github.com/WordPress/agent-skills>
 
 For existing serialized blocks, canonical cards, actors, stories, and panels
 are merged with the current defaults by `id`, so this release can supply its
@@ -105,8 +132,8 @@ SVGs. `build/` remains committed so the ZIP is installable without a build step.
 Local unit, lint, and build results prove local source and package state only.
 Browser verification is a separate gate. Safari, Add to Home Screen, Guided
 Access, service-worker behavior, and physical iPad touch/landscape acceptance
-require their own on-device sign-off. This repository documentation does not
-claim deployment.
+require their own on-device sign-off. A current Cloudflare Pages deployment
+still requires its own origin-level verification.
 
 Before deactivating or deleting the plugin, turn off Offline mode in the block
 and load the published kiosk page once while online. That lets the active page
