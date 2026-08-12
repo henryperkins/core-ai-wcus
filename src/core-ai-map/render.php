@@ -233,8 +233,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 
 	<div
 		class="core-ai-map__experience"
-		data-wp-bind--inert="state.isAttract"
-		data-wp-bind--aria-hidden="state.isAttract"
+		data-wp-bind--inert="state.isExperienceInactive"
+		data-wp-bind--aria-hidden="state.isExperienceInactive"
 	>
 		<div class="core-ai-map__map-heading">
 			<p><?php esc_html_e( 'The Core AI ecosystem', 'core-ai-map' ); ?></p>

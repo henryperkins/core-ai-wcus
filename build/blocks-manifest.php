@@ -91,9 +91,9 @@ return array(
 					array(
 						'id' => 'bench',
 						'name' => 'WP Bench',
-						'kicker' => 'Measure WordPress knowledge',
-						'description' => 'The official benchmark for evaluating how well language models understand WordPress development.',
-						'technical' => 'WP Bench tests knowledge of Core APIs, coding standards, plugin architecture, and security practices to make model comparisons reproducible.',
+						'kicker' => 'Benchmark WordPress coding',
+						'description' => 'The official benchmark for evaluating how well AI agents complete real WordPress development tasks.',
+						'technical' => 'WP Bench runs generated solutions in sandboxed WordPress environments and grades them with static analysis and runtime assertions, making model comparisons reproducible.',
 						'status' => 'Open-source benchmark',
 						'href' => 'https://github.com/WordPress/wp-bench'
 					)
@@ -134,8 +134,8 @@ return array(
 					),
 					array(
 						'id' => 'evaluate',
-						'label' => 'Test what models know',
-						'description' => 'Use a shared benchmark to assess WordPress development knowledge and improve reusable agent guidance.',
+						'label' => 'Test what agents can build',
+						'description' => 'Use a shared execution benchmark to assess WordPress coding and improve reusable agent guidance.',
 						'projects' => array(
 							'bench',
 							'skills'

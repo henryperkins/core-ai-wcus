@@ -8,12 +8,33 @@ import { animate, stagger } from 'motion';
 
 const animationControls = new WeakMap();
 const lastProjectTriggers = new WeakMap();
+const resetSchedulers = new WeakMap();
 const toastTimers = new WeakMap();
 
 const getRoot = ( element ) => element?.closest( '.core-ai-map' );
 
 const getScenarioPath = ( context ) =>
 	context.scenarioPaths?.[ context.activeScenario ] || [];
+
+const focusElement = ( element, delay = 40 ) => {
+	if ( ! element ) {
+		return;
+	}
+
+	window.setTimeout( () => {
+		element.focus( { preventScroll: true } );
+	}, delay );
+};
+
+const focusWithin = ( root, selector, delay = 40 ) => {
+	if ( ! root ) {
+		return;
+	}
+
+	window.setTimeout( () => {
+		root.querySelector( selector )?.focus( { preventScroll: true } );
+	}, delay );
+};
 
 const stopAnimations = ( root ) => {
 	( animationControls.get( root ) || [] ).forEach( ( control ) => {
@@ -169,6 +190,10 @@ store( 'core-ai/map', {
 		get isNotDetail() {
 			return getContext().screen !== 'detail';
 		},
+		get isExperienceInactive() {
+			const { screen } = getContext();
+			return screen === 'attract' || screen === 'detail';
+		},
 		get isOnline() {
 			return ! getContext().isOffline;
 		},
@@ -246,11 +271,15 @@ store( 'core-ai/map', {
 	actions: {
 		start() {
 			const context = getContext();
+			const { ref } = getElement();
+			const root = getRoot( ref );
+
 			context.screen = 'map';
 			context.selectedProject = '';
 			context.activeScenario = '';
 			context.announcement =
 				'Map open. Choose one of six projects or follow a story.';
+			focusWithin( root, '.core-ai-map__node button' );
 		},
 		selectProject() {
 			const context = getContext();
@@ -265,12 +294,7 @@ store( 'core-ai/map', {
 			context.selectedProject = context.projectId;
 			context.activeScenario = '';
 			context.announcement = `${ ref.textContent.trim() } details open.`;
-
-			window.setTimeout( () => {
-				root?.querySelector( '.core-ai-map__details-close' )?.focus( {
-					preventScroll: true,
-				} );
-			}, 80 );
+			focusWithin( root, '.core-ai-map__details-close', 80 );
 		},
 		closeDetails() {
 			const context = getContext();
@@ -283,10 +307,7 @@ store( 'core-ai/map', {
 			context.screen = 'map';
 			context.selectedProject = '';
 			context.announcement = 'Project details closed. Back on the map.';
-
-			window.setTimeout( () => {
-				previousTrigger?.focus( { preventScroll: true } );
-			}, 40 );
+			focusElement( previousTrigger );
 		},
 		selectScenario() {
 			const context = getContext();
@@ -301,7 +322,12 @@ store( 'core-ai/map', {
 				: `${ ref.textContent.trim() } path highlighted.`;
 		},
 		reset() {
-			setAttractState( getContext() );
+			const context = getContext();
+			const { ref } = getElement();
+			const root = getRoot( ref );
+
+			setAttractState( context );
+			focusWithin( root, '.core-ai-map__prompt' );
 		},
 		keepInKiosk( event ) {
 			event.preventDefault();
@@ -338,12 +364,10 @@ store( 'core-ai/map', {
 					return undefined;
 				}
 
-				return runMotion(
-					ref,
-					screen,
-					selectedProject,
-					activeScenario
-				);
+				const cleanup = runMotion( ref, screen );
+				resetSchedulers.get( ref )?.();
+
+				return cleanup;
 			}, [ screen, selectedProject, activeScenario ] );
 
 			useEffect( () => {
@@ -372,6 +396,11 @@ store( 'core-ai/map', {
 						setAttractState( context );
 						context.announcement =
 							'The map reset after a period of inactivity.';
+						if (
+							root.contains( root.ownerDocument.activeElement )
+						) {
+							focusWithin( root, '.core-ai-map__prompt' );
+						}
 					}
 				};
 
@@ -384,6 +413,8 @@ store( 'core-ai/map', {
 						);
 					}
 				};
+
+				resetSchedulers.set( root, scheduleReset );
 
 				const updateNetworkStatus = () => {
 					context.isOffline = ! navigator.onLine;
@@ -427,13 +458,17 @@ store( 'core-ai/map', {
 						return;
 					}
 
+					event.preventDefault();
+
 					if ( context.screen === 'detail' ) {
 						context.screen = 'map';
 						context.selectedProject = '';
 						context.announcement =
 							'Project details closed. Back on the map.';
+						focusElement( lastProjectTriggers.get( root ) );
 					} else if ( context.screen === 'map' ) {
 						setAttractState( context );
+						focusWithin( root, '.core-ai-map__prompt' );
 					}
 				};
 
@@ -510,6 +545,7 @@ store( 'core-ai/map', {
 					window.clearTimeout( resetTimer );
 					window.clearTimeout( toastTimers.get( root ) );
 					window.clearInterval( idleScenarioTimer );
+					resetSchedulers.delete( root );
 					root.removeEventListener( 'pointerdown', scheduleReset );
 					window.removeEventListener( 'keydown', handleKeydown );
 					window.removeEventListener( 'online', updateNetworkStatus );
@@ -531,7 +567,7 @@ store( 'core-ai/map', {
 						);
 					}
 				};
-			}, [] );
+			}, [ context ] );
 		},
 	},
 } );
