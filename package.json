@@ -1,7 +1,7 @@
 {
 	"name": "core-ai-map",
-	"version": "0.1.0",
-	"description": "An interactive Core AI project map for a landscape iPad kiosk.",
+	"version": "0.2.0",
+	"description": "An interactive Core AI boundary map for a landscape iPad kiosk.",
 	"author": "The WordPress Contributors",
 	"license": "GPL-2.0-or-later",
 	"main": "build/index.js",
@@ -27,8 +27,7 @@
 		"@wordpress/blocks": "15.25.0",
 		"@wordpress/components": "38.0.0",
 		"@wordpress/i18n": "6.25.0",
-		"@wordpress/interactivity": "6.52.0",
-		"motion": "13.1.0"
+		"@wordpress/interactivity": "6.52.0"
 	},
 	"devDependencies": {
 		"@wordpress/scripts": "34.0.0"

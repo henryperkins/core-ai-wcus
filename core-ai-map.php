@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Core AI Living Map
  * Description:       An interactive Core AI project map for a landscape iPad kiosk.
- * Version:           0.1.0
+ * Version:           0.2.0
  * Requires at least: 6.8
  * Requires PHP:      7.4
  * Author:            The WordPress Contributors
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CORE_AI_MAP_VERSION', '0.1.0' );
+define( 'CORE_AI_MAP_VERSION', '0.2.0' );
 define( 'CORE_AI_MAP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'CORE_AI_MAP_URL', plugin_dir_url( __FILE__ ) );
 

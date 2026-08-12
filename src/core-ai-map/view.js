@@ -4,17 +4,58 @@ import {
 	store,
 	useEffect,
 } from '@wordpress/interactivity';
-import { animate, stagger } from 'motion';
 
-const animationControls = new WeakMap();
-const lastProjectTriggers = new WeakMap();
+/**
+ * Core AI Boundary Map.
+ *
+ * The map has three screens — attract, map, inspect — and four stories. Picking
+ * a story recomposes the canvas: its members slide into a numbered left-to-right
+ * workflow and everything else parks on a shelf. All of the geometry comes from
+ * the layout table `render.php` puts in the context, so PHP stays the single
+ * source of truth for placement.
+ */
+
+const STAGE_WIDTH = 1366;
+const STAGE_HEIGHT = 1024;
+const ATTRACT_STORY_INTERVAL = 9000;
+const SUGGESTION_INTERVAL = 1200;
+
 const resetSchedulers = new WeakMap();
-const toastTimers = new WeakMap();
+const lastCardTriggers = new WeakMap();
 
 const getRoot = ( element ) => element?.closest( '.core-ai-map' );
 
-const getScenarioPath = ( context ) =>
-	context.scenarioPaths?.[ context.activeScenario ] || [];
+/**
+ * @param {Object} context Interactivity context.
+ * @return {Object|null} Layout of the story currently on the canvas.
+ */
+const activeLayout = ( context ) =>
+	( context.story && context.layout?.[ context.story ] ) || null;
+
+/**
+ * @param {Object} context Interactivity context.
+ * @return {boolean} Whether members physically move for the current story.
+ */
+const isRecomposed = ( context ) =>
+	Boolean( activeLayout( context ) ) && context.recompose !== false;
+
+/**
+ * Every story's connector paths are in the DOM at once; each one carries the
+ * story it belongs to and whether it is a recomposed (`edges`) or resting
+ * (`rest`) path. Only the set matching the current story is shown.
+ *
+ * @param {Object} context Interactivity context.
+ * @return {boolean} Whether this path belongs to what is on the canvas now.
+ */
+const isCurrentPathVariant = ( context ) => {
+	if ( ! context.story || context.storyId !== context.story ) {
+		return false;
+	}
+
+	const wanted = context.recompose === false ? 'rest' : 'edges';
+
+	return context.variant === wanted;
+};
 
 const focusElement = ( element, delay = 40 ) => {
 	if ( ! element ) {
@@ -36,144 +77,12 @@ const focusWithin = ( root, selector, delay = 40 ) => {
 	}, delay );
 };
 
-const stopAnimations = ( root ) => {
-	( animationControls.get( root ) || [] ).forEach( ( control ) => {
-		control.stop?.();
-	} );
-	animationControls.delete( root );
-};
-
-const cleanMotionStyles = ( root ) => {
-	root.querySelectorAll(
-		'.core-ai-map__node, .core-ai-map__paths path, .core-ai-map__prompt, .core-ai-map__details'
-	).forEach( ( element ) => {
-		element.style.removeProperty( 'opacity' );
-		element.style.removeProperty( 'transform' );
-		element.style.removeProperty( 'stroke-dashoffset' );
-		element.style.removeProperty( 'box-shadow' );
-	} );
-};
-
-const runMotion = ( root, screen ) => {
-	stopAnimations( root );
-	cleanMotionStyles( root );
-
-	const reduceMotion = window.matchMedia(
-		'(prefers-reduced-motion: reduce)'
-	).matches;
-	root.classList.toggle( 'core-ai-map--reduce-motion', reduceMotion );
-
-	if ( reduceMotion || document.visibilityState === 'hidden' ) {
-		return undefined;
-	}
-
-	const controls = [];
-	const nodes = root.querySelectorAll( '.core-ai-map__node' );
-	const activeNodes = root.querySelectorAll( '.core-ai-map__node.is-active' );
-	const activePaths = root.querySelectorAll(
-		'.core-ai-map__paths path.is-active'
-	);
-
-	if ( screen === 'attract' ) {
-		nodes.forEach( ( node, index ) => {
-			controls.push(
-				animate(
-					node,
-					{ y: [ 0, index % 2 === 0 ? -7 : 7, 0 ] },
-					{
-						duration: 5.5 + index * 0.25,
-						delay: index * 0.18,
-						ease: 'easeInOut',
-						repeat: Infinity,
-					}
-				)
-			);
-		} );
-		controls.push(
-			animate(
-				root.querySelector( '.core-ai-map__prompt' ),
-				{
-					boxShadow: [
-						'0 14px 36px rgba(56, 88, 233, 0.2)',
-						'0 18px 52px rgba(56, 88, 233, 0.38)',
-						'0 14px 36px rgba(56, 88, 233, 0.2)',
-					],
-				},
-				{ duration: 3.2, ease: 'easeInOut', repeat: Infinity }
-			)
-		);
-	}
-
-	if ( screen === 'map' ) {
-		controls.push(
-			animate(
-				nodes,
-				{ opacity: [ 0, 1 ], scale: [ 0.88, 1 ], y: [ 20, 0 ] },
-				{
-					duration: 0.5,
-					delay: stagger( 0.055 ),
-					ease: [ 0.22, 1, 0.36, 1 ],
-				}
-			)
-		);
-	}
-
-	if ( screen === 'detail' ) {
-		const details = root.querySelector( '.core-ai-map__details' );
-
-		if ( details ) {
-			controls.push(
-				animate(
-					details,
-					{ opacity: [ 0, 1 ], x: [ 44, 0 ] },
-					{ duration: 0.4, ease: [ 0.22, 1, 0.36, 1 ] }
-				)
-			);
-		}
-	}
-
-	if ( activeNodes.length ) {
-		controls.push(
-			animate(
-				activeNodes,
-				{ scale: [ 1, 1.035, 1 ] },
-				{
-					duration: 1.6,
-					delay: stagger( 0.12 ),
-					ease: 'easeInOut',
-				}
-			)
-		);
-	}
-
-	activePaths.forEach( ( path, index ) => {
-		controls.push(
-			animate(
-				path,
-				{ strokeDashoffset: [ 1, 0 ] },
-				{
-					duration: 1.25,
-					delay: index * 0.14,
-					ease: 'linear',
-					repeat: screen === 'attract' ? Infinity : 1,
-				}
-			)
-		);
-	} );
-
-	animationControls.set( root, controls.filter( Boolean ) );
-
-	return () => stopAnimations( root );
-};
-
 const setAttractState = ( context ) => {
-	const scenarioIds = Object.keys( context.scenarioPaths || {} );
 	context.screen = 'attract';
-	context.selectedProject = '';
-	context.activeScenario = scenarioIds[ 0 ] || '';
-	context.idleScenarioIndex = 0;
-	context.toast = '';
-	context.announcement = 'The Core AI map returned to its welcome screen.';
+	context.inspect = '';
+	context.idleStoryIndex = 0;
+	context.story = context.storyIds?.[ 0 ] || '';
+	context.announcement = 'The boundary map returned to its welcome screen.';
 };
 
 store( 'core-ai/map', {
@@ -184,191 +93,303 @@ store( 'core-ai/map', {
 		get isMap() {
 			return getContext().screen === 'map';
 		},
-		get isDetail() {
-			return getContext().screen === 'detail';
+		get isInspect() {
+			return getContext().screen === 'inspect';
 		},
-		get isNotDetail() {
-			return getContext().screen !== 'detail';
+		get isNotInspect() {
+			return getContext().screen !== 'inspect';
 		},
-		get isExperienceInactive() {
-			const { screen } = getContext();
-			return screen === 'attract' || screen === 'detail';
+		get hasStory() {
+			return Boolean( activeLayout( getContext() ) );
 		},
 		get isOnline() {
 			return ! getContext().isOffline;
 		},
-		get isOffline() {
-			return getContext().isOffline;
-		},
-		get hasScenario() {
-			return Boolean( getContext().activeScenario );
-		},
-		get isScenarioSelected() {
-			const context = getContext();
-			return (
-				Boolean( context.scenarioId ) &&
-				context.scenarioId === context.activeScenario
-			);
-		},
-		get isScenarioNotSelected() {
-			const context = getContext();
-			return context.scenarioId !== context.activeScenario;
-		},
-		get isProjectSelected() {
-			const context = getContext();
-			return (
-				Boolean( context.projectId ) &&
-				context.projectId === context.selectedProject
-			);
-		},
-		get isProjectNotSelected() {
-			const context = getContext();
-			return context.projectId !== context.selectedProject;
-		},
-		get isProjectActive() {
-			const context = getContext();
-			const path = getScenarioPath( context );
 
+		/* Stories ------------------------------------------------------ */
+
+		get isStorySelected() {
+			const context = getContext();
 			return (
-				context.projectId === context.selectedProject ||
-				path.includes( context.projectId )
+				Boolean( context.storyId ) && context.storyId === context.story
 			);
 		},
-		get isProjectDimmed() {
+		get isStoryNotSelected() {
 			const context = getContext();
+			return context.storyId !== context.story;
+		},
+		get isStoryCopyHidden() {
+			const context = getContext();
+			return (
+				context.screen === 'attract' ||
+				context.screen === 'inspect' ||
+				! activeLayout( context )
+			);
+		},
 
-			if ( context.selectedProject ) {
-				return context.projectId !== context.selectedProject;
+		/* Cards -------------------------------------------------------- */
+
+		get cardTransform() {
+			const context = getContext();
+			const layout = activeLayout( context );
+			const neutral = context.neutral?.[ context.cardId ];
+
+			if ( ! layout || ! neutral || context.recompose === false ) {
+				return '';
 			}
 
-			const path = getScenarioPath( context );
-			return path.length > 0 && ! path.includes( context.projectId );
-		},
-		get isPathActive() {
-			const context = getContext();
-			const path = getScenarioPath( context );
+			const place = layout.place?.[ context.cardId ];
 
-			return path.some( ( projectId, index ) => {
-				const nextProjectId = path[ index + 1 ];
-				return (
-					( projectId === context.fromProject &&
-						nextProjectId === context.toProject ) ||
-					( projectId === context.toProject &&
-						nextProjectId === context.fromProject )
-				);
-			} );
+			if ( place ) {
+				return `translate(${ place[ 0 ] - neutral[ 0 ] }px, ${
+					place[ 1 ] - neutral[ 1 ]
+				}px)`;
+			}
+
+			const slot = ( layout.park || [] ).indexOf( context.cardId );
+
+			// Actors do not park — they simply leave the canvas.
+			if ( slot < 0 ) {
+				return '';
+			}
+
+			const shelfX =
+				context.shelfX?.[ slot ] ?? context.shelfX?.[ 0 ] ?? 0;
+
+			return `translate(${ shelfX - neutral[ 0 ] }px, ${
+				layout.shelfY - neutral[ 1 ]
+			}px) scale(0.5)`;
 		},
+		get cardStep() {
+			const context = getContext();
+			const step = activeLayout( context )?.members?.[ context.cardId ];
+
+			return step ? String( step ) : '';
+		},
+		get isCardActive() {
+			const context = getContext();
+
+			return Boolean(
+				activeLayout( context )?.members?.[ context.cardId ]
+			);
+		},
+		get isCardParked() {
+			const context = getContext();
+
+			return (
+				isRecomposed( context ) &&
+				! activeLayout( context ).members[ context.cardId ] &&
+				( activeLayout( context ).park || [] ).includes(
+					context.cardId
+				)
+			);
+		},
+		get isCardDimmed() {
+			const context = getContext();
+			const layout = activeLayout( context );
+
+			return Boolean(
+				layout &&
+					! isRecomposed( context ) &&
+					! layout.members[ context.cardId ]
+			);
+		},
+		get isCardOffstage() {
+			const context = getContext();
+
+			return ! activeLayout( context )?.members?.[ context.cardId ];
+		},
+		get isCardInspected() {
+			const context = getContext();
+			return context.cardId === context.inspect;
+		},
+		get isCardNotInspected() {
+			const context = getContext();
+			return context.cardId !== context.inspect;
+		},
+
+		/* Role strips -------------------------------------------------- */
+
+		get isStripLive() {
+			const context = getContext();
+
+			if ( context.shapes === false ) {
+				return false;
+			}
+
+			const isActiveOnMap =
+				context.screen === 'map' &&
+				Boolean( activeLayout( context )?.members?.[ context.cardId ] );
+
+			return isActiveOnMap || context.inspect === context.cardId;
+		},
+		get stripTop() {
+			const context = getContext();
+			const offset =
+				activeLayout( context )?.strips?.[ context.cardId ]?.[ 1 ];
+
+			return `${ offset ?? 158 }px`;
+		},
+
+		/* Boundary ----------------------------------------------------- */
+
+		get isRuleLit() {
+			const context = getContext();
+			const crosses = activeLayout( context )?.crosses || [];
+
+			return crosses.includes( context.side );
+		},
+		get areHairlinesHidden() {
+			return isRecomposed( getContext() );
+		},
+		get isOutsideZoneLit() {
+			return activeLayout( getContext() )?.zone === 'outside';
+		},
+		get isShelfHidden() {
+			return ! isRecomposed( getContext() );
+		},
+		get shelfTop() {
+			const layout = activeLayout( getContext() );
+
+			return `${ layout ? layout.shelfY - 22 : 490 }px`;
+		},
+
+		/* Flow --------------------------------------------------------- */
+
+		get isEdgeLive() {
+			return isCurrentPathVariant( getContext() );
+		},
+		get isSparkLive() {
+			const context = getContext();
+
+			// The travelling sparks belong to the attract loop, and they stand
+			// down for the story that already carries the token motion.
+			return (
+				context.screen === 'attract' &&
+				! activeLayout( context )?.tokens &&
+				isCurrentPathVariant( context )
+			);
+		},
+		get areTokensLive() {
+			const context = getContext();
+
+			return Boolean(
+				activeLayout( context )?.tokens &&
+					context.shapes !== false &&
+					context.screen !== 'inspect'
+			);
+		},
+
+		/* AI Plugin suggestion cycle ----------------------------------- */
+
+		get suggestionLabel() {
+			const context = getContext();
+			const items = context.suggestions || [];
+
+			if ( ! items.length ) {
+				return '';
+			}
+
+			return (
+				items[ Math.floor( context.suggestion / 3 ) % items.length ]
+					?.label || ''
+			);
+		},
+		get suggestionText() {
+			const context = getContext();
+			const items = context.suggestions || [];
+
+			if ( ! items.length ) {
+				return '';
+			}
+
+			return (
+				items[ Math.floor( context.suggestion / 3 ) % items.length ]
+					?.text || ''
+			);
+		},
+		get suggestionPhase() {
+			const context = getContext();
+			const phases = context.phases || [];
+
+			return phases[ context.suggestion % 3 ] || '';
+		},
+		get isSuggestionReviewing() {
+			return getContext().suggestion % 3 === 1;
+		},
+		get isSuggestionApplied() {
+			return getContext().suggestion % 3 === 2;
+		},
+
 		get announcement() {
 			return getContext().announcement;
 		},
-		get toast() {
-			return getContext().toast;
-		},
-		get hasNoToast() {
-			return ! getContext().toast;
-		},
 	},
+
 	actions: {
 		start() {
 			const context = getContext();
-			const { ref } = getElement();
-			const root = getRoot( ref );
+			const root = getRoot( getElement().ref );
 
 			context.screen = 'map';
-			context.selectedProject = '';
-			context.activeScenario = '';
+			context.story = '';
+			context.inspect = '';
 			context.announcement =
-				'Map open. Choose one of six projects or follow a story.';
-			focusWithin( root, '.core-ai-map__node button' );
+				'The blocks are on the canvas. Open a block, or follow a story.';
+			focusWithin( root, '.core-ai-map__block-body' );
 		},
-		selectProject() {
+
+		selectStory() {
+			const context = getContext();
+			const { ref } = getElement();
+			const isCurrent = context.story === context.storyId;
+
+			context.screen = 'map';
+			context.inspect = '';
+			context.story = isCurrent ? '' : context.storyId;
+			context.announcement = isCurrent
+				? 'Story cleared. The blocks returned to the neutral map.'
+				: `${ ref.textContent.trim() }. The blocks recomposed.`;
+		},
+
+		inspectCard() {
 			const context = getContext();
 			const { ref } = getElement();
 			const root = getRoot( ref );
 
 			if ( root ) {
-				lastProjectTriggers.set( root, ref );
+				lastCardTriggers.set( root, ref );
 			}
 
-			context.screen = 'detail';
-			context.selectedProject = context.projectId;
-			context.activeScenario = '';
+			context.screen = 'inspect';
+			context.inspect = context.cardId;
+			context.story = '';
 			context.announcement = `${ ref.textContent.trim() } details open.`;
 			focusWithin( root, '.core-ai-map__details-close', 80 );
 		},
-		closeDetails() {
+
+		closeInspect() {
 			const context = getContext();
-			const { ref } = getElement();
-			const root = getRoot( ref );
-			const previousTrigger = root
-				? lastProjectTriggers.get( root )
-				: undefined;
+			const root = getRoot( getElement().ref );
 
 			context.screen = 'map';
-			context.selectedProject = '';
-			context.announcement = 'Project details closed. Back on the map.';
-			focusElement( previousTrigger );
+			context.inspect = '';
+			context.announcement = 'Details closed. Back on the map.';
+			focusElement( root ? lastCardTriggers.get( root ) : undefined );
 		},
-		selectScenario() {
-			const context = getContext();
-			const { ref } = getElement();
-			const isCurrent = context.activeScenario === context.scenarioId;
 
-			context.screen = 'map';
-			context.selectedProject = '';
-			context.activeScenario = isCurrent ? '' : context.scenarioId;
-			context.announcement = isCurrent
-				? 'Scenario cleared.'
-				: `${ ref.textContent.trim() } path highlighted.`;
-		},
 		reset() {
 			const context = getContext();
-			const { ref } = getElement();
-			const root = getRoot( ref );
+			const root = getRoot( getElement().ref );
 
 			setAttractState( context );
 			focusWithin( root, '.core-ai-map__prompt' );
 		},
-		keepInKiosk( event ) {
-			event.preventDefault();
-
-			const context = getContext();
-			const { ref } = getElement();
-			const root = getRoot( ref );
-			const url = ref.getAttribute( 'href' );
-
-			context.toast = `This display stays on the map. Visit ${ url } on your device.`;
-
-			if ( root ) {
-				window.clearTimeout( toastTimers.get( root ) );
-				toastTimers.set(
-					root,
-					window.setTimeout( () => {
-						context.toast = '';
-					}, 6500 )
-				);
-			}
-		},
 	},
+
 	callbacks: {
 		useKiosk() {
 			const context = getContext();
-			const screen = context.screen;
-			const selectedProject = context.selectedProject;
-			const activeScenario = context.activeScenario;
-
-			useEffect( () => {
-				const { ref } = getElement();
-
-				if ( ! ref ) {
-					return undefined;
-				}
-
-				const cleanup = runMotion( ref, screen );
-				resetSchedulers.get( ref )?.();
-
-				return cleanup;
-			}, [ screen, selectedProject, activeScenario ] );
 
 			useEffect( () => {
 				const { ref: root } = getElement();
@@ -384,9 +405,25 @@ store( 'core-ai/map', {
 					root.dataset.inactivityTimeout,
 					10
 				);
-				const scenarioIds = Object.keys( context.scenarioPaths || {} );
 				let resetTimer;
 				let wakeLock;
+
+				// The stage is authored at exactly 1366x1024; scale it to fit
+				// whatever viewport it lands in rather than making the geometry
+				// responsive.
+				const fitStage = () => {
+					const scale = Math.min(
+						root.clientWidth / STAGE_WIDTH,
+						root.clientHeight / STAGE_HEIGHT
+					);
+
+					if ( Number.isFinite( scale ) && scale > 0 ) {
+						root.style.setProperty(
+							'--cai-scale',
+							String( scale )
+						);
+					}
+				};
 
 				const resetForInactivity = () => {
 					if (
@@ -396,6 +433,7 @@ store( 'core-ai/map', {
 						setAttractState( context );
 						context.announcement =
 							'The map reset after a period of inactivity.';
+
 						if (
 							root.contains( root.ownerDocument.activeElement )
 						) {
@@ -406,10 +444,11 @@ store( 'core-ai/map', {
 
 				const scheduleReset = () => {
 					window.clearTimeout( resetTimer );
+
 					if ( context.screen !== 'attract' ) {
 						resetTimer = window.setTimeout(
 							resetForInactivity,
-							Number.isFinite( timeout ) ? timeout : 60000
+							Number.isFinite( timeout ) ? timeout : 90000
 						);
 					}
 				};
@@ -435,16 +474,6 @@ store( 'core-ai/map', {
 				};
 
 				const handleVisibility = () => {
-					const controls = animationControls.get( root ) || [];
-
-					controls.forEach( ( control ) => {
-						if ( document.visibilityState === 'hidden' ) {
-							control.pause?.();
-						} else {
-							control.play?.();
-						}
-					} );
-
 					if ( document.visibilityState === 'visible' ) {
 						scheduleReset();
 						requestWakeLock();
@@ -460,31 +489,55 @@ store( 'core-ai/map', {
 
 					event.preventDefault();
 
-					if ( context.screen === 'detail' ) {
+					if ( context.screen === 'inspect' ) {
 						context.screen = 'map';
-						context.selectedProject = '';
+						context.inspect = '';
 						context.announcement =
-							'Project details closed. Back on the map.';
-						focusElement( lastProjectTriggers.get( root ) );
+							'Details closed. Back on the map.';
+						focusElement( lastCardTriggers.get( root ) );
 					} else if ( context.screen === 'map' ) {
 						setAttractState( context );
 						focusWithin( root, '.core-ai-map__prompt' );
 					}
 				};
 
-				const cycleAttractScenario = () => {
+				// The attract loop walks the four stories so a passer-by sees
+				// the map compose itself before touching anything.
+				const cycleAttractStory = () => {
+					const storyIds = context.storyIds || [];
+
 					if (
 						context.screen !== 'attract' ||
 						document.visibilityState !== 'visible' ||
-						scenarioIds.length === 0
+						storyIds.length === 0
 					) {
 						return;
 					}
 
-					context.idleScenarioIndex =
-						( context.idleScenarioIndex + 1 ) % scenarioIds.length;
-					context.activeScenario =
-						scenarioIds[ context.idleScenarioIndex ];
+					context.idleStoryIndex =
+						( context.idleStoryIndex + 1 ) % storyIds.length;
+					context.story = storyIds[ context.idleStoryIndex ];
+				};
+
+				// The AI Plugin card runs a live suggestion -> review -> apply
+				// cycle whenever it is the block being talked about.
+				const advanceSuggestion = () => {
+					const isPluginInStory = Boolean(
+						context.screen === 'map' &&
+							context.layout?.[ context.story ]?.members?.plugin
+					);
+					const isPluginOpen =
+						context.screen === 'inspect' &&
+						context.inspect === 'plugin';
+
+					if (
+						document.visibilityState !== 'visible' ||
+						( ! isPluginInStory && ! isPluginOpen )
+					) {
+						return;
+					}
+
+					context.suggestion += 1;
 				};
 
 				const syncServiceWorker = async () => {
@@ -555,9 +608,13 @@ store( 'core-ai/map', {
 					}
 				};
 
-				const idleScenarioTimer = window.setInterval(
-					cycleAttractScenario,
-					9000
+				const storyTimer = window.setInterval(
+					cycleAttractStory,
+					ATTRACT_STORY_INTERVAL
+				);
+				const suggestionTimer = window.setInterval(
+					advanceSuggestion,
+					SUGGESTION_INTERVAL
 				);
 
 				root.addEventListener( 'pointerdown', scheduleReset, {
@@ -566,19 +623,21 @@ store( 'core-ai/map', {
 				window.addEventListener( 'keydown', handleKeydown );
 				window.addEventListener( 'online', updateNetworkStatus );
 				window.addEventListener( 'offline', updateNetworkStatus );
+				window.addEventListener( 'resize', fitStage );
 				document.addEventListener(
 					'visibilitychange',
 					handleVisibility
 				);
 
+				fitStage();
 				updateNetworkStatus();
 				requestWakeLock();
 				syncServiceWorker();
 
 				return () => {
 					window.clearTimeout( resetTimer );
-					window.clearTimeout( toastTimers.get( root ) );
-					window.clearInterval( idleScenarioTimer );
+					window.clearInterval( storyTimer );
+					window.clearInterval( suggestionTimer );
 					resetSchedulers.delete( root );
 					root.removeEventListener( 'pointerdown', scheduleReset );
 					window.removeEventListener( 'keydown', handleKeydown );
@@ -587,12 +646,12 @@ store( 'core-ai/map', {
 						'offline',
 						updateNetworkStatus
 					);
+					window.removeEventListener( 'resize', fitStage );
 					document.removeEventListener(
 						'visibilitychange',
 						handleVisibility
 					);
 					wakeLock?.release?.();
-					stopAnimations( root );
 					root.classList.remove( 'is-ready' );
 
 					if ( ! document.querySelector( '.core-ai-map.is-ready' ) ) {
@@ -602,6 +661,15 @@ store( 'core-ai/map', {
 					}
 				};
 			}, [ context ] );
+
+			// Any screen change restarts the inactivity countdown.
+			useEffect( () => {
+				const { ref: root } = getElement();
+
+				if ( root ) {
+					resetSchedulers.get( root )?.();
+				}
+			}, [ context.screen, context.story, context.inspect ] );
 		},
 	},
 } );
