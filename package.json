@@ -5,6 +5,13 @@
 	"author": "The WordPress Contributors",
 	"license": "GPL-2.0-or-later",
 	"main": "build/index.js",
+	"files": [
+		"assets",
+		"build",
+		"core-ai-map.php",
+		"README.md",
+		"readme.txt"
+	],
 	"scripts": {
 		"build": "wp-scripts build --experimental-modules --webpack-copy-php --blocks-manifest",
 		"format": "wp-scripts format",
