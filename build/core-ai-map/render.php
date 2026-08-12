@@ -43,34 +43,33 @@ $projects = array_values(
 );
 
 $scenario_paths = array();
-$scenarios      = array_values(
-	array_filter(
-		$scenarios,
-		static function ( &$scenario ) use ( $project_ids, &$scenario_paths ) {
-			if ( ! is_array( $scenario ) || empty( $scenario['id'] ) || empty( $scenario['projects'] ) || ! is_array( $scenario['projects'] ) ) {
-				return false;
+$valid_scenarios = array();
+
+foreach ( $scenarios as $scenario ) {
+	if ( ! is_array( $scenario ) || empty( $scenario['id'] ) || empty( $scenario['projects'] ) || ! is_array( $scenario['projects'] ) ) {
+		continue;
+	}
+
+	$scenario_id          = sanitize_key( $scenario['id'] );
+	$scenario['id']       = $scenario_id;
+	$scenario['projects'] = array_values(
+		array_filter(
+			array_map( 'sanitize_key', $scenario['projects'] ),
+			static function ( $project_id ) use ( $project_ids ) {
+				return in_array( $project_id, $project_ids, true );
 			}
+		)
+	);
 
-			$scenario_id          = sanitize_key( $scenario['id'] );
-			$scenario['id']       = $scenario_id;
-			$scenario['projects'] = array_values(
-				array_filter(
-					array_map( 'sanitize_key', $scenario['projects'] ),
-					static function ( $project_id ) use ( $project_ids ) {
-						return in_array( $project_id, $project_ids, true );
-					}
-				)
-			);
+	if ( empty( $scenario['projects'] ) ) {
+		continue;
+	}
 
-			if ( empty( $scenario['projects'] ) ) {
-				return false;
-			}
+	$scenario_paths[ $scenario_id ] = $scenario['projects'];
+	$valid_scenarios[]               = $scenario;
+}
 
-			$scenario_paths[ $scenario_id ] = $scenario['projects'];
-			return true;
-		}
-	)
-);
+$scenarios = $valid_scenarios;
 
 $initial_scenario = ! empty( $scenarios ) ? $scenarios[0]['id'] : '';
 $context          = array(
@@ -81,7 +80,7 @@ $context          = array(
 	'announcement'       => __( 'Core AI Living Map ready. Tap to begin exploring.', 'core-ai-map' ),
 	'toast'              => '',
 	'isOffline'          => false,
-	'idleScenarioIndex'  => 0,
+	'idleScenarioIndex' => 0,
 );
 
 $service_worker_url = add_query_arg( '_core_ai_map_sw', '1', home_url( '/' ) );
@@ -95,7 +94,7 @@ $asset_urls         = array(
 );
 
 if ( function_exists( 'wp_script_modules' ) && method_exists( wp_script_modules(), 'get_registered' ) ) {
-	$seen_modules  = array();
+	$seen_modules          = array();
 	$collect_module_assets = static function ( $module_id ) use ( &$collect_module_assets, &$asset_urls, &$seen_modules ) {
 		if ( isset( $seen_modules[ $module_id ] ) ) {
 			return;
@@ -176,16 +175,16 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	array(
 		'class'                   => 'core-ai-map',
 		'aria-label'              => __( 'WordPress Core AI project map', 'core-ai-map' ),
-		'data-wp-interactive'     => 'core-ai/map',
-		'data-wp-run'             => 'callbacks.mount',
-		'data-wp-class--is-attract' => 'state.isAttract',
-		'data-wp-class--is-map'   => 'state.isMap',
-		'data-wp-class--is-detail' => 'state.isDetail',
-		'data-inactivity-timeout' => (string) ( $inactivity_timeout * 1000 ),
-		'data-offline-enabled'    => $offline_enabled ? 'true' : 'false',
-		'data-service-worker-url' => $service_worker_url,
+		'data-wp-interactive'        => 'core-ai/map',
+		'data-wp-run'                => 'callbacks.useKiosk',
+		'data-wp-class--is-attract'  => 'state.isAttract',
+		'data-wp-class--is-map'      => 'state.isMap',
+		'data-wp-class--is-detail'   => 'state.isDetail',
+		'data-inactivity-timeout'    => (string) ( $inactivity_timeout * 1000 ),
+		'data-offline-enabled'       => $offline_enabled ? 'true' : 'false',
+		'data-service-worker-url'    => $service_worker_url,
 		'data-service-worker-scope' => $service_scope ? $service_scope : '/',
-		'data-asset-urls'         => wp_json_encode( $asset_urls ),
+		'data-asset-urls'            => wp_json_encode( $asset_urls ),
 	)
 );
 ?>
