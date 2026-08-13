@@ -51,11 +51,20 @@ Build the static Pages artifact from an official WordPress Playground static
 release directory:
 
 ```powershell
+git fetch origin
+git switch main
+git pull --ff-only
+if (git status --porcelain) { throw 'Production checkout is not clean.' }
 npm ci
 npm run plugin-zip
 $env:PLAYGROUND_SOURCE_DIR = 'C:\path\to\wasm-wordpress-net'
 npm run build:playground
-npx wrangler pages deploy dist-playground --project-name=core-ai-living-block-map
+$commit = git rev-parse HEAD
+npx wrangler pages deploy dist-playground `
+    --project-name=core-ai-living-block-map `
+    --branch=main `
+    --commit-hash=$commit `
+    --commit-dirty=false
 ```
 
 The build copies only the assets needed by the pinned runtime plus WordPress
@@ -64,6 +73,35 @@ and 25 MiB-per-asset limits, removes upstream Google Fonts and analytics, and
 uses a local Blueprint and plugin ZIP. `dist-playground/` is generated and not
 committed. Cloudflare Pages provides the required HTTPS origin; a normal HTTP
 origin cannot run Playground's service worker.
+
+Production is deployed manually from `dist-playground/`. Automatic Git
+production and preview deployments are intentionally disabled for the Pages
+project because the repository root is not a deployable Playground artifact.
+The `wcus.hperkins.com` CNAME points to the Pages hostname in DNS-only mode;
+enabling the orange-cloud proxy prevents Pages from routing this hostname.
+After deployment, verify the root, `remote.html`, `sw.js`, local Blueprint, and
+plugin ZIP on both public hostnames:
+
+```powershell
+$hosts = @(
+    'https://core-ai-living-block-map.pages.dev',
+    'https://wcus.hperkins.com'
+)
+$paths = @(
+    '/',
+    '/remote.html',
+    '/sw.js',
+    '/kiosk-blueprint/blueprint.json',
+    '/kiosk-blueprint/core-ai-map.zip'
+)
+foreach ($hostName in $hosts) {
+    foreach ($path in $paths) {
+        $response = Invoke-WebRequest -Uri "$hostName$path" -UseBasicParsing
+        $contentType = $response.Headers['Content-Type']
+        "{0} {1} {2}" -f $response.StatusCode, $contentType, "$hostName$path"
+    }
+}
+```
 
 ## What visitors see
 
@@ -96,13 +134,13 @@ Seven committed SVG QR assets live under `assets/qr/`; they are generated
 locally and their destinations are fixed, selectable text in the inspector.
 There are no arbitrary editable QR-image or URL fields.
 
--   Abilities: <https://developer.wordpress.org/apis/abilities-api/>
--   AI Client: <https://developer.wordpress.org/reference/functions/wp_ai_client_prompt/>
--   Connectors: <https://make.wordpress.org/core/2026/03/18/introducing-the-connectors-api-in-wordpress-7-0/>
--   AI Plugin: <https://wordpress.org/plugins/ai/>
--   MCP Adapter: <https://github.com/WordPress/mcp-adapter>
--   WP-Bench: <https://github.com/WordPress/wp-bench>
--   Agent Skills: <https://github.com/WordPress/agent-skills>
+- Abilities: <https://developer.wordpress.org/apis/abilities-api/>
+- AI Client: <https://developer.wordpress.org/reference/functions/wp_ai_client_prompt/>
+- Connectors: <https://make.wordpress.org/core/2026/03/18/introducing-the-connectors-api-in-wordpress-7-0/>
+- AI Plugin: <https://wordpress.org/plugins/ai/>
+- MCP Adapter: <https://github.com/WordPress/mcp-adapter>
+- WP-Bench: <https://github.com/WordPress/wp-bench>
+- Agent Skills: <https://github.com/WordPress/agent-skills>
 
 For existing serialized blocks, canonical cards, actors, stories, and panels
 are merged with the current defaults by `id`, so this release can supply its
