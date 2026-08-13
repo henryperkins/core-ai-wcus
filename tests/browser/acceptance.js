@@ -176,6 +176,92 @@ async ( page ) => {
 			),
 		'Neutral map did not focus the first block.'
 	);
+	const neutral = await page.evaluate( () => {
+		const overlapArea = ( first, second ) =>
+			Math.max(
+				0,
+				Math.min( first.right, second.right ) -
+					Math.max( first.left, second.left )
+			) *
+			Math.max(
+				0,
+				Math.min( first.bottom, second.bottom ) -
+					Math.max( first.top, second.top )
+			);
+		const reviewed = document
+			.querySelector( '.core-ai-map__brand small' )
+			.getBoundingClientRect();
+		const hint = document
+			.querySelector( '.core-ai-map__hint' )
+			.getBoundingClientRect();
+
+		return {
+			actors: [
+				...document.querySelectorAll( '.core-ai-map__actor' ),
+			].map( ( actor ) => ( {
+				hidden: actor.hidden,
+				opacity: getComputedStyle( actor ).opacity,
+			} ) ),
+			reviewedHintOverlap: overlapArea( reviewed, hint ),
+		};
+	} );
+	observations.neutral = neutral;
+	assert(
+		neutral.actors.length === 5 &&
+			neutral.actors.every(
+				( actor ) => ! actor.hidden && actor.opacity === '0.42'
+			),
+		'Neutral map did not keep all five outside actors visible and dimmed.'
+	);
+	assert(
+		neutral.reviewedHintOverlap === 0,
+		'Reviewed date overlapped the neutral-map hint.'
+	);
+
+	const aboutTrigger = page.getByRole( 'button', {
+		name: 'About this exhibit',
+	} );
+	await aboutTrigger.click();
+	await page.waitForTimeout( 120 );
+	const about = await page.evaluate( () => {
+		const overlapArea = ( first, second ) =>
+			Math.max(
+				0,
+				Math.min( first.right, second.right ) -
+					Math.max( first.left, second.left )
+			) *
+			Math.max(
+				0,
+				Math.min( first.bottom, second.bottom ) -
+					Math.max( first.top, second.top )
+			);
+		const close = document.querySelector( '.core-ai-map__about-close' );
+		const content = document.querySelector( '.core-ai-map__about-content' );
+		const brand = document.querySelector( '.core-ai-map__brand' );
+
+		return {
+			closeInsideContent: content.firstElementChild === close,
+			closeBrandOverlap: overlapArea(
+				close.getBoundingClientRect(),
+				brand.getBoundingClientRect()
+			),
+			focusedClose: close.ownerDocument.activeElement === close,
+		};
+	} );
+	observations.about = about;
+	assert(
+		about.closeInsideContent && about.closeBrandOverlap === 0,
+		'About Back control was not contained by the white card without brand overlap.'
+	);
+	assert( about.focusedClose, 'About dialog did not focus its Back control.' );
+	await page.locator( '.core-ai-map__about-close' ).click();
+	await page.waitForTimeout( 80 );
+	assert(
+		await aboutTrigger.evaluate(
+			( element ) => element === element.ownerDocument.activeElement
+		),
+		'About dialog did not restore focus to its trigger.'
+	);
 
 	const storyButtons = page.locator( '.core-ai-map__rail button' );
 	assert(

@@ -1394,11 +1394,11 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			data-wp-bind--hidden="state.isNotAbout"
 			hidden
 		>
-			<button class="core-ai-map__about-close" type="button" data-wp-on--click="actions.closeAbout">
-				<span aria-hidden="true">&larr;</span>
-				<?php esc_html_e( 'Back to the exhibit', 'core-ai-map' ); ?>
-			</button>
 			<div class="core-ai-map__about-content">
+				<button class="core-ai-map__about-close" type="button" data-wp-on--click="actions.closeAbout">
+					<span aria-hidden="true">&larr;</span>
+					<?php esc_html_e( 'Back to the exhibit', 'core-ai-map' ); ?>
+				</button>
 				<p class="core-ai-map__details-badge"><?php esc_html_e( 'Transparency', 'core-ai-map' ); ?></p>
 				<h2 id="<?php echo esc_attr( $instance_id . '-about-title' ); ?>"><?php esc_html_e( 'About this exhibit', 'core-ai-map' ); ?></h2>
 				<dl class="core-ai-map__about-disclosure">

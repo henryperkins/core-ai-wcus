@@ -363,6 +363,8 @@ describe( 'Core AI map render contract', () => {
 			'.core-ai-map__about-trigger'
 		);
 		const dialog = container.querySelector( '.core-ai-map__about' );
+		const content = dialog.querySelector( '.core-ai-map__about-content' );
+		const close = dialog.querySelector( '.core-ai-map__about-close' );
 
 		expect( trigger.getAttribute( 'aria-controls' ) ).toMatch(
 			/core-ai-map-test-about/
@@ -370,6 +372,7 @@ describe( 'Core AI map render contract', () => {
 		expect( trigger.getAttribute( 'aria-expanded' ) ).toBe( 'false' );
 		expect( dialog.getAttribute( 'role' ) ).toBe( 'dialog' );
 		expect( dialog.getAttribute( 'aria-modal' ) ).toBe( 'true' );
+		expect( content.firstElementChild ).toBe( close );
 		expect( dialog.querySelector( 'dt' ).textContent ).toBe(
 			'AI assistance:'
 		);

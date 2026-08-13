@@ -177,7 +177,7 @@ body.core-ai-kiosk-active {
 	&__brand {
 		display: flex;
 		align-items: center;
-		gap: 12px;
+		gap: 10px;
 		height: 60px;
 		font-size: 13px;
 		font-weight: 650;
@@ -1595,13 +1595,12 @@ body.core-ai-kiosk-active {
 	}
 
 	&__about-close {
-		position: absolute;
-		top: 24px;
-		left: 32px;
+		position: static;
 		display: inline-flex;
 		align-items: center;
 		gap: 10px;
 		min-height: 60px;
+		margin: -12px 0 18px;
 		padding: 0;
 		font-size: 14px;
 		font-weight: 620;
