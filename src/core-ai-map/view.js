@@ -500,6 +500,9 @@ store( 'core-ai/map', {
 		},
 		get cardOpacity() {
 			const context = getContext();
+			if ( context.screen === 'map' && ! activeLayout( context ) ) {
+				return '0.42';
+			}
 			if ( context.screen !== 'attract' ) {
 				return '';
 			}
@@ -527,6 +530,9 @@ store( 'core-ai/map', {
 				return false;
 			}
 			const layout = activeLayout( context );
+			if ( context.screen === 'map' && ! layout ) {
+				return false;
+			}
 			return ! (
 				hasLayoutMember( layout, context.cardId ) ||
 				isLayoutSidecar( layout, context.cardId )
