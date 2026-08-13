@@ -129,9 +129,51 @@ export const patchKioskIndex = ( html ) => {
 		</style>
 		<script>
 			(() => {
+				const originalLoadingMessage = 'Preparing WordPress';
+				const kioskLoadingMessage = 'Building a real WordPress 7.0 site in your browser — no server, about 45 seconds.';
+				const rewriteLoadingMessage = () => {
+					if (!document.body) {
+						return false;
+					}
+
+					const textNodes = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+					let textNode = textNodes.nextNode();
+
+					while (textNode) {
+						if (textNode.nodeValue.includes(originalLoadingMessage)) {
+							textNode.nodeValue = textNode.nodeValue.replace(originalLoadingMessage, kioskLoadingMessage);
+							return true;
+						}
+						textNode = textNodes.nextNode();
+					}
+
+					return false;
+				};
+				const watchLoadingMessage = () => {
+					if (rewriteLoadingMessage()) {
+						return;
+					}
+
+					const observer = new MutationObserver(() => {
+						if (rewriteLoadingMessage()) {
+							observer.disconnect();
+						}
+					});
+					observer.observe(document.body, {
+						childList: true,
+						characterData: true,
+						subtree: true,
+					});
+				};
 				const url = new URL(window.location.href);
 				url.searchParams.set('blueprint-url', new URL('/kiosk-blueprint/blueprint.json', url.origin));
 				history.replaceState(null, '', url);
+
+				if (document.readyState === 'loading') {
+					document.addEventListener('DOMContentLoaded', watchLoadingMessage, { once: true });
+				} else {
+					watchLoadingMessage();
+				}
 			})();
 		</script>`;
 

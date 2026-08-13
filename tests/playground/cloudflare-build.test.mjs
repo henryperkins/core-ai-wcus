@@ -63,6 +63,12 @@ test( 'patches the official Playground shell into a local kiosk launcher', () =>
 
 	assert.match( result, /<title>Core AI Living Block Map<\/title>/ );
 	assert.match( result, /kiosk-blueprint\/blueprint\.json/ );
+	assert.match(
+		result,
+		/Building a real WordPress 7\.0 site in your browser — no server, about 45 seconds\./
+	);
+	assert.match( result, /Preparing WordPress/ );
+	assert.match( result, /MutationObserver/ );
 	assert.doesNotMatch( result, /fonts\.googleapis\.com/ );
 	assert.doesNotMatch( result, /googletagmanager\.com/ );
 } );
