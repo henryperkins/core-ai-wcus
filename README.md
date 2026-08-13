@@ -137,8 +137,7 @@ foreach ($hostName in $hosts) {
     $remote = Invoke-WebRequest `
         -Uri "$hostName/remote.html?probe=$probe" `
         -UseBasicParsing `
-        -MaximumRedirection 0 `
-        -SkipHttpErrorCheck
+        -MaximumRedirection 0
     if ($remote.StatusCode -ne 200) {
         throw "Expected 200 for $hostName/remote.html; got $($remote.StatusCode)."
     }
@@ -183,15 +182,13 @@ foreach ($hostName in $hosts) {
     }
 
     try {
-        $download = Invoke-WebRequest `
+        Invoke-WebRequest `
             -Uri "${hostName}/${artifactRelative}?probe=$probe" `
             -UseBasicParsing `
-            -OutFile $downloadPath `
-            -PassThru
+            -OutFile $downloadPath
         $downloadBytes = (Get-Item -LiteralPath $downloadPath).Length
         $downloadSha256 = (Get-FileHash -LiteralPath $downloadPath -Algorithm SHA256).Hash.ToLowerInvariant()
         if (
-            $download.StatusCode -ne 200 -or
             $downloadBytes -ne $expectedBytes -or
             $downloadSha256 -ne $expectedSha256
         ) {
