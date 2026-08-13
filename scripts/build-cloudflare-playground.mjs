@@ -140,7 +140,8 @@ export const patchKioskIndex = ( html ) => {
 					let textNode = textNodes.nextNode();
 
 					while (textNode) {
-						if (textNode.nodeValue.includes(originalLoadingMessage)) {
+						const isIgnoredElement = textNode.parentElement?.closest('script, style, noscript');
+						if (!isIgnoredElement && textNode.nodeValue.includes(originalLoadingMessage)) {
 							textNode.nodeValue = textNode.nodeValue.replace(originalLoadingMessage, kioskLoadingMessage);
 							return true;
 						}

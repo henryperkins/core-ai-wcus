@@ -69,6 +69,7 @@ test( 'patches the official Playground shell into a local kiosk launcher', () =>
 	);
 	assert.match( result, /Preparing WordPress/ );
 	assert.match( result, /MutationObserver/ );
+	assert.match( result, /closest\('script, style, noscript'\)/ );
 	assert.doesNotMatch( result, /fonts\.googleapis\.com/ );
 	assert.doesNotMatch( result, /googletagmanager\.com/ );
 } );
