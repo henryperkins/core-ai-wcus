@@ -190,6 +190,9 @@ Inter are bundled as local WOFF2 files; their license texts are in
 
 ## Development and verification
 
+The unit suite requires a PHP 8.3 CLI executable named `php` on `PATH`;
+several contract tests execute the server renderer directly.
+
 ```sh
 npm ci
 npm run generate:qr
