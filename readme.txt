@@ -72,6 +72,8 @@ Before deactivating or deleting the plugin, turn off Offline mode in the block a
 
 No. Unit tests, lint, and builds prove only local source/package state. Browser verification is separate. Safari, Add to Home Screen, Guided Access, worker behavior, and physical iPad touch and landscape acceptance require separate on-device sign-off. This plugin does not claim deployment.
 
+For every Playground booth deployment, bump all release metadata, use a fingerprinted plugin ZIP URL, compare the deployed ZIP's byte count and SHA-256 with the build manifest on both public hostnames, and clear Cache Storage, OPFS data, and service workers on every booth browser. Then perform foreground cold and warm boots, verify the visible-only 60-second reset and the operating system's reduced-motion mode, disable sleep, prefer wired networking, and prewarm the kiosk. Do not enable a persisted Playground `site-slug`; if the upstream crash dialog recurs after one foreground reload, clear site data and cold-boot again.
+
 == Development ==
 
 Run these commands when building from source:
@@ -91,6 +93,13 @@ Run these commands when building from source:
 `npm run plugin-zip`
 
 == Changelog ==
+
+= 3.1.2 =
+
+* Fingerprinted the Playground plugin ZIP and added byte-count and SHA-256 identity to the deployment manifest.
+* Replaced the generic Playground loader text with an explanation of the browser-local WordPress 7.0 boot.
+* Kept all five outside actors visible in the neutral map and removed the reviewed-date and About-control collisions.
+* Promoted booth-browser storage clearing, physical timing, reset, reduced-motion, power/network, and recovery checks into standing release gates.
 
 = 3.1.1 =
 
