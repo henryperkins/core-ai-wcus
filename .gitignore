@@ -1,4 +1,5 @@
 /node_modules
+/.worktrees/
 /core-ai-map.zip
 /dist-playground
 .DS_Store
