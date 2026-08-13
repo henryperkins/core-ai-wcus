@@ -240,6 +240,9 @@ export const pagesHeaders = `/*
   Cache-Control: public, max-age=0, must-revalidate
 `;
 
+export const pagesRedirects = `/remote.html /remote 200
+`;
+
 const writeHeaders = async ( outputDirectory ) => {
 	await writeFile(
 		join( outputDirectory, '_headers' ),
@@ -248,9 +251,18 @@ const writeHeaders = async ( outputDirectory ) => {
 	);
 };
 
+const writeRedirects = async ( outputDirectory ) => {
+	await writeFile(
+		join( outputDirectory, '_redirects' ),
+		pagesRedirects,
+		'utf8'
+	);
+};
+
 export const buildCloudflarePlayground = async ( {
 	sourceDirectory,
 	outputDirectory = defaultOutputDirectory,
+	pluginZipPath = join( projectDirectory, 'core-ai-map.zip' ),
 } ) => {
 	const source = resolve( sourceDirectory );
 	const output = resolve( outputDirectory );
@@ -285,11 +297,9 @@ export const buildCloudflarePlayground = async ( {
 		join( projectDirectory, 'playground', 'setup.php' ),
 		join( blueprintDirectory, 'setup.php' )
 	);
-	await cp(
-		join( projectDirectory, 'core-ai-map.zip' ),
-		join( blueprintDirectory, 'core-ai-map.zip' )
-	);
+	await cp( pluginZipPath, join( blueprintDirectory, 'core-ai-map.zip' ) );
 	await writeHeaders( output );
+	await writeRedirects( output );
 
 	const filesBeforeManifest = await walkFiles( output );
 	validatePagesAssetBudget( filesBeforeManifest );

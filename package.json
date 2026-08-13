@@ -22,6 +22,7 @@
 		"packages-update": "wp-scripts packages-update",
 		"plugin-zip": "wp-scripts plugin-zip",
 		"start": "wp-scripts start --experimental-modules --webpack-copy-php --blocks-manifest",
+		"test:playground": "node --test tests/playground/blueprint.test.mjs tests/playground/cloudflare-build.test.mjs",
 		"test:unit": "wp-scripts test-unit-js"
 	},
 	"dependencies": {

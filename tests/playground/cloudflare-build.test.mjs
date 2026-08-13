@@ -1,12 +1,54 @@
 import assert from 'node:assert/strict';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
+	buildCloudflarePlayground,
 	pagesHeaders,
 	patchKioskIndex,
 	requiredRuntimeDirectories,
 	validatePagesAssetBudget,
 } from '../../scripts/build-cloudflare-playground.mjs';
+
+const projectDirectory = resolve(
+	dirname( fileURLToPath( import.meta.url ) ),
+	'../..'
+);
+
+const createMinimalPlaygroundSource = async ( sourceDirectory ) => {
+	await mkdir( join( sourceDirectory, 'assets' ), { recursive: true } );
+	await mkdir( join( sourceDirectory, 'wp-7.0' ), { recursive: true } );
+	await writeFile(
+		join( sourceDirectory, 'index.html' ),
+		`<!doctype html><html><head>
+			<meta name="commit-id" content="playground-test-commit" />
+			<title>WordPress Playground</title>
+		</head><body></body></html>`
+	);
+	await writeFile(
+		join( sourceDirectory, 'assets-required-for-offline-mode.json' ),
+		'[]'
+	);
+
+	for ( const fileName of [
+		'remote.html',
+		'sw.js',
+		'blueprint-schema.json',
+		'favicon.ico',
+		'manifest.json',
+		'apple-touch-icon.png',
+		'ogimage.png',
+		'logo-192.png',
+		'logo-256.png',
+		'logo-384.png',
+		'logo-512.png',
+		'maskable-icon-512.png',
+	] ) {
+		await writeFile( join( sourceDirectory, fileName ), fileName );
+	}
+};
 
 test( 'patches the official Playground shell into a local kiosk launcher', () => {
 	const result = patchKioskIndex( `<!doctype html>
@@ -28,6 +70,36 @@ test( 'does not force cross-origin isolation onto Playground virtual pages', () 
 	assert.doesNotMatch(
 		pagesHeaders,
 		/Cross-Origin-(?:Opener|Embedder)-Policy/
+	);
+} );
+
+test( 'build emits the Pages rewrite for the literal remote.html endpoint', async ( t ) => {
+	const temporaryDirectory = await mkdtemp(
+		join( projectDirectory, '.tmp-cloudflare-build-' )
+	);
+	t.after( () => rm( temporaryDirectory, { recursive: true, force: true } ) );
+	const sourceDirectory = join( temporaryDirectory, 'source' );
+	const outputDirectory = join( temporaryDirectory, 'output' );
+	const pluginZipPath = join( temporaryDirectory, 'fixture-plugin.zip' );
+	await createMinimalPlaygroundSource( sourceDirectory );
+	await writeFile( pluginZipPath, 'fixture-plugin-zip' );
+
+	await buildCloudflarePlayground( {
+		sourceDirectory,
+		outputDirectory,
+		pluginZipPath,
+	} );
+
+	assert.equal(
+		await readFile( join( outputDirectory, '_redirects' ), 'utf8' ),
+		'/remote.html /remote 200\n'
+	);
+	assert.equal(
+		await readFile(
+			join( outputDirectory, 'kiosk-blueprint', 'core-ai-map.zip' ),
+			'utf8'
+		),
+		'fixture-plugin-zip'
 	);
 } );
 

@@ -70,7 +70,9 @@ npx wrangler pages deploy dist-playground `
 The build copies only the assets needed by the pinned runtime plus WordPress
 7.0's static fallback tree. It validates Cloudflare Pages Free's 20,000-file
 and 25 MiB-per-asset limits, removes upstream Google Fonts and analytics, and
-uses a local Blueprint and plugin ZIP. `dist-playground/` is generated and not
+uses a local Blueprint and plugin ZIP. It also emits a Pages rewrite that keeps
+the Playground runtime's literal `/remote.html` endpoint from being redirected
+to Cloudflare's extensionless route. `dist-playground/` is generated and not
 committed. Cloudflare Pages provides the required HTTPS origin; a normal HTTP
 origin cannot run Playground's service worker.
 
@@ -79,6 +81,9 @@ production and preview deployments are intentionally disabled for the Pages
 project because the repository root is not a deployable Playground artifact.
 The `wcus.hperkins.com` CNAME points to the Pages hostname in DNS-only mode;
 enabling the orange-cloud proxy prevents Pages from routing this hostname.
+Because the pre-fix `/remote.html` response was a permanent redirect, clear
+stored site data once on any booth browser that loaded the broken deployment
+before using that browser for acceptance or exhibition.
 After deployment, verify the root, `remote.html`, `sw.js`, local Blueprint, and
 plugin ZIP on both public hostnames:
 
@@ -89,12 +94,28 @@ $hosts = @(
 )
 $paths = @(
     '/',
-    '/remote.html',
     '/sw.js',
     '/kiosk-blueprint/blueprint.json',
     '/kiosk-blueprint/core-ai-map.zip'
 )
 foreach ($hostName in $hosts) {
+    $probe = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    $remote = Invoke-WebRequest `
+        -Uri "$hostName/remote.html?probe=$probe" `
+        -UseBasicParsing `
+        -MaximumRedirection 0 `
+        -SkipHttpErrorCheck
+    if ($remote.StatusCode -ne 200) {
+        throw "Expected 200 for $hostName/remote.html; got $($remote.StatusCode)."
+    }
+    if ($null -ne $remote.Headers['Location']) {
+        throw "Expected no redirect for $hostName/remote.html; got $($remote.Headers['Location'])."
+    }
+    if (-not $remote.Headers['Content-Type'].StartsWith('text/html')) {
+        throw "Expected text/html for $hostName/remote.html; got $($remote.Headers['Content-Type'])."
+    }
+    "{0} {1} {2}" -f $remote.StatusCode, $remote.Headers['Content-Type'], "$hostName/remote.html"
+
     foreach ($path in $paths) {
         $response = Invoke-WebRequest -Uri "$hostName$path" -UseBasicParsing
         $contentType = $response.Headers['Content-Type']
@@ -168,6 +189,7 @@ Inter are bundled as local WOFF2 files; their license texts are in
 npm ci
 npm run generate:qr
 npm run test:unit -- --runInBand
+npm run test:playground
 npm run lint:js
 npm run lint:css
 npm run build
