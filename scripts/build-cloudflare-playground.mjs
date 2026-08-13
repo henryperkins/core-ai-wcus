@@ -10,6 +10,7 @@ import {
 	writeFile,
 } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -266,6 +267,28 @@ export const buildCloudflarePlayground = async ( {
 } ) => {
 	const source = resolve( sourceDirectory );
 	const output = resolve( outputDirectory );
+	const blueprintPath = join(
+		projectDirectory,
+		'playground',
+		'blueprint.json'
+	);
+	const blueprintContents = await readFile( blueprintPath, 'utf8' );
+	const blueprint = JSON.parse( blueprintContents );
+	const pluginSource = blueprint.plugins?.[ 0 ]?.source;
+	const pluginSourceMatch =
+		typeof pluginSource === 'string'
+			? pluginSource.match( /^\.\/(core-ai-map-\d+\.\d+\.\d+\.zip)$/ )
+			: null;
+
+	if ( blueprint.plugins?.length !== 1 || ! pluginSourceMatch ) {
+		throw new Error(
+			'The kiosk Blueprint must reference exactly one fingerprinted core-ai-map plugin ZIP.'
+		);
+	}
+
+	const pluginFileName = pluginSourceMatch[ 1 ];
+	const pluginArtifactPath = `kiosk-blueprint/${ pluginFileName }`;
+	const pluginContents = await readFile( pluginZipPath );
 
 	if ( ! isInside( projectDirectory, output ) ) {
 		throw new Error(
@@ -289,15 +312,19 @@ export const buildCloudflarePlayground = async ( {
 
 	const blueprintDirectory = join( output, 'kiosk-blueprint' );
 	await mkdir( blueprintDirectory, { recursive: true } );
-	await cp(
-		join( projectDirectory, 'playground', 'blueprint.json' ),
-		join( blueprintDirectory, 'blueprint.json' )
+	await writeFile(
+		join( blueprintDirectory, 'blueprint.json' ),
+		blueprintContents,
+		'utf8'
 	);
 	await cp(
 		join( projectDirectory, 'playground', 'setup.php' ),
 		join( blueprintDirectory, 'setup.php' )
 	);
-	await cp( pluginZipPath, join( blueprintDirectory, 'core-ai-map.zip' ) );
+	await writeFile(
+		join( blueprintDirectory, pluginFileName ),
+		pluginContents
+	);
 	await writeHeaders( output );
 	await writeRedirects( output );
 
@@ -319,6 +346,13 @@ export const buildCloudflarePlayground = async ( {
 				playgroundCommit: commit,
 				wordpressVersion: '7.0',
 				phpVersion: '8.3',
+				pluginArtifact: {
+					path: pluginArtifactPath,
+					bytes: pluginContents.byteLength,
+					sha256: createHash( 'sha256' )
+						.update( pluginContents )
+						.digest( 'hex' ),
+				},
 				fileCount: filesBeforeManifest.length + 1,
 			},
 			null,

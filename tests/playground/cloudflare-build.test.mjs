@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
@@ -96,11 +97,31 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 	);
 	assert.equal(
 		await readFile(
-			join( outputDirectory, 'kiosk-blueprint', 'core-ai-map.zip' ),
+			join( outputDirectory, 'kiosk-blueprint', 'core-ai-map-3.1.2.zip' ),
 			'utf8'
 		),
 		'fixture-plugin-zip'
 	);
+	await assert.rejects(
+		readFile(
+			join( outputDirectory, 'kiosk-blueprint', 'core-ai-map.zip' )
+		),
+		{ code: 'ENOENT' }
+	);
+
+	const deploymentManifest = JSON.parse(
+		await readFile(
+			join( outputDirectory, 'deployment-manifest.json' ),
+			'utf8'
+		)
+	);
+	assert.deepEqual( deploymentManifest.pluginArtifact, {
+		path: 'kiosk-blueprint/core-ai-map-3.1.2.zip',
+		bytes: Buffer.byteLength( 'fixture-plugin-zip' ),
+		sha256: createHash( 'sha256' )
+			.update( 'fixture-plugin-zip' )
+			.digest( 'hex' ),
+	} );
 } );
 
 test( 'ships the pinned WordPress static fallback tree', () => {

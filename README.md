@@ -1,6 +1,6 @@
 # Core AI Living Block Map
 
-Version and design: **3.1.1**. Core AI Living Block Map is one dynamic,
+Version and design: **3.1.2**. Core AI Living Block Map is one dynamic,
 server-rendered `core-ai/core-ai-map` block for explaining how WordPress and AI
 building blocks fit together on a kiosk. Its server markup is enhanced by the
 WordPress Interactivity API. The repository also contains a reproducible,
