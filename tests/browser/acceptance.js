@@ -195,13 +195,28 @@ async ( page ) => {
 			.querySelector( '.core-ai-map__hint' )
 			.getBoundingClientRect();
 
-		return {
-			actors: [
-				...document.querySelectorAll( '.core-ai-map__actor' ),
-			].map( ( actor ) => ( {
+		const actors = [
+			...document.querySelectorAll( '.core-ai-map__actor' ),
+		].map( ( actor ) => ( {
 				hidden: actor.hidden,
+				id: actor.className.match( /core-ai-map__actor--([a-z-]+)/ )[ 1 ],
 				opacity: getComputedStyle( actor ).opacity,
-			} ) ),
+				rect: actor.getBoundingClientRect().toJSON(),
+			} ) );
+		const actorOverlaps = [];
+		for ( let first = 0; first < actors.length; first += 1 ) {
+			for ( let second = first + 1; second < actors.length; second += 1 ) {
+				if ( overlapArea( actors[ first ].rect, actors[ second ].rect ) ) {
+					actorOverlaps.push(
+						`${ actors[ first ].id }/${ actors[ second ].id }`
+					);
+				}
+			}
+		}
+
+		return {
+			actors,
+			actorOverlaps,
 			reviewedHintOverlap: overlapArea( reviewed, hint ),
 		};
 	} );
@@ -212,6 +227,10 @@ async ( page ) => {
 				( actor ) => ! actor.hidden && actor.opacity === '0.42'
 			),
 		'Neutral map did not keep all five outside actors visible and dimmed.'
+	);
+	assert(
+		neutral.actorOverlaps.length === 0,
+		`Neutral actors overlapped: ${ neutral.actorOverlaps.join( ', ' ) }`
 	);
 	assert(
 		neutral.reviewedHintOverlap === 0,

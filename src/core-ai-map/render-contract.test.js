@@ -161,6 +161,50 @@ echo ob_get_clean();
 };
 
 describe( 'Core AI map render contract', () => {
+	it( 'gives all five neutral actors distinct outside-column positions', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup();
+		const actors = Array.from(
+			container.querySelectorAll( '.core-ai-map__actor' )
+		).map( ( actor ) => ( {
+			id: actor.className.match( /core-ai-map__actor--([a-z-]+)/ )[ 1 ],
+			x: Number.parseFloat( actor.style.getPropertyValue( '--cai-x' ) ),
+			y: Number.parseFloat( actor.style.getPropertyValue( '--cai-y' ) ),
+			width: 180,
+			height: 120,
+		} ) );
+		const overlaps = [];
+
+		for ( let first = 0; first < actors.length; first += 1 ) {
+			for (
+				let second = first + 1;
+				second < actors.length;
+				second += 1
+			) {
+				const one = actors[ first ];
+				const two = actors[ second ];
+				if (
+					one.x < two.x + two.width &&
+					one.x + one.width > two.x &&
+					one.y < two.y + two.height &&
+					one.y + one.height > two.y
+				) {
+					overlaps.push( `${ one.id }/${ two.id }` );
+				}
+			}
+		}
+
+		expect( actors ).toHaveLength( 5 );
+		expect( overlaps ).toEqual( [] );
+		expect(
+			actors.every( ( actor ) =>
+				actor.id === 'provider'
+					? actor.x >= 1030
+					: actor.x + actor.width <= 240
+			)
+		).toBe( true );
+	} );
+
 	it( 'keeps Connectors beside the provider request path, not inside it', () => {
 		const context = renderDefaultContext();
 
@@ -241,8 +285,8 @@ describe( 'Core AI map render contract', () => {
 		} );
 		expect( context.layout.learns.place.agent ).toEqual( [ 24, 320 ] );
 		expect( context.layout.learns.place.task ).toEqual( [ 24, 490 ] );
-		expect( context.neutral.agent ).toEqual( [ 24, 320 ] );
-		expect( context.neutral.task ).toEqual( [ 24, 490 ] );
+		expect( context.neutral.agent ).toEqual( [ 24, 376 ] );
+		expect( context.neutral.task ).toEqual( [ 24, 508 ] );
 		expect( context.layout.learns.edges ).toEqual( [
 			'M114 276 L114 314',
 			'M114 446 L114 484',

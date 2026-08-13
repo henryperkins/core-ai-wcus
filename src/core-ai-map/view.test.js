@@ -145,8 +145,11 @@ describe( 'Core AI Living Block Map', () => {
 				mcp: [ 122, 400 ],
 				abilities: [ 556, 400 ],
 				bench: [ 556, 672 ],
-				assistant: [ 24, 176 ],
+				assistant: [ 24, 112 ],
+				skills: [ 24, 244 ],
+				agent: [ 24, 376 ],
 				provider: [ 1150, 330 ],
+				task: [ 24, 508 ],
 			},
 			loose: {
 				plugin: [ -38, 26, -1.4 ],

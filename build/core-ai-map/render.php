@@ -32,11 +32,11 @@ $neutral = array(
 	'mcp'        => array( 122, 400 ),
 	'abilities'  => array( 556, 400 ),
 	'bench'      => array( 556, 672 ),
-	'assistant'  => array( 24, 176 ),
-	'skills'     => array( 24, 176 ),
-	'agent'      => array( 24, 320 ),
+	'assistant'  => array( 24, 112 ),
+	'skills'     => array( 24, 244 ),
+	'agent'      => array( 24, 376 ),
 	'provider'   => array( 1150, 330 ),
-	'task'       => array( 24, 490 ),
+	'task'       => array( 24, 508 ),
 );
 
 /**
