@@ -1,4 +1,5 @@
 /node_modules
 /core-ai-map.zip
+/dist-playground
 .DS_Store
 npm-debug.log*

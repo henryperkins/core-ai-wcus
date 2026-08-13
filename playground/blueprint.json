@@ -1,0 +1,40 @@
+{
+	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
+	"version": 2,
+	"blueprintMeta": {
+		"name": "Core AI Living Block Map",
+		"description": "A self-contained WordPress Playground kiosk showing the Core AI Living Block Map.",
+		"version": "3.1.1",
+		"authors": [
+			"WordPress Contributors"
+		],
+		"license": "GPL-2.0-or-later"
+	},
+	"applicationOptions": {
+		"wordpress-playground": {
+			"landingPage": "/living-block-map/",
+			"login": false,
+			"networkAccess": false
+		}
+	},
+	"contentBaseline": "empty",
+	"wordpressVersion": "7.0",
+	"phpVersion": "8.3",
+	"siteOptions": {
+		"blogname": "Core AI Living Block Map",
+		"permalink_structure": "/%postname%/"
+	},
+	"plugins": [
+		{
+			"source": "./core-ai-map.zip",
+			"targetDirectoryName": "core-ai-map",
+			"humanReadableName": "Core AI Living Block Map"
+		}
+	],
+	"additionalStepsAfterExecution": [
+		{
+			"step": "runPHP",
+			"code": "./setup.php"
+		}
+	]
+}

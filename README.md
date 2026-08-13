@@ -1,23 +1,15 @@
-# Core AI Living Map
+# Core AI Living Block Map
 
-A self-guided, server-rendered WordPress block for exploring the Core AI
-ecosystem on a landscape iPad. It includes an attract screen, six project
-details, four guided paths, an inactivity reset, accessible keyboard behavior,
-Home Screen metadata, and offline caching.
+Version and design: **3.1.1**. Core AI Living Block Map is one dynamic,
+server-rendered `core-ai/core-ai-map` block for explaining how WordPress and AI
+building blocks fit together on a kiosk. Its server markup is enhanced by the
+WordPress Interactivity API. The repository also contains a reproducible,
+self-hosted WordPress Playground artifact for static-hosted demonstrations.
 
-## Requirements
+## Install and create the kiosk page
 
-- WordPress 6.8 or newer
-- PHP 7.4 or newer
-- HTTPS for offline caching and the screen wake lock
-- Node.js and npm only when building from source
-
-## Install
-
-For a production install, upload `core-ai-map.zip` in **Plugins > Add New >
-Upload Plugin**, then activate **Core AI Living Map**.
-
-To create the installable zip from source:
+Build an uploadable ZIP, then upload it from **Plugins > Add New > Upload
+Plugin** and activate it:
 
 ```sh
 npm ci
@@ -25,91 +17,135 @@ npm run build
 npm run plugin-zip
 ```
 
-The package is written to `core-ai-map.zip`.
+On a fresh page, select the theme's blank or full-width template, insert the
+single **Core AI Living Block Map** block, set it to full width, and publish a
+non-home/root permalink. The authored target is a 1366 x 1024 landscape kiosk
+stage. It is also compatible with 1024 x 768, with authored controls at least
+60 logical pixels in the header and story rail. Nested controls such as Apply
+remain 44 logical pixels, so 1024 x 768 is a compatibility view rather than a
+fully supported touch layout. Physical iPad touch acceptance is still a
+separate required sign-off.
 
-## Create the kiosk page
+The reviewed date shown by this release is **Reviewed 12 Aug 2026**.
 
-1. Create a page and choose the theme's blank or full-width template.
-2. Insert the **Core AI Living Map** block. The block is limited to one
-   instance per post.
-3. In the block sidebar, set the welcome copy, inactivity timeout, and offline
-   preference.
-4. Review the six project records and four scenario paths, then publish.
-5. Open the published URL while logged out to verify the visitor experience.
+## AI assistance and accountability
 
-The published block covers the viewport, so theme headers and footers remain
-behind the kiosk interface.
+- AI assistance: **Yes**
+- Tool: **OpenAI Codex**
+- Used for: implementation, tests, and deployment preparation.
 
-## Edit the content
+Final work was human-reviewed and tested; the human contributor remains
+responsible for it. Use the same disclosure in the description of any future
+pull request for this work.
 
-The block inspector contains:
+## Cloudflare Pages Playground exhibit
 
-- **Experience:** eyebrow, headline, introduction, attract prompt, inactivity
-  timeout, and offline caching.
-- **Projects:** name, short label, plain-language description, technical
-  detail, status, and official URL for each project.
-- **Scenario paths:** label, description, and comma-separated project IDs.
+`playground/blueprint.json` packages this same plugin into a browser-executed
+WordPress Playground kiosk. It pins WordPress 7.0 and PHP 8.3, creates the
+`/living-block-map/` page, disables Playground network access, and keeps each
+visitor's WordPress state in that visitor's browser. The page disables this
+plugin's own offline worker because Playground already owns the virtual site's
+service worker and browser-local persistence.
 
-Scenario paths may use these fixed IDs:
+Build the static Pages artifact from an official WordPress Playground static
+release directory:
 
-`abilities`, `skills`, `client`, `plugin`, `mcp`, and `bench`.
+```powershell
+npm ci
+npm run plugin-zip
+$env:PLAYGROUND_SOURCE_DIR = 'C:\path\to\wasm-wordpress-net'
+npm run build:playground
+npx wrangler pages deploy dist-playground --project-name=core-ai-living-block-map
+```
 
-The default project copy is stored when a block is inserted. Reinsert the block
-if an existing page needs newly shipped defaults, or update its inspector
-fields directly.
+The build copies only the assets needed by the pinned runtime plus WordPress
+7.0's static fallback tree. It validates Cloudflare Pages Free's 20,000-file
+and 25 MiB-per-asset limits, removes upstream Google Fonts and analytics, and
+uses a local Blueprint and plugin ZIP. `dist-playground/` is generated and not
+committed. Cloudflare Pages provides the required HTTPS origin; a normal HTTP
+origin cannot run Playground's service worker.
 
-## Set up an iPad
+## What visitors see
 
-1. Connect the iPad to power and lock rotation in landscape.
-2. Open the HTTPS kiosk URL in Safari while logged out. Reopen it once so the
-   page and current assets are available offline.
-3. Use **Share > Add to Home Screen**, then launch the new **Core AI Map** icon
-   for the full-screen experience.
-4. In **Settings > Display & Brightness**, choose an Auto-Lock setting suitable
-   for the booth. The page also requests a screen wake lock when supported.
-5. Optionally enable Guided Access in **Settings > Accessibility > Guided
-   Access**, then start it from the Home Screen app to keep visitors on the
-   display.
-6. Test the inactivity reset and, if offline mode is enabled, test once in
-   Airplane Mode before the event.
+The attract loop introduces four stories, then runs the preview through
+**assemble, path, signal, caption, and release**. After a visitor engages, the
+motion settles rather than looping continuously. With reduced motion enabled,
+the same story, path, state, and caption information remains available without
+the animation.
 
-Official project links intentionally stay inside the kiosk and display their
-URL on screen instead of navigating away.
+The stories are:
 
-## Offline behavior
+1. WordPress uses AI.
+2. AI uses WordPress.
+3. Agent Skills -> Coding agent -> A WordPress task. This work is outside the
+   site: nothing inside WordPress runs in this story.
+4. WordPress tests the result with WP-Bench.
 
-Offline mode caches the published page, block assets, WordPress Interactivity
-runtime dependencies, and app icons. External project sites are not cached.
-Revisit the kiosk URL while online after publishing content or plugin updates.
-Turning offline mode off unregisters this plugin's service worker and clears
-its cache on the next secure page load.
+The **Abilities API** inspector includes its dedicated tabs. **WP-Bench** has a
+five-stage run loop that follows the work from task and sandbox through checks
+to evidence; it is a test bench, not a live request path. The MCP Adapter is
+explicitly labelled **WordPress plugin · not in Core**.
 
-## Development
+Cards and inspectors support visible focus, inert background content while a
+detail panel is open, Escape to close, and focus restoration to the originating
+card.
+
+## Canonical QR destinations
+
+Seven committed SVG QR assets live under `assets/qr/`; they are generated
+locally and their destinations are fixed, selectable text in the inspector.
+There are no arbitrary editable QR-image or URL fields.
+
+-   Abilities: <https://developer.wordpress.org/apis/abilities-api/>
+-   AI Client: <https://developer.wordpress.org/reference/functions/wp_ai_client_prompt/>
+-   Connectors: <https://make.wordpress.org/core/2026/03/18/introducing-the-connectors-api-in-wordpress-7-0/>
+-   AI Plugin: <https://wordpress.org/plugins/ai/>
+-   MCP Adapter: <https://github.com/WordPress/mcp-adapter>
+-   WP-Bench: <https://github.com/WordPress/wp-bench>
+-   Agent Skills: <https://github.com/WordPress/agent-skills>
+
+For existing serialized blocks, canonical cards, actors, stories, and panels
+are merged with the current defaults by `id`, so this release can supply its
+new canonical structure. User-authored copy fields remain editable rather than
+being overwritten.
+
+## Offline, assets, and packaging
+
+Offline support is scoped only to a non-root kiosk permalink. It is disabled
+when the map is placed on the home/root URL, so the worker cannot take control
+of unrelated site pages. The published kiosk must also use HTTPS (localhost is
+the browser's development exception), because service workers do not register
+in an insecure HTTP context. It caches kiosk assets locally; it does not cache
+the external destinations above.
+
+The package contains the PHP bootstrap, committed `build/` block assets,
+`assets/` (icons, worker, local fonts, and QR SVGs), and plugin readmes. It does
+not require Node.js on the installed site. EB Garamond, IBM Plex Mono, and
+Inter are bundled as local WOFF2 files; their license texts are in
+`assets/fonts/`. Plugin code is GPL-2.0-or-later.
+
+## Development and verification
 
 ```sh
-npm run start       # watch source files
-npm run build       # create production assets
+npm ci
+npm run generate:qr
+npm run test:unit -- --runInBand
 npm run lint:js
 npm run lint:css
-npm run test:unit -- --runInBand
+npm run build
 npm run plugin-zip
 ```
 
-Check PHP syntax with:
+`npm run generate:qr` deterministically refreshes the seven committed local
+SVGs. `build/` remains committed so the ZIP is installable without a build step.
 
-```sh
-find . -path ./node_modules -prune -o -name '*.php' -exec php -l {} \;
-```
+Local unit, lint, and build results prove local source and package state only.
+Browser verification is a separate gate. Safari, Add to Home Screen, Guided
+Access, service-worker behavior, and physical iPad touch/landscape acceptance
+require their own on-device sign-off. A current Cloudflare Pages deployment
+still requires its own origin-level verification.
 
-Generated production files in `build/` are committed so the repository can be
-installed as a WordPress plugin without a local Node.js build.
-
-## Troubleshooting
-
-- **Offline mode or wake lock does not start:** confirm the page uses HTTPS.
-- **Old content appears offline:** reconnect, reload the kiosk URL, and reopen
-  the Home Screen app.
-- **Theme chrome is visible:** use the block's published page rather than the
-  editor preview, and select a blank or full-width page template.
-- **A scenario does not highlight:** verify that its project IDs match the six
-  supported IDs exactly.
+Before deactivating or deleting the plugin, turn off Offline mode in the block
+and load the published kiosk page once while online. That lets the active page
+unregister its scoped worker and clear its cache before the worker endpoint is
+removed.

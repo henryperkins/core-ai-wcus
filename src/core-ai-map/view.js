@@ -4,176 +4,306 @@ import {
 	store,
 	useEffect,
 } from '@wordpress/interactivity';
-import { animate, stagger } from 'motion';
 
-const animationControls = new WeakMap();
-const lastProjectTriggers = new WeakMap();
+const STAGE_WIDTH = 1366;
+const STAGE_HEIGHT = 1024;
+const FLOW_SETTLE_DELAY = 2900;
+const ATTRACT_TIMELINE = {
+	drawing: 560,
+	signalling: 1000,
+	settled: 2900,
+	releasing: 5200,
+	next: 6500,
+	restart: 8000,
+};
+
 const resetSchedulers = new WeakMap();
-const toastTimers = new WeakMap();
+const attractSchedulers = new WeakMap();
+const flowTimers = new WeakMap();
+const attractTimers = new WeakMap();
+const lastCardTriggers = new WeakMap();
+const lastBenchTriggers = new WeakMap();
+const lastAboutTriggers = new WeakMap();
 
 const getRoot = ( element ) => element?.closest( '.core-ai-map' );
 
-const getScenarioPath = ( context ) =>
-	context.scenarioPaths?.[ context.activeScenario ] || [];
+const getObservedStaticAssets = () => {
+	try {
+		return performance
+			.getEntriesByType( 'resource' )
+			.map( ( entry ) => entry.name )
+			.filter( ( assetUrl ) => {
+				const url = new URL( assetUrl, window.location.href );
+				return (
+					url.origin === window.location.origin &&
+					[ ...url.searchParams.keys() ].every(
+						( key ) => key === 'ver'
+					) &&
+					/\.(?:css|m?js|woff2|svg|png)$/i.test( url.pathname )
+				);
+			} );
+	} catch {
+		return [];
+	}
+};
+
+const isolateKioskPage = ( root ) => {
+	const records = [];
+	let branch = root;
+
+	while ( branch?.parentElement ) {
+		const parent = branch.parentElement;
+		for ( const sibling of parent.children ) {
+			if ( sibling === branch ) {
+				continue;
+			}
+			records.push( {
+				element: sibling,
+				hadInert: sibling.hasAttribute( 'inert' ),
+				inert: sibling.inert,
+				hadAriaHidden: sibling.hasAttribute( 'aria-hidden' ),
+				ariaHidden: sibling.getAttribute( 'aria-hidden' ),
+			} );
+			sibling.inert = true;
+			sibling.setAttribute( 'aria-hidden', 'true' );
+		}
+		if ( parent === root.ownerDocument.body ) {
+			break;
+		}
+		branch = parent;
+	}
+
+	return () => {
+		for ( const record of records ) {
+			if ( record.hadInert ) {
+				record.element.inert = record.inert;
+			} else {
+				record.element.inert = false;
+				record.element.removeAttribute( 'inert' );
+			}
+			if ( record.hadAriaHidden ) {
+				record.element.setAttribute( 'aria-hidden', record.ariaHidden );
+			} else {
+				record.element.removeAttribute( 'aria-hidden' );
+			}
+		}
+	};
+};
+
+const activeLayout = ( context ) =>
+	( context.story && context.layout?.[ context.story ] ) || null;
+
+const previewList = ( context ) => {
+	if ( Array.isArray( context.previews ) && context.previews.length ) {
+		return context.previews;
+	}
+
+	return ( context.storyIds || [] )
+		.map( ( storyId ) => {
+			const layout = context.layout?.[ storyId ];
+			if ( ! layout ) {
+				return null;
+			}
+			return {
+				storyId,
+				ids: Object.keys( layout.members || {} ),
+				at: layout.place || {},
+				scale: 1,
+			};
+		} )
+		.filter( Boolean );
+};
+
+const activePreview = ( context ) => {
+	const previews = previewList( context );
+	if ( ! previews.length ) {
+		return null;
+	}
+	return previews[ context.previewIndex % previews.length ] || previews[ 0 ];
+};
+
+const isRecomposed = ( context ) =>
+	Boolean( activeLayout( context ) ) && context.recompose !== false;
+
+const reducedMotion = ( root ) =>
+	Boolean(
+		root?.ownerDocument?.defaultView?.matchMedia?.(
+			'(prefers-reduced-motion: reduce)'
+		).matches ??
+			window.matchMedia?.( '(prefers-reduced-motion: reduce)' ).matches
+	);
+
+const isCurrentPathVariant = ( context ) => {
+	if ( ! context.story || context.storyId !== context.story ) {
+		return false;
+	}
+	return (
+		context.variant === ( context.recompose === false ? 'rest' : 'edges' )
+	);
+};
 
 const focusElement = ( element, delay = 40 ) => {
 	if ( ! element ) {
 		return;
 	}
-
-	window.setTimeout( () => {
-		element.focus( { preventScroll: true } );
-	}, delay );
+	window.setTimeout( () => element.focus( { preventScroll: true } ), delay );
 };
 
 const focusWithin = ( root, selector, delay = 40 ) => {
-	if ( ! root ) {
-		return;
+	if ( root ) {
+		window.setTimeout(
+			() =>
+				root
+					.querySelector( selector )
+					?.focus( { preventScroll: true } ),
+			delay
+		);
 	}
-
-	window.setTimeout( () => {
-		root.querySelector( selector )?.focus( { preventScroll: true } );
-	}, delay );
 };
 
-const stopAnimations = ( root ) => {
-	( animationControls.get( root ) || [] ).forEach( ( control ) => {
-		control.stop?.();
-	} );
-	animationControls.delete( root );
+const clearTimers = ( timers, root ) => {
+	for ( const timer of timers.get( root ) || [] ) {
+		window.clearTimeout( timer );
+	}
+	timers.set( root, [] );
 };
 
-const cleanMotionStyles = ( root ) => {
-	root.querySelectorAll(
-		'.core-ai-map__node, .core-ai-map__paths path, .core-ai-map__prompt, .core-ai-map__details'
-	).forEach( ( element ) => {
-		element.style.removeProperty( 'opacity' );
-		element.style.removeProperty( 'transform' );
-		element.style.removeProperty( 'stroke-dashoffset' );
-		element.style.removeProperty( 'box-shadow' );
-	} );
+const addTimer = ( timers, root, callback, delay ) => {
+	const timer = window.setTimeout( callback, delay );
+	const current = timers.get( root ) || [];
+	current.push( timer );
+	timers.set( root, current );
+	return timer;
 };
 
-const runMotion = ( root, screen ) => {
-	stopAnimations( root );
-	cleanMotionStyles( root );
-
-	const reduceMotion = window.matchMedia(
-		'(prefers-reduced-motion: reduce)'
-	).matches;
-	root.classList.toggle( 'core-ai-map--reduce-motion', reduceMotion );
-
-	if ( reduceMotion || document.visibilityState === 'hidden' ) {
-		return undefined;
-	}
-
-	const controls = [];
-	const nodes = root.querySelectorAll( '.core-ai-map__node' );
-	const activeNodes = root.querySelectorAll( '.core-ai-map__node.is-active' );
-	const activePaths = root.querySelectorAll(
-		'.core-ai-map__paths path.is-active'
-	);
-
-	if ( screen === 'attract' ) {
-		nodes.forEach( ( node, index ) => {
-			controls.push(
-				animate(
-					node,
-					{ y: [ 0, index % 2 === 0 ? -7 : 7, 0 ] },
-					{
-						duration: 5.5 + index * 0.25,
-						delay: index * 0.18,
-						ease: 'easeInOut',
-						repeat: Infinity,
-					}
-				)
-			);
-		} );
-		controls.push(
-			animate(
-				root.querySelector( '.core-ai-map__prompt' ),
-				{
-					boxShadow: [
-						'0 14px 36px rgba(56, 88, 233, 0.2)',
-						'0 18px 52px rgba(56, 88, 233, 0.38)',
-						'0 14px 36px rgba(56, 88, 233, 0.2)',
-					],
-				},
-				{ duration: 3.2, ease: 'easeInOut', repeat: Infinity }
-			)
-		);
-	}
-
-	if ( screen === 'map' ) {
-		controls.push(
-			animate(
-				nodes,
-				{ opacity: [ 0, 1 ], scale: [ 0.88, 1 ], y: [ 20, 0 ] },
-				{
-					duration: 0.5,
-					delay: stagger( 0.055 ),
-					ease: [ 0.22, 1, 0.36, 1 ],
-				}
-			)
-		);
-	}
-
-	if ( screen === 'detail' ) {
-		const details = root.querySelector( '.core-ai-map__details' );
-
-		if ( details ) {
-			controls.push(
-				animate(
-					details,
-					{ opacity: [ 0, 1 ], x: [ 44, 0 ] },
-					{ duration: 0.4, ease: [ 0.22, 1, 0.36, 1 ] }
-				)
-			);
-		}
-	}
-
-	if ( activeNodes.length ) {
-		controls.push(
-			animate(
-				activeNodes,
-				{ scale: [ 1, 1.035, 1 ] },
-				{
-					duration: 1.6,
-					delay: stagger( 0.12 ),
-					ease: 'easeInOut',
-				}
-			)
-		);
-	}
-
-	activePaths.forEach( ( path, index ) => {
-		controls.push(
-			animate(
-				path,
-				{ strokeDashoffset: [ 1, 0 ] },
-				{
-					duration: 1.25,
-					delay: index * 0.14,
-					ease: 'linear',
-					repeat: screen === 'attract' ? Infinity : 1,
-				}
-			)
-		);
-	} );
-
-	animationControls.set( root, controls.filter( Boolean ) );
-
-	return () => stopAnimations( root );
+const setPreviewPhase = ( context, phase ) => {
+	context.previewPhase = phase;
+	// Retained as an alias for the original RED contract and assistive tooling.
+	context.attractPhase = phase;
 };
 
 const setAttractState = ( context ) => {
-	const scenarioIds = Object.keys( context.scenarioPaths || {} );
 	context.screen = 'attract';
-	context.selectedProject = '';
-	context.activeScenario = scenarioIds[ 0 ] || '';
-	context.idleScenarioIndex = 0;
-	context.toast = '';
-	context.announcement = 'The Core AI map returned to its welcome screen.';
+	context.aboutReturnScreen = '';
+	context.story = '';
+	context.inspect = '';
+	context.previewIndex = 0;
+	context.flowPhase = 'settled';
+	context.storyMotionPhase = 'settled';
+	context.benchPathsLive = false;
+	context.suggestion = Math.floor( ( context.suggestion || 0 ) / 2 ) * 2;
+	setPreviewPhase( context, 'assembling' );
+	context.announcement =
+		'The Living Block Map returned to its welcome screen.';
+};
+
+const startAttractCycle = ( root, context ) => {
+	if ( ! root ) {
+		return;
+	}
+	clearTimers( attractTimers, root );
+
+	const run = () => {
+		if ( context.screen !== 'attract' ) {
+			return;
+		}
+
+		setPreviewPhase(
+			context,
+			reducedMotion( root ) ? 'settled' : 'assembling'
+		);
+		if ( ! reducedMotion( root ) ) {
+			addTimer(
+				attractTimers,
+				root,
+				() => {
+					if ( context.screen === 'attract' ) {
+						setPreviewPhase( context, 'drawing' );
+					}
+				},
+				ATTRACT_TIMELINE.drawing
+			);
+			addTimer(
+				attractTimers,
+				root,
+				() => {
+					if ( context.screen === 'attract' ) {
+						setPreviewPhase( context, 'signalling' );
+					}
+				},
+				ATTRACT_TIMELINE.signalling
+			);
+			addTimer(
+				attractTimers,
+				root,
+				() => {
+					if ( context.screen === 'attract' ) {
+						setPreviewPhase( context, 'settled' );
+					}
+				},
+				ATTRACT_TIMELINE.settled
+			);
+			addTimer(
+				attractTimers,
+				root,
+				() => {
+					if ( context.screen === 'attract' ) {
+						setPreviewPhase( context, 'releasing' );
+					}
+				},
+				ATTRACT_TIMELINE.releasing
+			);
+		}
+
+		addTimer(
+			attractTimers,
+			root,
+			() => {
+				if ( context.screen !== 'attract' ) {
+					return;
+				}
+				const previews = previewList( context );
+				context.previewIndex = previews.length
+					? ( context.previewIndex + 1 ) % previews.length
+					: 0;
+				setPreviewPhase(
+					context,
+					reducedMotion( root ) ? 'settled' : 'assembling'
+				);
+			},
+			ATTRACT_TIMELINE.next
+		);
+
+		addTimer( attractTimers, root, run, ATTRACT_TIMELINE.restart );
+	};
+
+	attractSchedulers.set( root, () => startAttractCycle( root, context ) );
+	run();
+};
+
+const runFlow = ( root, context, { bench = false } = {} ) => {
+	if ( root ) {
+		clearTimers( flowTimers, root );
+	}
+	context.flowPhase = reducedMotion( root ) ? 'settled' : 'transition';
+	context.storyMotionPhase = context.flowPhase;
+	context.benchPathsLive = Boolean(
+		bench && context.flowPhase === 'transition'
+	);
+
+	if ( context.flowPhase !== 'transition' || ! root ) {
+		return;
+	}
+	addTimer(
+		flowTimers,
+		root,
+		() => {
+			context.flowPhase = 'settled';
+			context.storyMotionPhase = 'settled';
+			context.benchPathsLive = false;
+		},
+		FLOW_SETTLE_DELAY
+	);
 };
 
 store( 'core-ai/map', {
@@ -181,213 +311,563 @@ store( 'core-ai/map', {
 		get isAttract() {
 			return getContext().screen === 'attract';
 		},
+		get isNotAttract() {
+			return getContext().screen !== 'attract';
+		},
 		get isMap() {
 			return getContext().screen === 'map';
 		},
-		get isDetail() {
-			return getContext().screen === 'detail';
+		get isInspect() {
+			return getContext().screen === 'inspect';
 		},
-		get isNotDetail() {
-			return getContext().screen !== 'detail';
+		get isNotInspect() {
+			return getContext().screen !== 'inspect';
 		},
-		get isExperienceInactive() {
-			const { screen } = getContext();
-			return screen === 'attract' || screen === 'detail';
+		get isBench() {
+			return getContext().screen === 'bench';
+		},
+		get isAbout() {
+			return getContext().screen === 'about';
+		},
+		get isNotAbout() {
+			return getContext().screen !== 'about';
+		},
+		get isAboutControlHidden() {
+			return [ 'about', 'inspect', 'bench' ].includes(
+				getContext().screen
+			);
+		},
+		get isNotBench() {
+			return getContext().screen !== 'bench';
+		},
+		get isCanvasHidden() {
+			return getContext().screen !== 'map';
+		},
+		get isCanvasInert() {
+			return getContext().screen !== 'map';
+		},
+		get isHintHidden() {
+			return getContext().screen !== 'map';
+		},
+		get isResetHidden() {
+			return getContext().screen !== 'map';
+		},
+		get isRailHidden() {
+			return getContext().screen !== 'map';
+		},
+		get hasStory() {
+			return Boolean( activeLayout( getContext() ) );
 		},
 		get isOnline() {
 			return ! getContext().isOffline;
 		},
-		get isOffline() {
-			return getContext().isOffline;
-		},
-		get hasScenario() {
-			return Boolean( getContext().activeScenario );
-		},
-		get isScenarioSelected() {
-			const context = getContext();
-			return (
-				Boolean( context.scenarioId ) &&
-				context.scenarioId === context.activeScenario
-			);
-		},
-		get isScenarioNotSelected() {
-			const context = getContext();
-			return context.scenarioId !== context.activeScenario;
-		},
-		get isProjectSelected() {
-			const context = getContext();
-			return (
-				Boolean( context.projectId ) &&
-				context.projectId === context.selectedProject
-			);
-		},
-		get isProjectNotSelected() {
-			const context = getContext();
-			return context.projectId !== context.selectedProject;
-		},
-		get isProjectActive() {
-			const context = getContext();
-			const path = getScenarioPath( context );
 
+		get isStorySelected() {
+			const context = getContext();
 			return (
-				context.projectId === context.selectedProject ||
-				path.includes( context.projectId )
+				Boolean( context.storyId ) && context.storyId === context.story
 			);
 		},
-		get isProjectDimmed() {
+		get isStoryNotSelected() {
 			const context = getContext();
+			return context.storyId !== context.story;
+		},
+		get isStoryCopyHidden() {
+			const context = getContext();
+			return context.screen !== 'map' || ! activeLayout( context );
+		},
 
-			if ( context.selectedProject ) {
-				return context.projectId !== context.selectedProject;
+		get cardTransform() {
+			const context = getContext();
+			const neutral = context.neutral?.[ context.cardId ];
+			if ( ! neutral ) {
+				return '';
 			}
 
-			const path = getScenarioPath( context );
-			return path.length > 0 && ! path.includes( context.projectId );
-		},
-		get isPathActive() {
-			const context = getContext();
-			const path = getScenarioPath( context );
+			if ( context.screen === 'attract' ) {
+				const preview = activePreview( context );
+				const place = preview?.at?.[ context.cardId ];
+				if ( place && context.previewPhase !== 'releasing' ) {
+					return `translate(${ place[ 0 ] - neutral[ 0 ] }px, ${
+						place[ 1 ] - neutral[ 1 ]
+					}px) scale(${ preview.scale ?? 1 })`;
+				}
+				const loose = context.loose?.[ context.cardId ];
+				return loose
+					? `translate(${ loose[ 0 ] }px, ${ loose[ 1 ] }px) rotate(${ loose[ 2 ] }deg)`
+					: '';
+			}
 
-			return path.some( ( projectId, index ) => {
-				const nextProjectId = path[ index + 1 ];
-				return (
-					( projectId === context.fromProject &&
-						nextProjectId === context.toProject ) ||
-					( projectId === context.toProject &&
-						nextProjectId === context.fromProject )
-				);
-			} );
+			const layout = activeLayout( context );
+			if ( ! layout || context.recompose === false ) {
+				return '';
+			}
+			const place = layout.place?.[ context.cardId ];
+			if ( place ) {
+				return `translate(${ place[ 0 ] - neutral[ 0 ] }px, ${
+					place[ 1 ] - neutral[ 1 ]
+				}px)`;
+			}
+			const slot = ( layout.park || [] ).indexOf( context.cardId );
+			if ( slot < 0 ) {
+				return '';
+			}
+			const shelfIndex = ( layout.shelfStart || 0 ) + slot;
+			const shelfX =
+				context.shelfX?.[ shelfIndex ] ?? context.shelfX?.[ 0 ] ?? 0;
+			return `translate(${ shelfX - neutral[ 0 ] }px, ${
+				layout.shelfY - neutral[ 1 ]
+			}px)`;
+		},
+		get cardStep() {
+			const context = getContext();
+			if ( context.screen === 'attract' ) {
+				if ( context.previewPhase === 'releasing' ) {
+					return '';
+				}
+				const previewStep =
+					activePreview( context )?.ids?.indexOf( context.cardId ) ??
+					-1;
+				return previewStep >= 0 ? String( previewStep + 1 ) : '';
+			}
+			const step = activeLayout( context )?.members?.[ context.cardId ];
+			return step ? String( step ) : '';
+		},
+		get isCardActive() {
+			const context = getContext();
+			if ( context.screen === 'attract' ) {
+				return this.isPreviewMember;
+			}
+			return Boolean(
+				activeLayout( context )?.members?.[ context.cardId ]
+			);
+		},
+		get isCardParked() {
+			const context = getContext();
+			const layout = activeLayout( context );
+			return Boolean(
+				isRecomposed( context ) &&
+					! layout.members[ context.cardId ] &&
+					layout.park?.includes( context.cardId )
+			);
+		},
+		get isPreviewMember() {
+			const context = getContext();
+			return Boolean(
+				context.screen === 'attract' &&
+					context.previewPhase !== 'releasing' &&
+					activePreview( context )?.ids?.includes( context.cardId )
+			);
+		},
+		get cardOpacity() {
+			const context = getContext();
+			if ( context.screen !== 'attract' ) {
+				return '';
+			}
+			if ( this.isPreviewMember ) {
+				return '1';
+			}
+			return context.previewPhase === 'releasing' ? '0.62' : '0.2';
+		},
+		get isCardDimmed() {
+			const context = getContext();
+			const layout = activeLayout( context );
+			return Boolean(
+				layout &&
+					! isRecomposed( context ) &&
+					! layout.members[ context.cardId ]
+			);
+		},
+		get isCardOffstage() {
+			const context = getContext();
+			if ( context.screen === 'attract' ) {
+				return false;
+			}
+			return ! activeLayout( context )?.members?.[ context.cardId ];
+		},
+		get isCardInspected() {
+			const context = getContext();
+			return context.cardId === context.inspect;
+		},
+		get isCardNotInspected() {
+			const context = getContext();
+			return context.cardId !== context.inspect;
+		},
+
+		get isStripLive() {
+			const context = getContext();
+			if ( context.shapes === false ) {
+				return false;
+			}
+			if ( context.inspect === context.cardId ) {
+				return true;
+			}
+			const layout = activeLayout( context );
+			return Boolean(
+				context.screen === 'map' &&
+					layout?.members?.[ context.cardId ] &&
+					! layout.noStrip?.includes( context.cardId )
+			);
+		},
+		get isStripHidden() {
+			return ! this.isStripLive;
+		},
+		get stripTop() {
+			const context = getContext();
+			return `${
+				activeLayout( context )?.strips?.[ context.cardId ]?.[ 1 ] ??
+				158
+			}px`;
+		},
+
+		get isRuleLit() {
+			const context = getContext();
+			return ( activeLayout( context )?.crosses || [] ).includes(
+				context.side
+			);
+		},
+		get areHairlinesHidden() {
+			const context = getContext();
+			return context.screen === 'attract' || isRecomposed( context );
+		},
+		get isOutsideZoneLit() {
+			return activeLayout( getContext() )?.zone === 'outside';
+		},
+		get isShelfHidden() {
+			return ! isRecomposed( getContext() );
+		},
+		get shelfTop() {
+			const layout = activeLayout( getContext() );
+			return `${ layout ? layout.shelfY - 22 : 490 }px`;
+		},
+		get shelfLeft() {
+			const context = getContext();
+			const layout = activeLayout( context );
+			return `${
+				layout ? context.shelfX?.[ layout.shelfStart || 0 ] ?? 250 : 250
+			}px`;
+		},
+
+		get isPathVisible() {
+			return isCurrentPathVariant( getContext() );
+		},
+		get isEdgeLive() {
+			const context = getContext();
+			return Boolean(
+				isCurrentPathVariant( context ) &&
+					( context.flowPhase ?? 'transition' ) === 'transition' &&
+					! reducedMotion( getRoot( getElement().ref ) )
+			);
+		},
+		get isSparkLive() {
+			const context = getContext();
+			return Boolean(
+				this.isEdgeLive &&
+					! activeLayout( context )?.tokens &&
+					context.screen === 'map'
+			);
+		},
+		get areTokensLive() {
+			const context = getContext();
+			return Boolean(
+				this.isEdgeLive &&
+					activeLayout( context )?.tokens &&
+					context.shapes !== false &&
+					context.screen === 'map'
+			);
+		},
+		get areTokensVisible() {
+			const context = getContext();
+			return Boolean(
+				activeLayout( context )?.tokens &&
+					context.shapes !== false &&
+					context.screen === 'map'
+			);
+		},
+
+		get isPreviewHidden() {
+			const context = getContext();
+			return (
+				context.screen !== 'attract' ||
+				Number( context.previewId ) !== Number( context.previewIndex )
+			);
+		},
+		get isPreviewPathVisible() {
+			const context = getContext();
+			return Boolean(
+				! this.isPreviewHidden &&
+					( reducedMotion( getRoot( getElement().ref ) ) ||
+						[ 'drawing', 'signalling', 'settled' ].includes(
+							context.previewPhase
+						) )
+			);
+		},
+		get isPreviewTextVisible() {
+			const context = getContext();
+			return Boolean(
+				! this.isPreviewHidden &&
+					( reducedMotion( getRoot( getElement().ref ) ) ||
+						[ 'signalling', 'settled' ].includes(
+							context.previewPhase
+						) )
+			);
+		},
+		get isPreviewSignalLive() {
+			const context = getContext();
+			return Boolean(
+				! this.isPreviewHidden &&
+					context.previewPhase === 'signalling' &&
+					! reducedMotion( getRoot( getElement().ref ) )
+			);
+		},
+
+		get suggestionLabel() {
+			const context = getContext();
+			const items = context.suggestions || [];
+			return items.length
+				? items[ Math.floor( context.suggestion / 2 ) % items.length ]
+						?.label || ''
+				: '';
+		},
+		get suggestionText() {
+			const context = getContext();
+			const items = context.suggestions || [];
+			return items.length
+				? items[ Math.floor( context.suggestion / 2 ) % items.length ]
+						?.text || ''
+				: '';
+		},
+		get suggestionPhase() {
+			return getContext().phases?.[ getContext().suggestion % 2 ] || '';
+		},
+		get isSuggestionApplied() {
+			return getContext().suggestion % 2 === 1;
+		},
+		get isSuggestionNotApplied() {
+			return ! this.isSuggestionApplied;
+		},
+
+		get isAbilityTabSelected() {
+			const context = getContext();
+			return context.tabId === context.abilitiesTab;
+		},
+		get isAbilityTabNotSelected() {
+			return ! this.isAbilityTabSelected;
+		},
+		get abilityTabIndex() {
+			return this.isAbilityTabSelected ? '0' : '-1';
+		},
+		get isBenchStageSelected() {
+			const context = getContext();
+			return context.stageId === context.benchStage;
+		},
+		get isBenchStageNotSelected() {
+			return ! this.isBenchStageSelected;
+		},
+		get benchPathsLive() {
+			return Boolean( getContext().benchPathsLive );
 		},
 		get announcement() {
 			return getContext().announcement;
 		},
-		get toast() {
-			return getContext().toast;
-		},
-		get hasNoToast() {
-			return ! getContext().toast;
-		},
 	},
+
 	actions: {
 		start() {
 			const context = getContext();
-			const { ref } = getElement();
-			const root = getRoot( ref );
-
+			const root = getRoot( getElement().ref );
+			clearTimers( attractTimers, root );
 			context.screen = 'map';
-			context.selectedProject = '';
-			context.activeScenario = '';
+			context.story = '';
+			context.inspect = '';
+			context.flowPhase = 'settled';
 			context.announcement =
-				'Map open. Choose one of six projects or follow a story.';
-			focusWithin( root, '.core-ai-map__node button' );
+				'The blocks are on the canvas. Open a block, or follow a story.';
+			resetSchedulers.get( root )?.();
+			focusWithin( root, '.core-ai-map__block-body' );
 		},
-		selectProject() {
+		selectStory() {
 			const context = getContext();
 			const { ref } = getElement();
 			const root = getRoot( ref );
-
-			if ( root ) {
-				lastProjectTriggers.set( root, ref );
+			const isCurrent = context.story === context.storyId;
+			context.screen = 'map';
+			context.inspect = '';
+			context.story = isCurrent ? '' : context.storyId;
+			context.suggestion =
+				Math.floor( ( context.suggestion || 0 ) / 2 ) * 2;
+			runFlow( root, context );
+			context.announcement = isCurrent
+				? 'Story cleared. The blocks returned to the neutral map.'
+				: `${ ref.textContent.trim() }. ${
+						context.storyCopy?.[ context.storyId ] || ''
+				  }`;
+			resetSchedulers.get( root )?.();
+		},
+		replayStory() {
+			const context = getContext();
+			const advancesSuggestion = context.story === 'uses-ai';
+			if ( advancesSuggestion ) {
+				context.suggestion =
+					( Math.floor( context.suggestion / 2 ) + 1 ) * 2;
 			}
-
-			context.screen = 'detail';
-			context.selectedProject = context.projectId;
-			context.activeScenario = '';
+			runFlow( getRoot( getElement().ref ), context );
+			context.announcement = advancesSuggestion
+				? 'The story flow replayed with the next AI Plugin suggestion.'
+				: 'The story flow replayed.';
+		},
+		inspectCard() {
+			const context = getContext();
+			const { ref } = getElement();
+			const root = getRoot( ref );
+			ref?.blur?.();
+			if ( root ) {
+				lastCardTriggers.set( root, ref );
+			}
+			context.screen = 'inspect';
+			context.inspect = context.cardId;
+			if ( context.inspect === 'abilities' ) {
+				context.abilitiesTab = 'overview';
+			}
 			context.announcement = `${ ref.textContent.trim() } details open.`;
+			resetSchedulers.get( root )?.();
 			focusWithin( root, '.core-ai-map__details-close', 80 );
 		},
-		closeDetails() {
+		openAbout() {
 			const context = getContext();
 			const { ref } = getElement();
 			const root = getRoot( ref );
-			const previousTrigger = root
-				? lastProjectTriggers.get( root )
-				: undefined;
-
-			context.screen = 'map';
-			context.selectedProject = '';
-			context.announcement = 'Project details closed. Back on the map.';
-			focusElement( previousTrigger );
+			ref?.blur?.();
+			if ( root ) {
+				lastAboutTriggers.set( root, ref );
+			}
+			context.aboutReturnScreen = context.screen;
+			context.screen = 'about';
+			context.announcement = 'About this exhibit open.';
+			resetSchedulers.get( root )?.();
+			focusWithin( root, '.core-ai-map__about-close', 80 );
 		},
-		selectScenario() {
+		closeAbout() {
+			const context = getContext();
+			const root = getRoot( getElement().ref );
+			context.screen =
+				context.aboutReturnScreen === 'map' ? 'map' : 'attract';
+			context.aboutReturnScreen = '';
+			context.announcement = 'About this exhibit closed.';
+			resetSchedulers.get( root )?.();
+			focusElement( root ? lastAboutTriggers.get( root ) : undefined );
+		},
+		closeInspect() {
+			const context = getContext();
+			const root = getRoot( getElement().ref );
+			context.screen = 'map';
+			context.inspect = '';
+			context.announcement = 'Details closed. Back on the map.';
+			resetSchedulers.get( root )?.();
+			focusElement( root ? lastCardTriggers.get( root ) : undefined );
+		},
+		selectAbilityTab() {
 			const context = getContext();
 			const { ref } = getElement();
-			const isCurrent = context.activeScenario === context.scenarioId;
-
+			const root = getRoot( ref );
+			context.abilitiesTab = context.tabId || 'overview';
+			root?.querySelectorAll( '[role="tab"]' ).forEach( ( tab ) => {
+				tab.tabIndex = tab === ref ? 0 : -1;
+			} );
+		},
+		openBench() {
+			const context = getContext();
+			const { ref } = getElement();
+			const root = getRoot( ref );
+			ref?.blur?.();
+			if ( root ) {
+				const openedFromInspector = Boolean(
+					ref.closest( '.core-ai-map__details' )
+				);
+				const restoreTarget = openedFromInspector
+					? lastCardTriggers.get( root ) ||
+					  root.querySelector(
+							'.core-ai-map__block--bench .core-ai-map__block-body'
+					  )
+					: ref;
+				lastBenchTriggers.set( root, restoreTarget );
+			}
+			context.screen = 'bench';
+			context.inspect = '';
+			context.benchStage = 'sandbox';
+			runFlow( root, context, { bench: true } );
+			context.announcement = 'WP-Bench run loop open. Sandbox selected.';
+			resetSchedulers.get( root )?.();
+			focusWithin( root, '.core-ai-map__bench-heading button' );
+		},
+		closeBench() {
+			const context = getContext();
+			const root = getRoot( getElement().ref );
 			context.screen = 'map';
-			context.selectedProject = '';
-			context.activeScenario = isCurrent ? '' : context.scenarioId;
-			context.announcement = isCurrent
-				? 'Scenario cleared.'
-				: `${ ref.textContent.trim() } path highlighted.`;
+			context.benchPathsLive = false;
+			context.flowPhase = 'settled';
+			context.announcement = 'WP-Bench run loop closed. Back on the map.';
+			resetSchedulers.get( root )?.();
+			focusElement( root ? lastBenchTriggers.get( root ) : undefined );
+		},
+		selectBenchStage() {
+			const context = getContext();
+			context.benchStage = context.stageId || 'sandbox';
+			context.announcement = `WP-Bench stage selected: ${
+				context.benchTitles?.[ context.benchStage ] ||
+				context.benchStage
+			}.`;
+		},
+		applySuggestion() {
+			const context = getContext();
+			context.suggestion = Math.floor( context.suggestion / 2 ) * 2 + 1;
+			context.announcement =
+				'A person chose Apply. The AI Plugin suggestion is now applied.';
 		},
 		reset() {
 			const context = getContext();
-			const { ref } = getElement();
-			const root = getRoot( ref );
-
+			const root = getRoot( getElement().ref );
 			setAttractState( context );
+			attractSchedulers.get( root )?.();
 			focusWithin( root, '.core-ai-map__prompt' );
 		},
-		keepInKiosk( event ) {
-			event.preventDefault();
-
-			const context = getContext();
-			const { ref } = getElement();
-			const root = getRoot( ref );
-			const url = ref.getAttribute( 'href' );
-
-			context.toast = `This display stays on the map. Visit ${ url } on your device.`;
-
-			if ( root ) {
-				window.clearTimeout( toastTimers.get( root ) );
-				toastTimers.set(
-					root,
-					window.setTimeout( () => {
-						context.toast = '';
-					}, 6500 )
-				);
-			}
-		},
 	},
+
 	callbacks: {
 		useKiosk() {
 			const context = getContext();
-			const screen = context.screen;
-			const selectedProject = context.selectedProject;
-			const activeScenario = context.activeScenario;
-
-			useEffect( () => {
-				const { ref } = getElement();
-
-				if ( ! ref ) {
-					return undefined;
-				}
-
-				const cleanup = runMotion( ref, screen );
-				resetSchedulers.get( ref )?.();
-
-				return cleanup;
-			}, [ screen, selectedProject, activeScenario ] );
-
 			useEffect( () => {
 				const { ref: root } = getElement();
-
 				if ( ! root ) {
 					return undefined;
 				}
-
 				root.classList.add( 'is-ready' );
 				document.body.classList.add( 'core-ai-kiosk-active' );
-
+				const restorePage = isolateKioskPage( root );
 				const timeout = Number.parseInt(
 					root.dataset.inactivityTimeout,
 					10
 				);
-				const scenarioIds = Object.keys( context.scenarioPaths || {} );
 				let resetTimer;
 				let wakeLock;
+				let servedFromOfflineCache = Boolean(
+					document.querySelector(
+						'meta[name="core-ai-map-offline"][content="true"]'
+					)
+				);
 
+				const fitStage = () => {
+					const scale = Math.min(
+						root.clientWidth / STAGE_WIDTH,
+						root.clientHeight / STAGE_HEIGHT
+					);
+					if ( Number.isFinite( scale ) && scale > 0 ) {
+						root.style.setProperty(
+							'--cai-scale',
+							String( scale )
+						);
+					}
+				};
 				const resetForInactivity = () => {
 					if (
 						document.visibilityState === 'visible' &&
@@ -396,6 +876,7 @@ store( 'core-ai/map', {
 						setAttractState( context );
 						context.announcement =
 							'The map reset after a period of inactivity.';
+						attractSchedulers.get( root )?.();
 						if (
 							root.contains( root.ownerDocument.activeElement )
 						) {
@@ -403,23 +884,36 @@ store( 'core-ai/map', {
 						}
 					}
 				};
-
 				const scheduleReset = () => {
 					window.clearTimeout( resetTimer );
-					if ( context.screen !== 'attract' ) {
-						resetTimer = window.setTimeout(
-							resetForInactivity,
-							Number.isFinite( timeout ) ? timeout : 60000
-						);
+					if ( context.screen === 'attract' ) {
+						return;
 					}
+					const base = Number.isFinite( timeout ) ? timeout : 60000;
+					const deep =
+						context.screen === 'inspect' ||
+						context.screen === 'bench';
+					resetTimer = window.setTimeout(
+						resetForInactivity,
+						base + ( deep ? 30000 : 0 )
+					);
 				};
-
 				resetSchedulers.set( root, scheduleReset );
 
-				const updateNetworkStatus = () => {
-					context.isOffline = ! navigator.onLine;
+				const updateNetworkStatus = ( event ) => {
+					if ( event?.type === 'online' ) {
+						servedFromOfflineCache = false;
+					}
+					context.isOffline =
+						servedFromOfflineCache || ! navigator.onLine;
 				};
-
+				const handleCacheResult = ( event ) => {
+					if ( event.data?.type === 'CORE_AI_MAP_CACHE_RESULT' ) {
+						root.dataset.offlineReady = event.data.ok
+							? 'true'
+							: 'false';
+					}
+				};
 				const requestWakeLock = async () => {
 					if (
 						'wakeLock' in navigator &&
@@ -433,60 +927,80 @@ store( 'core-ai/map', {
 						}
 					}
 				};
-
 				const handleVisibility = () => {
-					const controls = animationControls.get( root ) || [];
-
-					controls.forEach( ( control ) => {
-						if ( document.visibilityState === 'hidden' ) {
-							control.pause?.();
-						} else {
-							control.play?.();
-						}
-					} );
-
 					if ( document.visibilityState === 'visible' ) {
 						scheduleReset();
 						requestWakeLock();
 					}
 				};
-
 				const handleKeydown = ( event ) => {
-					scheduleReset();
+					if ( ! root.contains( event.target ) ) {
+						return;
+					}
 
+					scheduleReset();
+					const tab = event.target?.closest?.( '[role="tab"]' );
+					if (
+						tab &&
+						context.screen === 'inspect' &&
+						context.inspect === 'abilities' &&
+						[ 'ArrowLeft', 'ArrowRight', 'Home', 'End' ].includes(
+							event.key
+						)
+					) {
+						const tabs = [
+							...root.querySelectorAll( '[role="tab"]' ),
+						];
+						const current = tabs.indexOf( tab );
+						let next;
+						if ( event.key === 'Home' ) {
+							next = 0;
+						} else if ( event.key === 'End' ) {
+							next = tabs.length - 1;
+						} else {
+							const direction =
+								event.key === 'ArrowRight' ? 1 : -1;
+							next =
+								( current + direction + tabs.length ) %
+								tabs.length;
+						}
+						event.preventDefault();
+						const nextTab = tabs[ next ];
+						context.abilitiesTab =
+							nextTab?.dataset.coreAiAbilitiesTab ||
+							context.abilitiesTab;
+						tabs.forEach( ( candidate, index ) => {
+							candidate.tabIndex = index === next ? 0 : -1;
+						} );
+						nextTab?.focus( { preventScroll: true } );
+						return;
+					}
 					if ( event.key !== 'Escape' ) {
 						return;
 					}
-
 					event.preventDefault();
-
-					if ( context.screen === 'detail' ) {
+					if ( context.screen === 'inspect' ) {
 						context.screen = 'map';
-						context.selectedProject = '';
+						context.inspect = '';
 						context.announcement =
-							'Project details closed. Back on the map.';
-						focusElement( lastProjectTriggers.get( root ) );
-					} else if ( context.screen === 'map' ) {
-						setAttractState( context );
-						focusWithin( root, '.core-ai-map__prompt' );
+							'Details closed. Back on the map.';
+						focusElement( lastCardTriggers.get( root ) );
+					} else if ( context.screen === 'bench' ) {
+						context.screen = 'map';
+						context.benchPathsLive = false;
+						context.announcement =
+							'WP-Bench closed. Back on the map.';
+						focusElement( lastBenchTriggers.get( root ) );
+					} else if ( context.screen === 'about' ) {
+						context.screen =
+							context.aboutReturnScreen === 'map'
+								? 'map'
+								: 'attract';
+						context.aboutReturnScreen = '';
+						context.announcement = 'About this exhibit closed.';
+						focusElement( lastAboutTriggers.get( root ) );
 					}
 				};
-
-				const cycleAttractScenario = () => {
-					if (
-						context.screen !== 'attract' ||
-						document.visibilityState !== 'visible' ||
-						scenarioIds.length === 0
-					) {
-						return;
-					}
-
-					context.idleScenarioIndex =
-						( context.idleScenarioIndex + 1 ) % scenarioIds.length;
-					context.activeScenario =
-						scenarioIds[ context.idleScenarioIndex ];
-				};
-
 				const syncServiceWorker = async () => {
 					if (
 						! ( 'serviceWorker' in navigator ) ||
@@ -494,71 +1008,178 @@ store( 'core-ai/map', {
 					) {
 						return;
 					}
-
 					try {
 						const serviceWorkerUrl = new URL(
 							root.dataset.serviceWorkerUrl,
 							window.location.href
 						).href;
-
-						if ( root.dataset.offlineEnabled !== 'true' ) {
+						const currentScope = new URL(
+							root.dataset.serviceWorkerScope,
+							window.location.origin
+						).href;
+						const storageKey = root.dataset.kioskKey
+							? `coreAiMapWorker:${ root.dataset.kioskKey }`
+							: '';
+						let previousScope = '';
+						if ( storageKey ) {
+							try {
+								previousScope =
+									JSON.parse(
+										window.localStorage.getItem(
+											storageKey
+										) || '{}'
+									).scope || '';
+							} catch {
+								previousScope = '';
+							}
+						}
+						const clearScopes = async ( scopes ) => {
+							if ( ! scopes.size ) {
+								return;
+							}
 							const registrations =
 								await navigator.serviceWorker.getRegistrations();
-
-							await Promise.all(
+							await Promise.allSettled(
 								registrations.map( ( registration ) => {
-									const workers = [
+									const worker = [
 										registration.active,
 										registration.waiting,
 										registration.installing,
-									].filter( Boolean );
-									const worker = workers.find(
-										( candidate ) =>
-											candidate.scriptURL ===
-											serviceWorkerUrl
-									);
-
-									if ( ! worker ) {
+									]
+										.filter( Boolean )
+										.find( ( candidate ) => {
+											try {
+												const url = new URL(
+													candidate.scriptURL
+												);
+												return (
+													url.origin ===
+														window.location
+															.origin &&
+													url.searchParams.get(
+														'_core_ai_map_sw'
+													) === '1'
+												);
+											} catch {
+												return false;
+											}
+										} );
+									if (
+										! worker ||
+										! scopes.has( registration.scope )
+									) {
 										return undefined;
 									}
-
 									worker.postMessage( {
 										type: 'CLEAR_CORE_AI_MAP',
 									} );
 									return registration.unregister();
 								} )
 							);
+						};
+						if ( root.dataset.offlineEnabled !== 'true' ) {
+							const ownedScopes = new Set(
+								[ currentScope, previousScope ].filter(
+									Boolean
+								)
+							);
+							await clearScopes( ownedScopes );
+							if ( storageKey ) {
+								try {
+									window.localStorage.removeItem(
+										storageKey
+									);
+								} catch {
+									// Storage is optional; worker cleanup already ran.
+								}
+							}
 							return;
 						}
-
-						await navigator.serviceWorker.register(
-							serviceWorkerUrl,
-							{ scope: root.dataset.serviceWorkerScope || '/' }
-						);
+						if ( previousScope && previousScope !== currentScope ) {
+							await clearScopes( new Set( [ previousScope ] ) );
+						}
 						const registration =
+							await navigator.serviceWorker.register(
+								serviceWorkerUrl,
+								{
+									scope: root.dataset.serviceWorkerScope,
+								}
+							);
+						if ( storageKey ) {
+							try {
+								window.localStorage.setItem(
+									storageKey,
+									JSON.stringify( {
+										scope:
+											registration.scope || currentScope,
+									} )
+								);
+							} catch {
+								// Offline caching does not depend on local storage.
+							}
+						}
+						const installingWorker =
+							registration.installing || registration.waiting;
+						if (
+							installingWorker &&
+							installingWorker.state !== 'activated'
+						) {
+							await new Promise( ( resolve ) => {
+								const handleState = () => {
+									if (
+										installingWorker.state ===
+											'activated' ||
+										installingWorker.state === 'redundant'
+									) {
+										installingWorker.removeEventListener(
+											'statechange',
+											handleState
+										);
+										resolve();
+									}
+								};
+								installingWorker.addEventListener(
+									'statechange',
+									handleState
+								);
+							} );
+						}
+						const readyRegistration =
 							await navigator.serviceWorker.ready;
+						if ( document.readyState !== 'complete' ) {
+							await new Promise( ( resolve ) =>
+								window.addEventListener( 'load', resolve, {
+									once: true,
+								} )
+							);
+						}
+						await document.fonts?.ready;
 						const worker =
-							registration.active ||
-							registration.waiting ||
-							registration.installing;
-						const assets = JSON.parse(
+							readyRegistration.active || registration.active;
+						const configuredAssets = JSON.parse(
 							root.dataset.assetUrls || '[]'
 						);
-
+						const observedAssets =
+							root.dataset.cachePage === 'true'
+								? getObservedStaticAssets()
+								: [];
 						worker?.postMessage( {
 							type: 'CACHE_CORE_AI_MAP',
-							pageUrl: window.location.href,
-							assets,
+							pageUrl:
+								root.dataset.cachePage === 'true'
+									? root.dataset.cachePageUrl
+									: '',
+							assets: [
+								...new Set( [
+									...configuredAssets,
+									...observedAssets,
+								] ),
+							],
 						} );
 					} catch {
 						// The server-rendered experience remains usable.
 					}
 				};
-
-				const idleScenarioTimer = window.setInterval(
-					cycleAttractScenario,
-					9000
-				);
 
 				root.addEventListener( 'pointerdown', scheduleReset, {
 					passive: true,
@@ -566,20 +1187,32 @@ store( 'core-ai/map', {
 				window.addEventListener( 'keydown', handleKeydown );
 				window.addEventListener( 'online', updateNetworkStatus );
 				window.addEventListener( 'offline', updateNetworkStatus );
+				navigator.serviceWorker?.addEventListener?.(
+					'message',
+					handleCacheResult
+				);
+				window.addEventListener( 'resize', fitStage );
+				window.addEventListener( 'orientationchange', fitStage );
 				document.addEventListener(
 					'visibilitychange',
 					handleVisibility
 				);
-
+				fitStage();
 				updateNetworkStatus();
 				requestWakeLock();
 				syncServiceWorker();
+				if ( context.screen === 'attract' ) {
+					startAttractCycle( root, context );
+				} else {
+					scheduleReset();
+				}
 
 				return () => {
 					window.clearTimeout( resetTimer );
-					window.clearTimeout( toastTimers.get( root ) );
-					window.clearInterval( idleScenarioTimer );
+					clearTimers( flowTimers, root );
+					clearTimers( attractTimers, root );
 					resetSchedulers.delete( root );
+					attractSchedulers.delete( root );
 					root.removeEventListener( 'pointerdown', scheduleReset );
 					window.removeEventListener( 'keydown', handleKeydown );
 					window.removeEventListener( 'online', updateNetworkStatus );
@@ -587,14 +1220,19 @@ store( 'core-ai/map', {
 						'offline',
 						updateNetworkStatus
 					);
+					navigator.serviceWorker?.removeEventListener?.(
+						'message',
+						handleCacheResult
+					);
+					window.removeEventListener( 'resize', fitStage );
+					window.removeEventListener( 'orientationchange', fitStage );
 					document.removeEventListener(
 						'visibilitychange',
 						handleVisibility
 					);
 					wakeLock?.release?.();
-					stopAnimations( root );
+					restorePage();
 					root.classList.remove( 'is-ready' );
-
 					if ( ! document.querySelector( '.core-ai-map.is-ready' ) ) {
 						document.body.classList.remove(
 							'core-ai-kiosk-active'
@@ -602,6 +1240,16 @@ store( 'core-ai/map', {
 					}
 				};
 			}, [ context ] );
+
+			useEffect( () => {
+				const { ref: root } = getElement();
+				resetSchedulers.get( root )?.();
+			}, [
+				context.screen,
+				context.story,
+				context.inspect,
+				context.benchStage,
+			] );
 		},
 	},
 } );

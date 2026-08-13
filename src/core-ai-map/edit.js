@@ -6,9 +6,11 @@ import {
 	TextareaControl,
 	ToggleControl,
 } from '@wordpress/components';
-import { __, sprintf } from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 
+import metadata from './block.json';
 import './editor.scss';
+import { withCurrentDefaults } from './normalize';
 
 const updateItem = ( items, index, key, value ) =>
 	items.map( ( item, itemIndex ) =>
@@ -18,14 +20,24 @@ const updateItem = ( items, index, key, value ) =>
 export default function Edit( { attributes, setAttributes } ) {
 	const {
 		eyebrow,
+		reviewedDate,
+		hint,
 		title,
 		intro,
 		prompt,
 		inactivityTimeout,
 		offlineEnabled,
-		projects,
-		scenarios,
+		recompose,
+		shapes,
+		blocks: savedBlocks,
+		actors: savedActors,
+		stories: savedStories,
+		panels: savedPanels,
 	} = attributes;
+	const blocks = withCurrentDefaults( metadata, 'blocks', savedBlocks );
+	const actors = withCurrentDefaults( metadata, 'actors', savedActors );
+	const stories = withCurrentDefaults( metadata, 'stories', savedStories );
+	const panels = withCurrentDefaults( metadata, 'panels', savedPanels );
 
 	const blockProps = useBlockProps( {
 		className: 'core-ai-map-editor',
@@ -34,7 +46,7 @@ export default function Edit( { attributes, setAttributes } ) {
 	return (
 		<>
 			<InspectorControls>
-				<PanelBody title={ __( 'Experience', 'core-ai-map' ) }>
+				<PanelBody title={ __( 'Attract screen', 'core-ai-map' ) }>
 					<TextControl
 						label={ __( 'Eyebrow', 'core-ai-map' ) }
 						value={ eyebrow }
@@ -57,10 +69,60 @@ export default function Edit( { attributes, setAttributes } ) {
 						}
 					/>
 					<TextControl
-						label={ __( 'Attract prompt', 'core-ai-map' ) }
+						label={ __( 'Call to action', 'core-ai-map' ) }
 						value={ prompt }
 						onChange={ ( value ) =>
 							setAttributes( { prompt: value } )
+						}
+					/>
+					<TextControl
+						label={ __( 'Map hint', 'core-ai-map' ) }
+						help={ __(
+							'Shown in the top bar once the blocks are on the canvas.',
+							'core-ai-map'
+						) }
+						value={ hint }
+						onChange={ ( value ) =>
+							setAttributes( { hint: value } )
+						}
+					/>
+					<TextControl
+						label={ __( 'Reviewed date', 'core-ai-map' ) }
+						help={ __(
+							'Shown in the kiosk header so visitors know when the factual copy was reviewed.',
+							'core-ai-map'
+						) }
+						value={ reviewedDate }
+						onChange={ ( value ) =>
+							setAttributes( { reviewedDate: value } )
+						}
+					/>
+				</PanelBody>
+
+				<PanelBody title={ __( 'Behavior', 'core-ai-map' ) }>
+					<ToggleControl
+						label={ __(
+							'Stories recompose the map',
+							'core-ai-map'
+						) }
+						help={ __(
+							'On: members slide into a numbered workflow and everything else parks on a shelf. Off: blocks hold their positions and only the path lights up.',
+							'core-ai-map'
+						) }
+						checked={ recompose }
+						onChange={ ( value ) =>
+							setAttributes( { recompose: value } )
+						}
+					/>
+					<ToggleControl
+						label={ __( 'Blocks grow role shapes', 'core-ai-map' ) }
+						help={ __(
+							'Ports, sockets, routers, and meters appear when a block joins a story or opens.',
+							'core-ai-map'
+						) }
+						checked={ shapes }
+						onChange={ ( value ) =>
+							setAttributes( { shapes: value } )
 						}
 					/>
 					<RangeControl
@@ -73,35 +135,40 @@ export default function Edit( { attributes, setAttributes } ) {
 						onChange={ ( value ) =>
 							setAttributes( { inactivityTimeout: value } )
 						}
-						min={ 20 }
+						min={ 30 }
 						max={ 180 }
-						step={ 5 }
+						step={ 15 }
 					/>
 					<ToggleControl
 						label={ __( 'Enable offline caching', 'core-ai-map' ) }
+						help={ __(
+							'Offline caching requires HTTPS (or localhost), is limited to the kiosk permalink, and stays disabled on a site homepage.',
+							'core-ai-map'
+						) }
 						checked={ offlineEnabled }
 						onChange={ ( value ) =>
 							setAttributes( { offlineEnabled: value } )
 						}
 					/>
 				</PanelBody>
+
 				<PanelBody
-					title={ __( 'Projects', 'core-ai-map' ) }
+					title={ __( 'Blocks on the canvas', 'core-ai-map' ) }
 					initialOpen={ false }
 				>
-					{ projects.map( ( project, index ) => (
+					{ blocks.map( ( item, index ) => (
 						<div
 							className="core-ai-map-editor__settings"
-							key={ project.id }
+							key={ item.id }
 						>
-							<h3>{ project.name }</h3>
+							<h3>{ item.name }</h3>
 							<TextControl
 								label={ __( 'Name', 'core-ai-map' ) }
-								value={ project.name }
+								value={ item.name }
 								onChange={ ( value ) =>
 									setAttributes( {
-										projects: updateItem(
-											projects,
+										blocks: updateItem(
+											blocks,
 											index,
 											'name',
 											value
@@ -110,77 +177,37 @@ export default function Edit( { attributes, setAttributes } ) {
 								}
 							/>
 							<TextControl
-								label={ __( 'Short label', 'core-ai-map' ) }
-								value={ project.kicker }
+								label={ __( 'Tagline', 'core-ai-map' ) }
+								value={ item.tagline }
 								onChange={ ( value ) =>
 									setAttributes( {
-										projects: updateItem(
-											projects,
+										blocks: updateItem(
+											blocks,
 											index,
-											'kicker',
-											value
-										),
-									} )
-								}
-							/>
-							<TextareaControl
-								label={ __(
-									'Plain-language description',
-									'core-ai-map'
-								) }
-								value={ project.description }
-								onChange={ ( value ) =>
-									setAttributes( {
-										projects: updateItem(
-											projects,
-											index,
-											'description',
-											value
-										),
-									} )
-								}
-							/>
-							<TextareaControl
-								label={ __(
-									'Technical detail',
-									'core-ai-map'
-								) }
-								value={ project.technical }
-								onChange={ ( value ) =>
-									setAttributes( {
-										projects: updateItem(
-											projects,
-											index,
-											'technical',
+											'tagline',
 											value
 										),
 									} )
 								}
 							/>
 							<TextControl
-								label={ __( 'Status', 'core-ai-map' ) }
-								value={ project.status }
-								onChange={ ( value ) =>
-									setAttributes( {
-										projects: updateItem(
-											projects,
-											index,
-											'status',
-											value
-										),
-									} )
+								label={ __( 'Status badge', 'core-ai-map' ) }
+								value={ item.badge }
+								disabled={ item.id === 'mcp' }
+								help={
+									item.id === 'mcp'
+										? __(
+												'Fixed to the reviewed WordPress project status.',
+												'core-ai-map'
+										  )
+										: undefined
 								}
-							/>
-							<TextControl
-								label={ __( 'Learn more URL', 'core-ai-map' ) }
-								type="url"
-								value={ project.href }
 								onChange={ ( value ) =>
 									setAttributes( {
-										projects: updateItem(
-											projects,
+										blocks: updateItem(
+											blocks,
 											index,
-											'href',
+											'badge',
 											value
 										),
 									} )
@@ -189,65 +216,146 @@ export default function Edit( { attributes, setAttributes } ) {
 						</div>
 					) ) }
 				</PanelBody>
+
 				<PanelBody
-					title={ __( 'Scenario paths', 'core-ai-map' ) }
+					title={ __( 'Off-canvas actors', 'core-ai-map' ) }
 					initialOpen={ false }
 				>
-					{ scenarios.map( ( scenario, index ) => (
+					{ actors.map( ( item, index ) => (
 						<div
 							className="core-ai-map-editor__settings"
-							key={ scenario.id }
+							key={ item.id }
 						>
-							<h3>{ scenario.label }</h3>
+							<h3>{ item.name }</h3>
 							<TextControl
-								label={ __( 'Label', 'core-ai-map' ) }
-								value={ scenario.label }
+								label={ __( 'Name', 'core-ai-map' ) }
+								value={ item.name }
 								onChange={ ( value ) =>
 									setAttributes( {
-										scenarios: updateItem(
-											scenarios,
+										actors: updateItem(
+											actors,
 											index,
-											'label',
+											'name',
+											value
+										),
+									} )
+								}
+							/>
+							<TextControl
+								label={ __( 'Tagline', 'core-ai-map' ) }
+								value={ item.tagline }
+								onChange={ ( value ) =>
+									setAttributes( {
+										actors: updateItem(
+											actors,
+											index,
+											'tagline',
+											value
+										),
+									} )
+								}
+							/>
+							<TextControl
+								label={ __( 'Eyebrow', 'core-ai-map' ) }
+								value={ item.badge }
+								onChange={ ( value ) =>
+									setAttributes( {
+										actors: updateItem(
+											actors,
+											index,
+											'badge',
+											value
+										),
+									} )
+								}
+							/>
+						</div>
+					) ) }
+				</PanelBody>
+
+				<PanelBody
+					title={ __( 'Stories', 'core-ai-map' ) }
+					initialOpen={ false }
+				>
+					<p className="core-ai-map-editor__note">
+						{ __(
+							'Which blocks take part in a story, and where they slide to, is fixed by the map geometry. Only the wording is editable here.',
+							'core-ai-map'
+						) }
+					</p>
+					{ stories.map( ( story, index ) => (
+						<div
+							className="core-ai-map-editor__settings"
+							key={ story.id }
+						>
+							<h3>{ story.title }</h3>
+							<TextControl
+								label={ __( 'Title', 'core-ai-map' ) }
+								value={ story.title }
+								onChange={ ( value ) =>
+									setAttributes( {
+										stories: updateItem(
+											stories,
+											index,
+											'title',
 											value
 										),
 									} )
 								}
 							/>
 							<TextareaControl
-								label={ __( 'Description', 'core-ai-map' ) }
-								value={ scenario.description }
+								label={ __( 'Caption', 'core-ai-map' ) }
+								value={ story.copy }
 								onChange={ ( value ) =>
 									setAttributes( {
-										scenarios: updateItem(
-											scenarios,
+										stories: updateItem(
+											stories,
 											index,
-											'description',
+											'copy',
 											value
 										),
 									} )
 								}
 							/>
-							<TextControl
-								label={ __( 'Project IDs', 'core-ai-map' ) }
-								help={ __(
-									'Comma-separated IDs: abilities, skills, client, plugin, mcp, bench.',
+						</div>
+					) ) }
+				</PanelBody>
+
+				<PanelBody
+					title={ __( 'Detail panels', 'core-ai-map' ) }
+					initialOpen={ false }
+				>
+					{ panels.map( ( panel, index ) => (
+						<div
+							className="core-ai-map-editor__settings"
+							key={ panel.id }
+						>
+							<h3>{ panel.title }</h3>
+							<TextareaControl
+								label={ __(
+									'Opening paragraph',
 									'core-ai-map'
 								) }
-								value={ scenario.projects.join( ', ' ) }
+								value={ panel.lede }
 								onChange={ ( value ) =>
 									setAttributes( {
-										scenarios: updateItem(
-											scenarios,
+										panels: updateItem(
+											panels,
 											index,
-											'projects',
+											'lede',
 											value
-												.split( ',' )
-												.map( ( id ) => id.trim() )
-												.filter( Boolean )
 										),
 									} )
 								}
 							/>
+							<p className="core-ai-map-editor__note">
+								{ __(
+									'The verified destination and its local QR code ship together and are not independently editable.',
+									'core-ai-map'
+								) }
+								<br />
+								<code>{ panel.href }</code>
+							</p>
 						</div>
 					) ) }
 				</PanelBody>
@@ -260,24 +368,50 @@ export default function Edit( { attributes, setAttributes } ) {
 					<p>{ intro }</p>
 				</div>
 				<div className="core-ai-map-editor__prompt">{ prompt }</div>
-				<div className="core-ai-map-editor__projects">
-					{ projects.map( ( project, index ) => (
-						<article key={ project.id }>
-							<span>
-								{ sprintf(
-									/* translators: %d: Project number. */
-									__( '0%d', 'core-ai-map' ),
-									index + 1
-								) }
-							</span>
-							<strong>{ project.name }</strong>
-							<small>{ project.kicker }</small>
-						</article>
+
+				<div className="core-ai-map-editor__zones">
+					<div className="core-ai-map-editor__zone">
+						<span>{ __( 'Outside', 'core-ai-map' ) }</span>
+						{ actors
+							.filter( ( actor ) => actor.id !== 'provider' )
+							.map( ( actor ) => (
+								<article key={ actor.id }>
+									<strong>{ actor.name }</strong>
+									<small>{ actor.tagline }</small>
+								</article>
+							) ) }
+					</div>
+					<div className="core-ai-map-editor__zone core-ai-map-editor__zone--inside">
+						<span>{ __( 'Inside WordPress', 'core-ai-map' ) }</span>
+						{ blocks.map( ( item ) => (
+							<article key={ item.id }>
+								<strong>{ item.name }</strong>
+								<small>{ item.tagline }</small>
+							</article>
+						) ) }
+					</div>
+					<div className="core-ai-map-editor__zone">
+						<span>{ __( 'Outside', 'core-ai-map' ) }</span>
+						{ actors
+							.filter( ( actor ) => actor.id === 'provider' )
+							.map( ( actor ) => (
+								<article key={ actor.id }>
+									<strong>{ actor.name }</strong>
+									<small>{ actor.tagline }</small>
+								</article>
+							) ) }
+					</div>
+				</div>
+
+				<div className="core-ai-map-editor__stories">
+					{ stories.map( ( story ) => (
+						<span key={ story.id }>{ story.title }</span>
 					) ) }
 				</div>
+
 				<p className="core-ai-map-editor__note">
 					{ __(
-						'Interactive animation, detail cards, and inactivity reset appear on the published page.',
+						'Recomposition, role shapes, the boundary rules, and the inactivity reset all appear on the published page.',
 						'core-ai-map'
 					) }
 				</p>
