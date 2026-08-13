@@ -140,6 +140,11 @@ The stories are:
    site: nothing inside WordPress runs in this story.
 4. WordPress tests the result with WP-Bench.
 
+In the first story, the runtime request travels from the AI Plugin through the
+AI Client and a provider plugin to an external AI service. Connectors appears
+beside that path as the site-owner surface for provider discovery,
+configuration, and credentials; it is not presented as the request executor.
+
 The **Abilities API** inspector includes its dedicated tabs. **WP-Bench** has a
 five-stage run loop that follows the work from task and sandbox through checks
 to evidence; it is a test bench, not a live request path. The MCP Adapter is

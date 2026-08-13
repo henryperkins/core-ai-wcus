@@ -48,6 +48,8 @@ $shelf_x = array( 250, 436, 622, 808, 994, 1170 );
  * Per-story composition.
  *
  * members  Block/actor id => step number in the workflow.
+ * sidecars Blocks shown beside, but not inside, the numbered runtime path.
+ * providerPlugin Transient provider-specific WordPress plugin layer.
  * place    Where each member slides to.
  * park     Non-members, in shelf order.
  * shelfY   Shelf row for this story.
@@ -60,22 +62,29 @@ $shelf_x = array( 250, 436, 622, 808, 994, 1170 );
 $story_layout = array(
 	'uses-ai' => array(
 		'members' => array(
-			'plugin'     => 1,
-			'client'     => 2,
-			'connectors' => 3,
-			'provider'   => 4,
+			'plugin'   => 1,
+			'client'   => 2,
+			'provider' => 0,
+		),
+		'sidecars' => array( 'connectors' ),
+		'providerPlugin' => array(
+			'step'         => 3,
+			'position'     => array( 824, 214 ),
+			'restPosition' => array( 824, 332 ),
 		),
 		'place'   => array(
 			'plugin'     => array( 268, 192 ),
 			'client'     => array( 556, 192 ),
-			'connectors' => array( 900, 192 ),
-			'provider'   => array( 1180, 216 ),
+			'connectors' => array( 836, 360 ),
+			'provider'   => array( 1180, 206 ),
 		),
 		'park'    => array( 'mcp', 'abilities', 'bench' ),
 		'shelfY'  => 512,
 		'shelfStart' => 3,
-		'edges'   => array( 'M504 266 L556 266', 'M792 266 L900 266', 'M1136 266 L1180 266' ),
-		'rest'    => array( 'M504 234 L556 234', 'M792 234 L912 234', 'M1090 308 C1112 340 1122 364 1146 377' ),
+		'edges'   => array( 'M504 266 L556 266', 'M792 266 L824 266', 'M1024 266 L1180 266' ),
+		'rest'    => array( 'M504 234 L556 234', 'M792 234 C810 234 806 384 824 384', 'M1024 384 C1080 384 1094 390 1150 390' ),
+		'sidecarEdges' => array( 'M924 360 L924 318' ),
+		'sidecarRest' => array( 'M924 332 C954 318 1012 320 1030 308' ),
 		'dur'     => array( '1.5s', '1.9s', '1.7s' ),
 		'crosses' => array( 'right' ),
 	),
@@ -155,13 +164,26 @@ $attract_previews = array(
 	array(
 		'storyId' => 'uses-ai',
 		'scale'   => 0.8,
-		'ids'     => array( 'plugin', 'client', 'connectors' ),
-		'at'      => array(
-			'plugin'     => array( 332, 200 ),
-			'client'     => array( 565, 200 ),
-			'connectors' => array( 798, 200 ),
+		'ids'     => array( 'plugin', 'client', 'provider' ),
+		'steps'   => array(
+			'plugin'   => 1,
+			'client'   => 2,
+			'provider' => 0,
 		),
-		'paths'   => array( 'M479 259 L559 259', 'M712 259 L792 259' ),
+		'sidecars' => array( 'connectors' ),
+		'providerPlugin' => array(
+			'step'     => 3,
+			'position' => array( 716, 200 ),
+			'scale'    => 0.8,
+		),
+		'at'      => array(
+			'plugin'     => array( 260, 200 ),
+			'client'     => array( 488, 200 ),
+			'connectors' => array( 728, 340 ),
+			'provider'   => array( 1060, 211 ),
+		),
+		'paths'   => array( 'M449 259 L488 259', 'M677 259 L716 259', 'M876 259 L1060 259' ),
+		'sidecarPaths' => array( 'M798 340 L798 284' ),
 	),
 	array(
 		'storyId' => 'uses-wp',
@@ -319,6 +341,7 @@ $migrate_legacy_defaults = static function ( $items, $current_defaults, $legacy_
 };
 
 $block_defaults = $by_id( array(), $default_attributes['blocks'] ?? array(), $block_ids );
+$actor_defaults = $by_id( array(), $default_attributes['actors'] ?? array(), $actor_ids );
 $story_defaults = $by_id( array(), $default_attributes['stories'] ?? array(), array_keys( $story_layout ) );
 $panel_defaults = $by_id( array(), $default_attributes['panels'] ?? array(), $panel_ids );
 
@@ -426,6 +449,73 @@ $panels = $migrate_legacy_defaults(
 );
 
 /*
+ * The pre-booth architecture pass corrects the provider request path and the
+ * still-scheduled 7.1 wording. Upgrade only values that exactly match the
+ * previously registered v3.1.1 defaults so genuine editor changes survive.
+ */
+$blocks = $migrate_legacy_defaults(
+	$blocks,
+	$block_defaults,
+	array(
+		'connectors' => array(
+			'tagline' => 'Connect WordPress to providers and services',
+		),
+	)
+);
+
+$actors = $migrate_legacy_defaults(
+	$actors,
+	$actor_defaults,
+	array(
+		'provider' => array(
+			'name'    => 'AI provider',
+			'tagline' => 'The site owner’s choice',
+		),
+	)
+);
+
+$stories = $migrate_legacy_defaults(
+	$stories,
+	$story_defaults,
+	array(
+		'uses-ai' => array(
+			'copy' => 'A plugin asks the AI Client for a capability. The AI Client chooses a compatible model from a provider the site owner configured through Connectors.',
+		),
+	)
+);
+
+$panels = $migrate_legacy_defaults(
+	$panels,
+	$panel_defaults,
+	array(
+		'abilities'  => array(
+			'notes' => array(
+				array(
+					'heading' => 'Under the hood',
+					'text'    => 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. One public flag for client exposure, filtering in wp_get_abilities(), and filters around execution are landing in WordPress 7.1, which ships 19 August 2026 — read the Anatomy panel as forward-looking until then.',
+				),
+			),
+		),
+		'client'     => array(
+			'lede' => 'A plugin asks for a capability and the kind of result it needs. The AI Client chooses a compatible model from a provider the site owner configured through Connectors.',
+		),
+		'connectors' => array(
+			'lede'  => 'Where a site owner connects WordPress to outside services. Connectors handles provider discovery, configuration, credentials, installation status, and connection status.',
+			'notes' => array(
+				array(
+					'heading' => 'Providers',
+					'text'    => 'Provider plugins register themselves with the AI Client and appear under Settings → Connectors. A plugin can ask what a site actually has before offering a feature. The map stays vendor-neutral: no provider owns a position on the canvas.',
+				),
+				array(
+					'heading' => 'Under the hood',
+					'text'    => 'Introduced in WordPress 7.0 as a standardized framework for registering and managing connections to external services, starting with AI providers.',
+				),
+			),
+		),
+	)
+);
+
+/*
  * Destinations are product-owned visitor data rather than editable kiosk copy.
  * Overwrite serialized values so already-inserted blocks migrate away from the
  * old generic links and QR placeholders on their next render.
@@ -496,8 +586,10 @@ $shapes             = ! isset( $attributes['shapes'] ) || ! empty( $attributes['
 $instance_id        = wp_unique_id( 'core-ai-map-' );
 $queried_object_id  = function_exists( 'get_queried_object_id' ) ? absint( get_queried_object_id() ) : 0;
 $kiosk_key          = $queried_object_id ? 'post-' . $queried_object_id : '';
-$initial_preview = $attract_previews[0];
-$initial_members = array_combine( $initial_preview['ids'], range( 1, count( $initial_preview['ids'] ) ) );
+$initial_preview         = $attract_previews[0];
+$initial_members         = $initial_preview['steps'] ?? array_combine( $initial_preview['ids'], range( 1, count( $initial_preview['ids'] ) ) );
+$initial_preview_members = array_fill_keys( $initial_preview['ids'], true );
+$initial_sidecars        = array_fill_keys( $initial_preview['sidecars'] ?? array(), true );
 
 /**
  * Transform that assembles the first attract preview without selecting a story.
@@ -976,8 +1068,10 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					<?php echo wp_interactivity_data_wp_context( array( 'previewId' => 0 ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 					data-wp-bind--hidden="state.isPreviewHidden"
 				>
-					<path d="M479 259 L559 259" data-wp-class--is-live="state.isPreviewPathVisible" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
-					<path d="M712 259 L792 259" data-wp-class--is-live="state.isPreviewPathVisible" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
+					<path d="M449 259 L488 259" data-wp-class--is-live="state.isPreviewPathVisible" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
+					<path d="M677 259 L716 259" data-wp-class--is-live="state.isPreviewPathVisible" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
+					<path d="M876 259 L1060 259" data-wp-class--is-live="state.isPreviewPathVisible" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
+					<path class="core-ai-map__config-path core-ai-map__preview-config" d="M798 340 L798 284" data-wp-class--is-live="state.isPreviewPathVisible"></path>
 					<circle class="core-ai-map__preview-signal" r="5.5" cx="0" cy="0" data-wp-class--is-live="state.isPreviewSignalLive"></circle>
 				</g>
 				<g
@@ -1047,6 +1141,20 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						<?php endforeach; ?>
 					<?php endforeach; ?>
 				</g>
+
+				<?php foreach ( $story_layout as $story_id => $story_paths ) : ?>
+					<?php foreach ( array( 'edges' => 'sidecarEdges', 'rest' => 'sidecarRest' ) as $variant => $sidecar_key ) : ?>
+						<?php foreach ( $story_paths[ $sidecar_key ] ?? array() as $path ) : ?>
+							<path
+								class="core-ai-map__config-path"
+								d="<?php echo esc_attr( $path ); ?>"
+								<?php echo wp_interactivity_data_wp_context( array( 'storyId' => $story_id, 'variant' => $variant ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+								data-wp-bind--hidden="state.isProviderConfigPathHidden"
+								hidden
+							></path>
+						<?php endforeach; ?>
+					<?php endforeach; ?>
+				<?php endforeach; ?>
 			</svg>
 
 			<div class="core-ai-map__sparks" aria-hidden="true">
@@ -1081,6 +1189,18 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			</div>
 
 			<div
+				class="core-ai-map__provider-plugin"
+				style="transform: translate(-108px, -14px) scale(0.8);"
+				data-wp-bind--hidden="state.isProviderPluginHidden"
+				data-wp-style--transform="state.providerPluginTransform"
+			>
+				<span class="core-ai-map__step" aria-hidden="true">3</span>
+				<span class="core-ai-map__provider-plugin-badge"><?php esc_html_e( 'WordPress plugin', 'core-ai-map' ); ?></span>
+				<strong><?php esc_html_e( 'AI provider plugin', 'core-ai-map' ); ?></strong>
+				<small><?php esc_html_e( 'Provider-specific integration', 'core-ai-map' ); ?></small>
+			</div>
+
+			<div
 				class="core-ai-map__learns-explanation"
 				<?php echo wp_interactivity_data_wp_context( array( 'storyId' => 'learns' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 				data-wp-bind--hidden="state.isStoryNotSelected"
@@ -1098,12 +1218,12 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<?php foreach ( $actors as $actor_id => $actor ) : ?>
 				<?php
 				$is_skills          = 'skills' === $actor_id;
-				$is_preview_member  = isset( $initial_members[ $actor_id ] );
+				$is_preview_member  = isset( $initial_preview_members[ $actor_id ] );
 				$actor_initial_class = $is_preview_member ? ' is-preview-member' : '';
 				?>
 				<div
 					class="core-ai-map__actor core-ai-map__actor--<?php echo esc_attr( $actor_id ); ?><?php echo esc_attr( $actor_initial_class ); ?>"
-					style="<?php echo esc_attr( $card_style( $actor_id ) . ( isset( $initial_members[ $actor_id ] ) ? '' : ' opacity: 0.2;' ) ); ?>"
+					style="<?php echo esc_attr( $card_style( $actor_id ) . ( $is_preview_member ? '' : ' opacity: 0.2;' ) ); ?>"
 					<?php echo wp_interactivity_data_wp_context( array( 'cardId' => $actor_id ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 					data-wp-bind--hidden="state.isCardOffstage"
 					data-wp-style--opacity="state.cardOpacity"
@@ -1125,7 +1245,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						<?php else : ?>
 							<div class="core-ai-map__actor-body">
 						<?php endif; ?>
-								<span class="core-ai-map__step" data-wp-text="state.cardStep" aria-hidden="true"><?php echo esc_html( (string) ( $initial_members[ $actor_id ] ?? '' ) ); ?></span>
+								<span class="core-ai-map__step" data-wp-text="state.cardStep" aria-hidden="true"><?php echo esc_html( (int) ( $initial_members[ $actor_id ] ?? 0 ) > 0 ? (string) $initial_members[ $actor_id ] : '' ); ?></span>
 								<span class="core-ai-map__actor-badge"><?php echo esc_html( $actor['badge'] ?? '' ); ?></span>
 								<strong><?php echo esc_html( $actor['name'] ?? '' ); ?></strong>
 								<small><?php echo esc_html( $actor['tagline'] ?? '' ); ?></small>
@@ -1141,8 +1261,10 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<?php foreach ( $blocks as $block_id => $card ) : ?>
 				<?php
 				$detail_id     = $instance_id . '-panel-' . $block_id;
-				$is_member     = isset( $initial_members[ $block_id ] );
+				$is_member     = isset( $initial_preview_members[ $block_id ] );
+				$is_sidecar    = isset( $initial_sidecars[ $block_id ] );
 				$initial_class = $is_member ? ' is-preview-member' : '';
+				$initial_class .= $is_sidecar ? ' is-sidecar is-preview-sidecar' : '';
 				?>
 				<div
 					class="core-ai-map__block core-ai-map__block--<?php echo esc_attr( $block_id ); ?><?php echo esc_attr( $initial_class ); ?>"
@@ -1151,21 +1273,23 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					data-wp-style--transform="state.cardTransform"
 					data-wp-class--is-active="state.isCardActive"
 					data-wp-class--is-parked="state.isCardParked"
+					data-wp-class--is-sidecar="state.isCardSidecar"
 					data-wp-class--is-preview-member="state.isPreviewMember"
+					data-wp-class--is-preview-sidecar="state.isPreviewSidecar"
 					data-wp-class--is-dimmed="state.isCardDimmed"
 				>
 					<div class="core-ai-map__block-float">
 						<button
 							class="core-ai-map__block-body"
 							type="button"
-							style="opacity: <?php echo $is_member ? '1' : '0.2'; ?>;"
+							style="opacity: <?php echo $is_member ? '1' : ( $is_sidecar ? '0.86' : '0.2' ); ?>;"
 							data-wp-style--opacity="state.cardOpacity"
 							aria-controls="<?php echo esc_attr( $detail_id ); ?>"
 							aria-expanded="false"
 							data-wp-bind--aria-expanded="state.isCardInspected"
 							data-wp-on--click="actions.inspectCard"
 						>
-							<span class="core-ai-map__step" data-wp-text="state.cardStep" aria-hidden="true"><?php echo esc_html( (string) ( $initial_members[ $block_id ] ?? '' ) ); ?></span>
+							<span class="core-ai-map__step" data-wp-text="state.cardStep" aria-hidden="true"><?php echo esc_html( (int) ( $initial_members[ $block_id ] ?? 0 ) > 0 ? (string) $initial_members[ $block_id ] : '' ); ?></span>
 							<span class="core-ai-map__block-head">
 								<?php $icon( $block_id ); ?>
 								<span class="core-ai-map__block-badge"><?php echo esc_html( $card['badge'] ?? '' ); ?></span>
@@ -1175,6 +1299,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								<small><?php echo esc_html( $card['tagline'] ?? '' ); ?></small>
 							</span>
 						</button>
+						<?php if ( 'connectors' === $block_id ) : ?>
+							<span class="core-ai-map__sidecar-label"><?php esc_html_e( 'Setup · discovery · credentials', 'core-ai-map' ); ?></span>
+						<?php endif; ?>
 					</div>
 
 					<div
@@ -1342,7 +1469,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								<span class="core-ai-map__chain-step is-accent"><?php esc_html_e( 'Typed output', 'core-ai-map' ); ?></span>
 							</div>
 							<p class="core-ai-map__details-heading"><?php esc_html_e( 'Under the hood', 'core-ai-map' ); ?></p>
-							<p class="core-ai-map__details-note"><?php esc_html_e( 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. One public flag for client exposure, filtering in wp_get_abilities(), and filters around execution are landing in WordPress 7.1, which ships 19 August 2026 — read the anatomy panel as forward-looking until then.', 'core-ai-map' ); ?></p>
+							<p class="core-ai-map__details-note"><?php esc_html_e( 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution are scheduled for WordPress 7.1 on August 19, 2026; this exhibit runs WordPress 7.0, so read the Anatomy panel as forward-looking.', 'core-ai-map' ); ?></p>
 							<?php $render_qr( $panel_id, $panel ); ?>
 						</div>
 
@@ -1373,7 +1500,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								<li><b>A</b><span><strong><?php esc_html_e( 'Two segments, lowercase.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'The name is public API. Renaming it later breaks every caller.', 'core-ai-map' ); ?></span></li>
 								<li><b>B</b><span><strong><?php esc_html_e( 'This is the part an agent reads.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'It picks the ability from these two lines alone. If the description needs an “and”, it is two abilities.', 'core-ai-map' ); ?></span></li>
 								<li><b>C</b><span><strong><?php esc_html_e( 'Checked on every call.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'An editor button, a REST client and an outside assistant all pass through the same gate.', 'core-ai-map' ); ?></span></li>
-								<li><b>D</b><span><strong><?php esc_html_e( 'One flag, every client. Coming in 7.1.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'Public says this ability is meant for the outside — REST, MCP adapters, agents. Leave it out and it stays private; a channel can still be turned off on its own.', 'core-ai-map' ); ?></span></li>
+								<li><b>D</b><span><strong><?php esc_html_e( 'One public default, per-channel control. Scheduled for 7.1.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'Public seeds outside channels such as REST, MCP adapters, and agents; each channel can still be turned off independently.', 'core-ai-map' ); ?></span></li>
 								<li><b>E</b><span><strong><?php esc_html_e( 'Annotations are hints, not enforcement.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'Core’s own words: hints for tooling and documentation. Read-only tells a client this ability changes nothing. It does not stop anyone from calling it.', 'core-ai-map' ); ?></span></li>
 							</ul>
 							<p class="core-ai-map__details-warning"><strong><?php esc_html_e( 'Validation is not sanitization.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'The schema checks types and required fields. It does not clean input, and it does not fill in the defaults you wrote. Whatever arrives is raw.', 'core-ai-map' ); ?></p>

@@ -41,6 +41,54 @@ describe( 'Living Block Map v3.1.1 metadata', () => {
 		);
 	} );
 
+	it( 'separates the AI request path from Connectors configuration', () => {
+		const connectors = attributes.blocks.default.find(
+			( block ) => block.id === 'connectors'
+		);
+		const provider = attributes.actors.default.find(
+			( actor ) => actor.id === 'provider'
+		);
+		const story = attributes.stories.default.find(
+			( candidate ) => candidate.id === 'uses-ai'
+		);
+		const clientPanel = attributes.panels.default.find(
+			( panel ) => panel.id === 'client'
+		);
+		const connectorsPanel = attributes.panels.default.find(
+			( panel ) => panel.id === 'connectors'
+		);
+
+		expect( connectors.tagline ).toBe(
+			'Configure provider plugins and credentials'
+		);
+		expect( provider ).toMatchObject( {
+			name: 'External AI service',
+			tagline: 'Selected from site configuration',
+		} );
+		expect( story.copy ).toBe(
+			'A plugin asks the AI Client for a capability. The Client routes through a configured provider plugin to an external AI service; Connectors supplies discovery, configuration, and credentials beside the request path.'
+		);
+		expect( clientPanel.lede ).toContain(
+			'routes through an installed provider plugin'
+		);
+		expect( connectorsPanel.lede ).toContain(
+			'It supports the request path; it is not the request executor.'
+		);
+	} );
+
+	it( 'describes WordPress 7.1 work as scheduled while the exhibit runs 7.0', () => {
+		const abilities = attributes.panels.default.find(
+			( panel ) => panel.id === 'abilities'
+		);
+		const copy = abilities.notes.map( ( note ) => note.text ).join( ' ' );
+
+		expect( copy ).toContain(
+			'scheduled for WordPress 7.1 on August 19, 2026'
+		);
+		expect( copy ).toContain( 'this exhibit runs WordPress 7.0' );
+		expect( copy ).not.toContain( 'ships 19 August' );
+	} );
+
 	it( 'uses the seven canonical panel destinations', () => {
 		const hrefs = Object.fromEntries(
 			attributes.panels.default.map( ( panel ) => [

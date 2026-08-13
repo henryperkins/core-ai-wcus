@@ -74,7 +74,7 @@ return array(
 					array(
 						'id' => 'connectors',
 						'name' => 'Connectors',
-						'tagline' => 'Connect WordPress to providers and services',
+						'tagline' => 'Configure provider plugins and credentials',
 						'badge' => 'Core API · 7.0'
 					),
 					array(
@@ -120,8 +120,8 @@ return array(
 					),
 					array(
 						'id' => 'provider',
-						'name' => 'AI provider',
-						'tagline' => 'The site owner’s choice',
+						'name' => 'External AI service',
+						'tagline' => 'Selected from site configuration',
 						'badge' => 'Not WordPress'
 					),
 					array(
@@ -159,7 +159,7 @@ return array(
 					array(
 						'id' => 'uses-ai',
 						'title' => 'WordPress uses AI',
-						'copy' => 'A plugin asks the AI Client for a capability. The AI Client chooses a compatible model from a provider the site owner configured through Connectors.'
+						'copy' => 'A plugin asks the AI Client for a capability. The Client routes through a configured provider plugin to an external AI service; Connectors supplies discovery, configuration, and credentials beside the request path.'
 					),
 					array(
 						'id' => 'uses-wp',
@@ -206,7 +206,7 @@ return array(
 						'notes' => array(
 							array(
 								'heading' => 'Under the hood',
-								'text' => 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. One public flag for client exposure, filtering in wp_get_abilities(), and filters around execution are landing in WordPress 7.1, which ships 19 August 2026 — read the Anatomy panel as forward-looking until then.'
+								'text' => 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution are scheduled for WordPress 7.1 on August 19, 2026; this exhibit runs WordPress 7.0, so read the Anatomy panel as forward-looking.'
 							)
 						),
 						'href' => 'https://developer.wordpress.org/apis/abilities-api/',
@@ -217,7 +217,7 @@ return array(
 						'id' => 'client',
 						'badge' => 'Core API · 7.0',
 						'title' => 'AI Client',
-						'lede' => 'A plugin asks for a capability and the kind of result it needs. The AI Client chooses a compatible model from a provider the site owner configured through Connectors.',
+						'lede' => 'A plugin asks for a capability and the kind of result it needs. The AI Client routes through an installed provider plugin to a compatible external service; Connectors supplies that plugin’s configuration and credentials.',
 						'connectHeading' => 'How it connects',
 						'connectLayout' => 'chain',
 						'connect' => array(
@@ -246,7 +246,7 @@ return array(
 						'id' => 'connectors',
 						'badge' => 'Core API · 7.0',
 						'title' => 'Connectors',
-						'lede' => 'Where a site owner connects WordPress to outside services. Connectors handles provider discovery, configuration, credentials, installation status, and connection status.',
+						'lede' => 'Where a site owner discovers and configures provider plugins, stores credentials, and sees connection status. It supports the request path; it is not the request executor.',
 						'connectHeading' => 'Connection states',
 						'connectLayout' => 'grid',
 						'connect' => array(
@@ -268,7 +268,7 @@ return array(
 						'notes' => array(
 							array(
 								'heading' => 'Providers',
-								'text' => 'Provider plugins register themselves with the AI Client and appear under Settings → Connectors. A plugin can ask what a site actually has before offering a feature. The map stays vendor-neutral: no provider owns a position on the canvas.'
+								'text' => 'Provider plugins register with the AI Client. Connectors auto-discovers them and gives site owners installation, configuration, credential, and status controls. The map stays vendor-neutral: no provider owns a position on the canvas.'
 							),
 							array(
 								'heading' => 'Under the hood',

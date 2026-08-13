@@ -72,7 +72,9 @@ async ( page ) => {
 	);
 
 	await page.waitForFunction( () =>
-		document.querySelector( '.core-ai-map__preview-signal.is-live' )
+		document.querySelector(
+			'.core-ai-map__preview-flow[data-core-ai-preview="0"] .core-ai-map__preview-signal.is-live'
+		)
 	);
 	const attract = await page.evaluate( () => ( {
 		promptColor: getComputedStyle(
@@ -91,6 +93,42 @@ async ( page ) => {
 			( path ) =>
 				Number.parseFloat( getComputedStyle( path ).opacity ) > 0
 		),
+		providerPluginVisible:
+			! document.querySelector( '.core-ai-map__provider-plugin' ).hidden,
+		externalService: document
+			.querySelector( '.core-ai-map__actor--provider' )
+			.getBoundingClientRect()
+			.toJSON(),
+		steps: [
+			'.core-ai-map__block--plugin',
+			'.core-ai-map__block--client',
+			'.core-ai-map__provider-plugin',
+			'.core-ai-map__block--connectors',
+			'.core-ai-map__actor--provider',
+		].map( ( selector ) =>
+			document
+				.querySelector( `${ selector } .core-ai-map__step` )
+				?.textContent.trim()
+		),
+		connectorsSidecar: document
+			.querySelector( '.core-ai-map__block--connectors' )
+			.classList.contains( 'is-preview-sidecar' ),
+		runtimePaths: [
+			...document.querySelectorAll(
+				'.core-ai-map__preview-flow[data-core-ai-preview="0"] path:not(.core-ai-map__preview-config).is-live'
+			),
+		].map( ( path ) => path.getAttribute( 'd' ) ),
+		configPath: ( () => {
+			const path = document.querySelector(
+				'.core-ai-map__preview-flow[data-core-ai-preview="0"] .core-ai-map__preview-config.is-live'
+			);
+			return path
+				? {
+						d: path.getAttribute( 'd' ),
+						dash: getComputedStyle( path ).strokeDasharray,
+					}
+				: null;
+		} )(),
 	} ) );
 	observations.attract = attract;
 	assert(
@@ -102,6 +140,21 @@ async ( page ) => {
 	assert(
 		attract.promptColor === 'rgb(255, 255, 255)',
 		'Attract prompt text was not white on its blue background.'
+	);
+	assert(
+		attract.providerPluginVisible &&
+			attract.steps.join( ',' ) === '1,2,3,,',
+		'Attract did not teach Plugin -> Client -> provider plugin as the numbered runtime path.'
+	);
+	assert(
+		attract.externalService.left >= 1030,
+		'Attract did not keep the external AI service outside the WordPress boundary.'
+	);
+	assert(
+		attract.connectorsSidecar &&
+			attract.configPath?.dash.includes( '5px' ) &&
+			attract.runtimePaths.length === 3,
+		'Attract did not distinguish Connectors configuration from the three runtime paths.'
 	);
 
 	await page
@@ -129,6 +182,61 @@ async ( page ) => {
 		( await storyButtons.count() ) === 4,
 		'Story rail did not contain four stories.'
 	);
+	await storyButtons.nth( 0 ).click();
+	await page.waitForTimeout( 800 );
+	const storyOne = await page.evaluate( () => {
+		const bounds = ( selector ) =>
+			document.querySelector( selector ).getBoundingClientRect().toJSON();
+		const step = ( selector ) =>
+			document
+				.querySelector( `${ selector } .core-ai-map__step` )
+				?.textContent.trim();
+		const configPath = document.querySelector(
+			'.core-ai-map__config-path:not(.core-ai-map__preview-config):not([hidden])'
+		);
+		return {
+			providerPlugin: bounds( '.core-ai-map__provider-plugin' ),
+			externalService: bounds( '.core-ai-map__actor--provider' ),
+			steps: [
+				step( '.core-ai-map__block--plugin' ),
+				step( '.core-ai-map__block--client' ),
+				step( '.core-ai-map__provider-plugin' ),
+				step( '.core-ai-map__block--connectors' ),
+				step( '.core-ai-map__actor--provider' ),
+			],
+			connectorsSidecar: document
+				.querySelector( '.core-ai-map__block--connectors' )
+				.classList.contains( 'is-sidecar' ),
+			runtimePaths: [
+				...document.querySelectorAll(
+					'.core-ai-map__flow path.is-visible'
+				),
+			].map( ( path ) => path.getAttribute( 'd' ) ),
+			configPath: configPath
+				? {
+						d: configPath.getAttribute( 'd' ),
+						dash: getComputedStyle( configPath ).strokeDasharray,
+					}
+				: null,
+		};
+	} );
+	observations.storyOne = storyOne;
+	assert(
+		storyOne.steps.join( ',' ) === '1,2,3,,',
+		'Story 01 did not number only Plugin -> Client -> provider plugin.'
+	);
+	assert(
+		storyOne.providerPlugin.right <= 1030 &&
+			storyOne.externalService.left >= 1030,
+		'Story 01 did not keep the provider plugin inside WordPress and the external service outside.'
+	);
+	assert(
+		storyOne.connectorsSidecar &&
+			storyOne.configPath?.dash.includes( '5px' ) &&
+			storyOne.runtimePaths.length === 3,
+		'Story 01 did not distinguish the Connectors sidecar from the runtime path.'
+	);
+
 	await storyButtons.nth( 2 ).click();
 	await page.waitForTimeout( 800 );
 	const storyThree = await page.evaluate( () => {
@@ -220,6 +328,85 @@ async ( page ) => {
 	assert(
 		inspector.tabs === 3 && inspector.tabStops === 1,
 		'Abilities tabs were not a three-tab roving set.'
+	);
+	const abilitiesCopy = await page
+		.locator( '.core-ai-map__details-note' )
+		.textContent();
+	assert(
+		abilitiesCopy.includes( 'scheduled for WordPress 7.1 on August 19, 2026' ) &&
+			abilitiesCopy.includes( 'this exhibit runs WordPress 7.0' ) &&
+			! abilitiesCopy.includes( 'ships 19' ),
+		'Abilities overview did not use scheduled 7.1 wording and the running 7.0 disclosure.'
+	);
+	await page
+		.locator( '[data-core-ai-abilities-tab="anatomy"]' )
+		.click();
+	const anatomyCopy = await page
+		.locator( '.core-ai-map__ability-notes' )
+		.textContent();
+	assert(
+		anatomyCopy.includes( 'One public default, per-channel control' ) &&
+			! anatomyCopy.includes( 'One flag, every client' ),
+		'Abilities Anatomy did not explain the per-channel 7.1 control.'
+	);
+	const contrast = await page.evaluate( () => {
+		const luminance = ( color ) => {
+			const channels = color
+				.match( /\d+(?:\.\d+)?/g )
+				.slice( 0, 3 )
+				.map( ( channel ) => Number.parseFloat( channel ) / 255 )
+				.map( ( channel ) =>
+					channel <= 0.04045
+						? channel / 12.92
+						: ( ( channel + 0.055 ) / 1.055 ) ** 2.4
+				);
+			return (
+				0.2126 * channels[ 0 ] +
+				0.7152 * channels[ 1 ] +
+				0.0722 * channels[ 2 ]
+			);
+		};
+		const ratio = ( foreground, background ) => {
+			const high = Math.max(
+				luminance( foreground ),
+				luminance( background )
+			);
+			const low = Math.min(
+				luminance( foreground ),
+				luminance( background )
+			);
+			return ( high + 0.05 ) / ( low + 0.05 );
+		};
+		return [
+			'.core-ai-map__brand small',
+			'.core-ai-map__actor-badge',
+			'.core-ai-map__rail button:not(.is-active) span',
+			'.core-ai-map__details-heading',
+		].map( ( selector ) => {
+			const element = document.querySelector( selector );
+			const foreground = getComputedStyle( element ).color;
+			let parent = element;
+			let background = 'rgba(0, 0, 0, 0)';
+			while ( parent && background.endsWith( ', 0)' ) ) {
+				background = getComputedStyle( parent ).backgroundColor;
+				parent = parent.parentElement;
+			}
+			return {
+				selector,
+				foreground,
+				background,
+				ratio: ratio( foreground, background ),
+			};
+		} );
+	} );
+	observations.contrast = contrast;
+	assert(
+		contrast.every(
+			( sample ) =>
+				sample.foreground !== 'rgb(167, 170, 173)' &&
+				sample.ratio >= 4.5
+		),
+		'Muted small text did not reach 4.5:1 contrast.'
 	);
 	await page.keyboard.press( 'Escape' );
 	await page.waitForTimeout( 80 );
@@ -425,6 +612,57 @@ async ( page ) => {
 	assert(
 		compatibility.storyHeight >= 44 && compatibility.resetHeight >= 44,
 		'1024 controls fell below 44px.'
+	);
+	await page.locator( '.core-ai-map__rail button' ).nth( 0 ).click();
+	await page.waitForTimeout( 800 );
+	const compatibilityStoryOne = await page.evaluate( () => {
+		const map = document.querySelector( '.core-ai-map' );
+		const stage = document
+			.querySelector( '.core-ai-map__stage' )
+			.getBoundingClientRect();
+		const scale = Number.parseFloat(
+			getComputedStyle( map ).getPropertyValue( '--cai-scale' )
+		);
+		const logicalBounds = ( selector ) => {
+			const box = document.querySelector( selector ).getBoundingClientRect();
+			return {
+				left: ( box.left - stage.left ) / scale,
+				right: ( box.right - stage.left ) / scale,
+			};
+		};
+		return {
+			providerPlugin: logicalBounds( '.core-ai-map__provider-plugin' ),
+			externalService: logicalBounds( '.core-ai-map__actor--provider' ),
+			providerStep: document
+				.querySelector(
+					'.core-ai-map__provider-plugin .core-ai-map__step'
+				)
+				.textContent.trim(),
+			connectorsStep: document
+				.querySelector(
+					'.core-ai-map__block--connectors .core-ai-map__step'
+				)
+				.textContent.trim(),
+			connectorsSidecar: document
+				.querySelector( '.core-ai-map__block--connectors' )
+				.classList.contains( 'is-sidecar' ),
+			scrollWidth: document.documentElement.scrollWidth,
+			scrollHeight: document.documentElement.scrollHeight,
+		};
+	} );
+	observations.compatibilityStoryOne = compatibilityStoryOne;
+	assert(
+		compatibilityStoryOne.providerPlugin.right <= 1030 &&
+			compatibilityStoryOne.externalService.left >= 1030 &&
+			compatibilityStoryOne.providerStep === '3' &&
+			compatibilityStoryOne.connectorsStep === '' &&
+			compatibilityStoryOne.connectorsSidecar,
+		'Story 01 lost its provider-plugin and Connectors-sidecar model at 1024.'
+	);
+	assert(
+		compatibilityStoryOne.scrollWidth <= 1024 &&
+			compatibilityStoryOne.scrollHeight <= 768,
+		'Story 01 introduced scrolling in the 1024 compatibility view.'
 	);
 
 	await page.waitForFunction(

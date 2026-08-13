@@ -46,19 +46,63 @@ require ${ JSON.stringify( renderPath ) };
 	return JSON.parse( result.stdout );
 };
 
-const renderLegacyMarkup = () => {
+const renderLegacyMarkup = ( profile = 'legacy' ) => {
 	const metadata = JSON.parse( readFileSync( metadataPath, 'utf8' ) );
 	const legacyMetadata = JSON.parse(
 		readFileSync( join( __dirname, 'fixtures', 'block-v0.2.json' ), 'utf8' )
 	);
-	const attributes = Object.fromEntries(
-		Object.entries( legacyMetadata.attributes ).flatMap(
-			( [ key, value ] ) =>
-				Object.hasOwn( value, 'default' )
-					? [ [ key, value.default ] ]
-					: []
+	const sourceMetadata = profile === 'prebooth' ? metadata : legacyMetadata;
+	const attributes = JSON.parse(
+		JSON.stringify(
+			Object.fromEntries(
+				Object.entries( sourceMetadata.attributes ).flatMap(
+					( [ key, value ] ) =>
+						Object.hasOwn( value, 'default' )
+							? [ [ key, value.default ] ]
+							: []
+				)
+			)
 		)
 	);
+	if ( profile === 'prebooth' ) {
+		Object.assign(
+			attributes.blocks.find( ( item ) => item.id === 'connectors' ),
+			{ tagline: 'Connect WordPress to providers and services' }
+		);
+		Object.assign(
+			attributes.actors.find( ( item ) => item.id === 'provider' ),
+			{
+				name: 'AI provider',
+				tagline: 'The site owner’s choice',
+			}
+		);
+		attributes.stories.find( ( item ) => item.id === 'uses-ai' ).copy =
+			'A plugin asks the AI Client for a capability. The AI Client chooses a compatible model from a provider the site owner configured through Connectors.';
+		attributes.panels.find( ( item ) => item.id === 'abilities' ).notes = [
+			{
+				heading: 'Under the hood',
+				text: 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. One public flag for client exposure, filtering in wp_get_abilities(), and filters around execution are landing in WordPress 7.1, which ships 19 August 2026 — read the Anatomy panel as forward-looking until then.',
+			},
+		];
+		attributes.panels.find( ( item ) => item.id === 'client' ).lede =
+			'A plugin asks for a capability and the kind of result it needs. The AI Client chooses a compatible model from a provider the site owner configured through Connectors.';
+		Object.assign(
+			attributes.panels.find( ( item ) => item.id === 'connectors' ),
+			{
+				lede: 'Where a site owner connects WordPress to outside services. Connectors handles provider discovery, configuration, credentials, installation status, and connection status.',
+				notes: [
+					{
+						heading: 'Providers',
+						text: 'Provider plugins register themselves with the AI Client and appear under Settings → Connectors. A plugin can ask what a site actually has before offering a feature. The map stays vendor-neutral: no provider owns a position on the canvas.',
+					},
+					{
+						heading: 'Under the hood',
+						text: 'Introduced in WordPress 7.0 as a standardized framework for registering and managing connections to external services, starting with AI providers.',
+					},
+				],
+			}
+		);
+	}
 	attributes.panels = attributes.panels.map( ( panel ) => ( {
 		...panel,
 		href: 'https://legacy.example/generic',
@@ -117,6 +161,76 @@ echo ob_get_clean();
 };
 
 describe( 'Core AI map render contract', () => {
+	it( 'keeps Connectors beside the provider request path, not inside it', () => {
+		const context = renderDefaultContext();
+
+		expect( context.layout[ 'uses-ai' ].members ).toEqual( {
+			plugin: 1,
+			client: 2,
+			provider: 0,
+		} );
+		expect( context.layout[ 'uses-ai' ].sidecars ).toEqual( [
+			'connectors',
+		] );
+		expect( context.layout[ 'uses-ai' ].providerPlugin ).toMatchObject( {
+			step: 3,
+			position: [ 824, 214 ],
+			restPosition: [ 824, 332 ],
+		} );
+		expect( context.layout[ 'uses-ai' ].edges ).toEqual( [
+			'M504 266 L556 266',
+			'M792 266 L824 266',
+			'M1024 266 L1180 266',
+		] );
+		expect( context.layout[ 'uses-ai' ].sidecarEdges ).toEqual( [
+			'M924 360 L924 318',
+		] );
+		expect( context.layout[ 'uses-ai' ].sidecarRest ).toEqual( [
+			'M924 332 C954 318 1012 320 1030 308',
+		] );
+		expect( context.layout[ 'uses-ai' ].rest ).toEqual( [
+			'M504 234 L556 234',
+			'M792 234 C810 234 806 384 824 384',
+			'M1024 384 C1080 384 1094 390 1150 390',
+		] );
+
+		const [ connectorsX, connectorsY ] = context.neutral.connectors;
+		const [ providerPluginX, providerPluginY ] =
+			context.layout[ 'uses-ai' ].providerPlugin.restPosition;
+		const connectorsRect = {
+			left: connectorsX,
+			right: connectorsX + 236,
+			top: connectorsY,
+			bottom: connectorsY + 148,
+		};
+		const providerPluginRect = {
+			left: providerPluginX,
+			right: providerPluginX + 200,
+			top: providerPluginY,
+			bottom: providerPluginY + 104,
+		};
+		expect(
+			providerPluginRect.right <= connectorsRect.left ||
+				providerPluginRect.left >= connectorsRect.right ||
+				providerPluginRect.bottom <= connectorsRect.top ||
+				providerPluginRect.top >= connectorsRect.bottom
+		).toBe( true );
+
+		expect( context.previews[ 0 ] ).toMatchObject( {
+			ids: [ 'plugin', 'client', 'provider' ],
+			steps: { plugin: 1, client: 2, provider: 0 },
+			sidecars: [ 'connectors' ],
+			providerPlugin: { step: 3, position: [ 716, 200 ], scale: 0.8 },
+			at: { provider: [ 1060, 211 ] },
+			paths: [
+				'M449 259 L488 259',
+				'M677 259 L716 259',
+				'M876 259 L1060 259',
+			],
+			sidecarPaths: [ 'M798 340 L798 284' ],
+		} );
+	} );
+
 	it( 'serializes task as the third actor in the agent-learning workflow', () => {
 		const context = renderDefaultContext();
 
@@ -177,6 +291,26 @@ describe( 'Core AI map render contract', () => {
 		);
 		expect( markup ).not.toContain( 'Evidence, not a leaderboard.' );
 		expect( markup ).not.toContain( 'Every feature is opt-in' );
+		expect( markup ).not.toContain( 'ships 19 August' );
+		expect( markup ).not.toContain( 'One flag, every client' );
+	} );
+
+	it( 'migrates untouched pre-booth v3.1.1 copy on the server', () => {
+		const markup = renderLegacyMarkup( 'prebooth' );
+
+		expect( markup ).toContain(
+			'Configure provider plugins and credentials'
+		);
+		expect( markup ).toContain( 'External AI service' );
+		expect( markup ).toContain( 'Selected from site configuration' );
+		expect( markup ).toContain( 'provider plugin' );
+		expect( markup ).toContain( 'installed provider plugin' );
+		expect( markup ).toContain( 'not the request executor' );
+		expect( markup ).toContain( 'auto-discovers them' );
+		expect( markup ).toContain(
+			'scheduled for WordPress 7.1 on August 19, 2026'
+		);
+		expect( markup ).not.toContain( 'ships 19 August' );
 	} );
 
 	it( 'keeps the WP-Bench process cues and complete evidence rationale', () => {

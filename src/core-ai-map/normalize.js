@@ -89,6 +89,51 @@ const LEGACY_DEFAULTS = {
 	},
 };
 
+const PRE_BOOTH_V311_DEFAULTS = {
+	blocks: {
+		connectors: {
+			tagline: 'Connect WordPress to providers and services',
+		},
+	},
+	actors: {
+		provider: {
+			name: 'AI provider',
+			tagline: 'The site owner’s choice',
+		},
+	},
+	stories: {
+		'uses-ai': {
+			copy: 'A plugin asks the AI Client for a capability. The AI Client chooses a compatible model from a provider the site owner configured through Connectors.',
+		},
+	},
+	panels: {
+		abilities: {
+			notes: [
+				{
+					heading: 'Under the hood',
+					text: 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. One public flag for client exposure, filtering in wp_get_abilities(), and filters around execution are landing in WordPress 7.1, which ships 19 August 2026 — read the Anatomy panel as forward-looking until then.',
+				},
+			],
+		},
+		client: {
+			lede: 'A plugin asks for a capability and the kind of result it needs. The AI Client chooses a compatible model from a provider the site owner configured through Connectors.',
+		},
+		connectors: {
+			lede: 'Where a site owner connects WordPress to outside services. Connectors handles provider discovery, configuration, credentials, installation status, and connection status.',
+			notes: [
+				{
+					heading: 'Providers',
+					text: 'Provider plugins register themselves with the AI Client and appear under Settings → Connectors. A plugin can ask what a site actually has before offering a feature. The map stays vendor-neutral: no provider owns a position on the canvas.',
+				},
+				{
+					heading: 'Under the hood',
+					text: 'Introduced in WordPress 7.0 as a standardized framework for registering and managing connections to external services, starting with AI providers.',
+				},
+			],
+		},
+	},
+};
+
 const valuesMatch = ( left, right ) =>
 	JSON.stringify( left ) === JSON.stringify( right );
 
@@ -110,16 +155,22 @@ export const withCurrentDefaults = ( metadata, key, items ) => {
 	return defaults.map( ( item ) => {
 		const savedItem = saved.get( item.id ) || {};
 		const merged = { ...item, ...savedItem };
-		const legacyFields = LEGACY_DEFAULTS[ key ]?.[ item.id ] || {};
+		[ LEGACY_DEFAULTS, PRE_BOOTH_V311_DEFAULTS ].forEach(
+			( defaultsSet ) => {
+				const legacyFields = defaultsSet[ key ]?.[ item.id ] || {};
 
-		Object.entries( legacyFields ).forEach( ( [ field, legacyValue ] ) => {
-			if (
-				Object.hasOwn( savedItem, field ) &&
-				valuesMatch( savedItem[ field ], legacyValue )
-			) {
-				merged[ field ] = item[ field ];
+				Object.entries( legacyFields ).forEach(
+					( [ field, legacyValue ] ) => {
+						if (
+							Object.hasOwn( savedItem, field ) &&
+							valuesMatch( savedItem[ field ], legacyValue )
+						) {
+							merged[ field ] = item[ field ];
+						}
+					}
+				);
 			}
-		} );
+		);
 
 		// These fields are factual release metadata, not visitor-authored copy.
 		if ( key === 'panels' ) {

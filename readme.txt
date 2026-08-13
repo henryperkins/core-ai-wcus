@@ -19,6 +19,7 @@ The attract workflow uses assemble, path, signal, caption, and release phases. A
 Features include:
 
 * Four stories: WordPress uses AI; AI uses WordPress; Agent Skills -> Coding agent -> A WordPress task; and WordPress tests the result with WP-Bench.
+* The WordPress-uses-AI runtime path runs through the AI Client and a provider plugin to an external AI service; Connectors is shown beside it for discovery, configuration, and credentials.
 * The Skills-to-agent-to-task story happens outside the site: nothing inside WordPress runs.
 * Abilities inspector tabs and a WP-Bench five-stage run loop from task and sandbox through checks to evidence.
 * MCP Adapter labelled "WordPress plugin · not in Core".
@@ -97,6 +98,7 @@ Run these commands when building from source:
 * Added phased attract previews, settled post-engagement motion, accessibility hardening, Abilities tabs, and the WP-Bench run loop.
 * Replaced placeholder and arbitrary QR documentation with seven deterministic local canonical QR assets.
 * Restricted the offline worker to non-root kiosk permalinks and disabled offline mode on the home/root URL.
+* Corrected the provider-plugin request path, scheduled WordPress 7.1 wording, and muted-text contrast for the pre-booth build.
 
 = 0.2.0 =
 

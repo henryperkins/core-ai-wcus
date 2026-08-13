@@ -23,6 +23,38 @@ const worker = fs.readFileSync(
 );
 
 describe( 'Living Block Map v3.1.1 server render', () => {
+	it( 'renders the provider plugin runtime layer and Connectors sidecar', () => {
+		expect( render ).toContain( 'core-ai-map__provider-plugin' );
+		expect( render ).toContain( 'AI provider plugin' );
+		expect( render ).toContain( 'Provider-specific integration' );
+		expect( render ).toContain(
+			'data-wp-class--is-sidecar="state.isCardSidecar"'
+		);
+		expect( render ).toContain( 'core-ai-map__config-path' );
+		expect( render ).toContain( 'Setup · discovery · credentials' );
+		expect( styles ).toMatch(
+			/&__preview-flow path\.core-ai-map__preview-config\s*\{[\s\S]*?stroke:\s*var\(--core-ai-text-muted\)[\s\S]*?stroke-dasharray:\s*5 6/
+		);
+	} );
+
+	it( 'uses scheduled 7.1 language and a per-channel public default', () => {
+		expect( render ).toContain(
+			'scheduled for WordPress 7.1 on August 19, 2026'
+		);
+		expect( render ).toContain( 'this exhibit runs WordPress 7.0' );
+		expect( render ).toContain(
+			'One public default, per-channel control. Scheduled for 7.1.'
+		);
+	} );
+
+	it( 'uses a passing muted-text token while preserving decorative gray lines', () => {
+		expect( styles ).toContain( '--core-ai-text-muted: #646970;' );
+		expect( styles ).not.toMatch( /color:\s*var\(--core-ai-line-strong\)/ );
+		expect( styles ).toMatch(
+			/border:\s*1px dashed var\(--core-ai-line-strong\)/
+		);
+	} );
+
 	it( 'renders the explicit WordPress task actor in story 03', () => {
 		expect( render ).toMatch( /\$actor_ids[\s\S]*?'task'/ );
 		expect( render ).toMatch( /'learns'[\s\S]*?'task'\s*=>\s*3/ );
@@ -166,6 +198,9 @@ describe( 'Living Block Map v3.1.1 server render', () => {
 	} );
 
 	it( 'normalizes versioned cache keys and precaches built local fonts', () => {
+		expect( worker ).toContain(
+			'const CACHE_NAME = `${ CACHE_SCOPE_PREFIX }v3.1.1-prebooth-1`;'
+		);
 		expect( worker ).toContain( "searchParams.delete( 'ver' )" );
 		expect( worker ).toMatch(
 			/cache\.match\(\s*cacheKeyFor\( request \)\s*\)/

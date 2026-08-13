@@ -81,4 +81,114 @@ describe( 'editor copy normalization', () => {
 			'A custom kiosk explanation.'
 		);
 	} );
+
+	it( 'upgrades untouched pre-booth v3.1.1 architecture and release copy', () => {
+		const blocks = withCurrentDefaults( currentMetadata, 'blocks', [
+			{
+				...currentMetadata.attributes.blocks.default.find(
+					( item ) => item.id === 'connectors'
+				),
+				tagline: 'Connect WordPress to providers and services',
+			},
+		] );
+		const actors = withCurrentDefaults( currentMetadata, 'actors', [
+			{
+				id: 'provider',
+				name: 'AI provider',
+				tagline: 'The site owner’s choice',
+				badge: 'Not WordPress',
+			},
+		] );
+		const stories = withCurrentDefaults( currentMetadata, 'stories', [
+			{
+				...currentMetadata.attributes.stories.default.find(
+					( item ) => item.id === 'uses-ai'
+				),
+				copy: 'A plugin asks the AI Client for a capability. The AI Client chooses a compatible model from a provider the site owner configured through Connectors.',
+			},
+		] );
+		const panels = withCurrentDefaults( currentMetadata, 'panels', [
+			{
+				...currentMetadata.attributes.panels.default.find(
+					( item ) => item.id === 'abilities'
+				),
+				notes: [
+					{
+						heading: 'Under the hood',
+						text: 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. One public flag for client exposure, filtering in wp_get_abilities(), and filters around execution are landing in WordPress 7.1, which ships 19 August 2026 — read the Anatomy panel as forward-looking until then.',
+					},
+				],
+			},
+			{
+				...currentMetadata.attributes.panels.default.find(
+					( item ) => item.id === 'client'
+				),
+				lede: 'A plugin asks for a capability and the kind of result it needs. The AI Client chooses a compatible model from a provider the site owner configured through Connectors.',
+			},
+			{
+				...currentMetadata.attributes.panels.default.find(
+					( item ) => item.id === 'connectors'
+				),
+				lede: 'Where a site owner connects WordPress to outside services. Connectors handles provider discovery, configuration, credentials, installation status, and connection status.',
+				notes: [
+					{
+						heading: 'Providers',
+						text: 'Provider plugins register themselves with the AI Client and appear under Settings → Connectors. A plugin can ask what a site actually has before offering a feature. The map stays vendor-neutral: no provider owns a position on the canvas.',
+					},
+					{
+						heading: 'Under the hood',
+						text: 'Introduced in WordPress 7.0 as a standardized framework for registering and managing connections to external services, starting with AI providers.',
+					},
+				],
+			},
+		] );
+
+		expect(
+			blocks.find( ( item ) => item.id === 'connectors' ).tagline
+		).toBe( 'Configure provider plugins and credentials' );
+		expect(
+			actors.find( ( item ) => item.id === 'provider' )
+		).toMatchObject( {
+			name: 'External AI service',
+			tagline: 'Selected from site configuration',
+		} );
+		expect(
+			stories.find( ( item ) => item.id === 'uses-ai' ).copy
+		).toContain( 'provider plugin' );
+		expect(
+			panels.find( ( item ) => item.id === 'abilities' ).notes[ 0 ].text
+		).toContain( 'scheduled for WordPress 7.1 on August 19, 2026' );
+		expect(
+			panels.find( ( item ) => item.id === 'client' ).lede
+		).toContain( 'installed provider plugin' );
+		expect(
+			panels.find( ( item ) => item.id === 'connectors' )
+		).toMatchObject( {
+			lede: expect.stringContaining( 'not the request executor' ),
+			notes: [
+				{
+					heading: 'Providers',
+					text: expect.stringContaining( 'auto-discovers them' ),
+				},
+				{
+					heading: 'Under the hood',
+					text: expect.any( String ),
+				},
+			],
+		} );
+	} );
+
+	it( 'preserves custom pre-booth copy instead of replacing it', () => {
+		const stories = withCurrentDefaults( currentMetadata, 'stories', [
+			{
+				id: 'uses-ai',
+				title: 'WordPress uses AI',
+				copy: 'A custom explanation of the provider path.',
+			},
+		] );
+
+		expect( stories.find( ( item ) => item.id === 'uses-ai' ).copy ).toBe(
+			'A custom explanation of the provider path.'
+		);
+	} );
 } );

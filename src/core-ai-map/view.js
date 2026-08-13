@@ -93,6 +93,12 @@ const isolateKioskPage = ( root ) => {
 const activeLayout = ( context ) =>
 	( context.story && context.layout?.[ context.story ] ) || null;
 
+const hasLayoutMember = ( layout, id ) =>
+	Boolean( layout?.members && Object.hasOwn( layout.members, id ) );
+
+const isLayoutSidecar = ( layout, id ) =>
+	Boolean( layout?.sidecars?.includes( id ) );
+
 const previewList = ( context ) => {
 	if ( Array.isArray( context.previews ) && context.previews.length ) {
 		return context.previews;
@@ -107,6 +113,8 @@ const previewList = ( context ) => {
 			return {
 				storyId,
 				ids: Object.keys( layout.members || {} ),
+				steps: layout.members || {},
+				sidecars: layout.sidecars || [],
 				at: layout.place || {},
 				scale: 1,
 			};
@@ -399,10 +407,18 @@ store( 'core-ai/map', {
 			}
 
 			const layout = activeLayout( context );
-			if ( ! layout || context.recompose === false ) {
+			if ( ! layout ) {
 				return '';
 			}
 			const place = layout.place?.[ context.cardId ];
+			if ( context.recompose === false ) {
+				return '';
+			}
+			if ( isLayoutSidecar( layout, context.cardId ) && place ) {
+				return `translate(${ place[ 0 ] - neutral[ 0 ] }px, ${
+					place[ 1 ] - neutral[ 1 ]
+				}px)`;
+			}
 			if ( place ) {
 				return `translate(${ place[ 0 ] - neutral[ 0 ] }px, ${
 					place[ 1 ] - neutral[ 1 ]
@@ -425,10 +441,13 @@ store( 'core-ai/map', {
 				if ( context.previewPhase === 'releasing' ) {
 					return '';
 				}
-				const previewStep =
-					activePreview( context )?.ids?.indexOf( context.cardId ) ??
-					-1;
-				return previewStep >= 0 ? String( previewStep + 1 ) : '';
+				const preview = activePreview( context );
+				const previewStep = preview?.steps?.[ context.cardId ];
+				if ( preview?.steps ) {
+					return previewStep ? String( previewStep ) : '';
+				}
+				const index = preview?.ids?.indexOf( context.cardId ) ?? -1;
+				return index >= 0 ? String( index + 1 ) : '';
 			}
 			const step = activeLayout( context )?.members?.[ context.cardId ];
 			return step ? String( step ) : '';
@@ -439,7 +458,16 @@ store( 'core-ai/map', {
 				return this.isPreviewMember;
 			}
 			return Boolean(
-				activeLayout( context )?.members?.[ context.cardId ]
+				Number(
+					activeLayout( context )?.members?.[ context.cardId ] || 0
+				) > 0
+			);
+		},
+		get isCardSidecar() {
+			const context = getContext();
+			return Boolean(
+				isRecomposed( context ) &&
+					isLayoutSidecar( activeLayout( context ), context.cardId )
 			);
 		},
 		get isCardParked() {
@@ -447,7 +475,8 @@ store( 'core-ai/map', {
 			const layout = activeLayout( context );
 			return Boolean(
 				isRecomposed( context ) &&
-					! layout.members[ context.cardId ] &&
+					! hasLayoutMember( layout, context.cardId ) &&
+					! isLayoutSidecar( layout, context.cardId ) &&
 					layout.park?.includes( context.cardId )
 			);
 		},
@@ -459,6 +488,16 @@ store( 'core-ai/map', {
 					activePreview( context )?.ids?.includes( context.cardId )
 			);
 		},
+		get isPreviewSidecar() {
+			const context = getContext();
+			return Boolean(
+				context.screen === 'attract' &&
+					context.previewPhase !== 'releasing' &&
+					activePreview( context )?.sidecars?.includes(
+						context.cardId
+					)
+			);
+		},
 		get cardOpacity() {
 			const context = getContext();
 			if ( context.screen !== 'attract' ) {
@@ -466,6 +505,9 @@ store( 'core-ai/map', {
 			}
 			if ( this.isPreviewMember ) {
 				return '1';
+			}
+			if ( this.isPreviewSidecar ) {
+				return '0.86';
 			}
 			return context.previewPhase === 'releasing' ? '0.62' : '0.2';
 		},
@@ -475,7 +517,8 @@ store( 'core-ai/map', {
 			return Boolean(
 				layout &&
 					! isRecomposed( context ) &&
-					! layout.members[ context.cardId ]
+					! hasLayoutMember( layout, context.cardId ) &&
+					! isLayoutSidecar( layout, context.cardId )
 			);
 		},
 		get isCardOffstage() {
@@ -483,7 +526,11 @@ store( 'core-ai/map', {
 			if ( context.screen === 'attract' ) {
 				return false;
 			}
-			return ! activeLayout( context )?.members?.[ context.cardId ];
+			const layout = activeLayout( context );
+			return ! (
+				hasLayoutMember( layout, context.cardId ) ||
+				isLayoutSidecar( layout, context.cardId )
+			);
 		},
 		get isCardInspected() {
 			const context = getContext();
@@ -505,7 +552,7 @@ store( 'core-ai/map', {
 			const layout = activeLayout( context );
 			return Boolean(
 				context.screen === 'map' &&
-					layout?.members?.[ context.cardId ] &&
+					Number( layout?.members?.[ context.cardId ] || 0 ) > 0 &&
 					! layout.noStrip?.includes( context.cardId )
 			);
 		},
@@ -618,6 +665,55 @@ store( 'core-ai/map', {
 				! this.isPreviewHidden &&
 					context.previewPhase === 'signalling' &&
 					! reducedMotion( getRoot( getElement().ref ) )
+			);
+		},
+
+		get isProviderPluginHidden() {
+			const context = getContext();
+			if ( context.screen === 'map' ) {
+				return context.story !== 'uses-ai';
+			}
+			return ! (
+				context.screen === 'attract' &&
+				context.previewPhase !== 'releasing' &&
+				activePreview( context )?.storyId === 'uses-ai'
+			);
+		},
+		get providerPluginTransform() {
+			const context = getContext();
+			const providerPlugin =
+				context.layout?.[ 'uses-ai' ]?.providerPlugin;
+			if (
+				context.screen === 'map' &&
+				context.story === 'uses-ai' &&
+				context.recompose === false
+			) {
+				const base = providerPlugin?.position;
+				const position = providerPlugin?.restPosition;
+				if ( ! base || ! position ) {
+					return '';
+				}
+				return `translate(${ position[ 0 ] - base[ 0 ] }px, ${
+					position[ 1 ] - base[ 1 ]
+				}px)`;
+			}
+			if ( context.screen !== 'attract' ) {
+				return '';
+			}
+			const preview = activePreview( context );
+			const base = providerPlugin?.position;
+			const position = preview?.providerPlugin?.position;
+			if ( ! base || ! position ) {
+				return '';
+			}
+			return `translate(${ position[ 0 ] - base[ 0 ] }px, ${
+				position[ 1 ] - base[ 1 ]
+			}px) scale(${ preview.providerPlugin.scale ?? 1 })`;
+		},
+		get isProviderConfigPathHidden() {
+			const context = getContext();
+			return (
+				context.screen !== 'map' || ! isCurrentPathVariant( context )
 			);
 		},
 

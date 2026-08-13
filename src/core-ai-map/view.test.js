@@ -24,25 +24,33 @@ const mapStore = store.mock.calls.find(
 
 const LAYOUT = {
 	'uses-ai': {
-		members: { plugin: 1, client: 2, connectors: 3, provider: 4 },
+		members: { plugin: 1, client: 2, provider: 0 },
+		sidecars: [ 'connectors' ],
+		providerPlugin: {
+			step: 3,
+			position: [ 824, 214 ],
+			restPosition: [ 824, 332 ],
+		},
 		place: {
 			plugin: [ 268, 192 ],
 			client: [ 556, 192 ],
-			connectors: [ 900, 192 ],
-			provider: [ 1180, 216 ],
+			connectors: [ 836, 360 ],
+			provider: [ 1180, 206 ],
 		},
 		park: [ 'mcp', 'abilities', 'bench' ],
 		shelfY: 512,
 		shelfStart: 3,
 		edges: [
 			'M504 266 L556 266',
-			'M792 266 L900 266',
-			'M1136 266 L1180 266',
+			'M792 266 L824 266',
+			'M1024 266 L1180 266',
 		],
+		sidecarEdges: [ 'M924 360 L924 318' ],
+		sidecarRest: [ 'M924 332 C954 318 1012 320 1030 308' ],
 		rest: [
 			'M504 234 L556 234',
-			'M792 234 L912 234',
-			'M1090 308 L1146 377',
+			'M792 234 C810 234 806 384 824 384',
+			'M1024 384 C1080 384 1094 390 1150 390',
 		],
 		dur: [ '1.5s', '1.9s', '1.7s' ],
 		crosses: [ 'right' ],
@@ -150,6 +158,32 @@ describe( 'Core AI Living Block Map', () => {
 				{ label: 'Post title', text: 'A quieter way to explain AI' },
 			],
 			phases: [ 'Needs review', 'Applied' ],
+			previews: [
+				{
+					storyId: 'uses-ai',
+					scale: 0.8,
+					ids: [ 'plugin', 'client', 'provider' ],
+					steps: { plugin: 1, client: 2, provider: 0 },
+					sidecars: [ 'connectors' ],
+					providerPlugin: {
+						step: 3,
+						position: [ 716, 200 ],
+						scale: 0.8,
+					},
+					at: {
+						plugin: [ 260, 200 ],
+						client: [ 488, 200 ],
+						connectors: [ 728, 340 ],
+						provider: [ 1060, 211 ],
+					},
+				},
+				{
+					storyId: 'uses-wp',
+					scale: 0.8,
+					ids: [ 'assistant', 'mcp', 'abilities' ],
+					at: {},
+				},
+			],
 		};
 		currentElement = root;
 
@@ -197,14 +231,30 @@ describe( 'Core AI Living Block Map', () => {
 		);
 	} );
 
-	it( 'slides a story member into place and parks a non-member without scaling it', () => {
+	it( 'keeps Connectors as an unnumbered configuration sidecar', () => {
 		context.screen = 'map';
 		context.story = 'uses-ai';
 
 		context.cardId = 'connectors';
-		expect( mapStore.state.cardTransform ).toBe( 'translate(-12px, 32px)' );
-		expect( mapStore.state.isCardActive ).toBe( true );
-		expect( mapStore.state.cardStep ).toBe( '3' );
+		expect( mapStore.state.cardTransform ).toBe(
+			'translate(-76px, 200px)'
+		);
+		expect( mapStore.state.isCardSidecar ).toBe( true );
+		expect( mapStore.state.isCardActive ).toBe( false );
+		expect( mapStore.state.isCardParked ).toBe( false );
+		expect( mapStore.state.isCardOffstage ).toBe( false );
+		expect( mapStore.state.isStripLive ).toBe( false );
+		expect( mapStore.state.cardStep ).toBe( '' );
+
+		context.cardId = 'provider';
+		expect( mapStore.state.cardTransform ).toBe(
+			'translate(30px, -124px)'
+		);
+		expect( mapStore.state.isCardOffstage ).toBe( false );
+		expect( mapStore.state.cardStep ).toBe( '' );
+
+		expect( mapStore.state.isProviderPluginHidden ).toBe( false );
+		expect( mapStore.state.providerPluginTransform ).toBe( '' );
 
 		// uses-ai starts its compact shelf in slot 3, leaving space around the
 		// active workflow while using the full 176px card width.
@@ -217,6 +267,33 @@ describe( 'Core AI Living Block Map', () => {
 		expect( mapStore.state.cardStep ).toBe( '' );
 	} );
 
+	it( 'teaches the same provider path in the attract preview', () => {
+		context.screen = 'attract';
+		context.previewIndex = 0;
+		context.previewPhase = 'settled';
+
+		context.cardId = 'connectors';
+		expect( mapStore.state.isPreviewSidecar ).toBe( true );
+		expect( mapStore.state.isPreviewMember ).toBe( false );
+		expect( mapStore.state.cardStep ).toBe( '' );
+		expect( mapStore.state.cardOpacity ).toBe( '0.86' );
+
+		context.cardId = 'provider';
+		expect( mapStore.state.isPreviewMember ).toBe( true );
+		expect( mapStore.state.cardTransform ).toBe(
+			'translate(-90px, -119px) scale(0.8)'
+		);
+		expect( mapStore.state.cardStep ).toBe( '' );
+		expect( mapStore.state.cardOpacity ).toBe( '1' );
+		expect( mapStore.state.isProviderPluginHidden ).toBe( false );
+		expect( mapStore.state.providerPluginTransform ).toBe(
+			'translate(-108px, -14px) scale(0.8)'
+		);
+
+		context.previewPhase = 'releasing';
+		expect( mapStore.state.isProviderPluginHidden ).toBe( true );
+	} );
+
 	it( 'holds positions and dims non-members when recomposition is off', () => {
 		context.screen = 'map';
 		context.story = 'uses-ai';
@@ -227,14 +304,25 @@ describe( 'Core AI Living Block Map', () => {
 		expect( mapStore.state.isCardParked ).toBe( false );
 		expect( mapStore.state.isCardDimmed ).toBe( true );
 
+		context.cardId = 'connectors';
+		expect( mapStore.state.cardTransform ).toBe( '' );
+		expect( mapStore.state.isCardSidecar ).toBe( false );
+		expect( mapStore.state.isCardDimmed ).toBe( false );
+		expect( mapStore.state.isCardOffstage ).toBe( false );
+		expect( mapStore.state.providerPluginTransform ).toBe(
+			'translate(0px, 118px)'
+		);
+
 		// Recomposition off falls back to the resting connector paths.
 		context.storyId = 'uses-ai';
 		context.variant = 'rest';
 		context.flowPhase = 'transition';
 		expect( mapStore.state.isEdgeLive ).toBe( true );
+		expect( mapStore.state.isProviderConfigPathHidden ).toBe( false );
 
 		context.variant = 'edges';
 		expect( mapStore.state.isEdgeLive ).toBe( false );
+		expect( mapStore.state.isProviderConfigPathHidden ).toBe( true );
 	} );
 
 	it( 'lights only the boundary rules a story actually crosses', () => {
@@ -831,7 +919,7 @@ describe( 'Core AI Living Block Map', () => {
 
 			context.cardId = 'plugin';
 			expect( mapStore.state.cardTransform ).toBe(
-				'translate(0px, 32px) scale(1)'
+				'translate(-8px, 40px) scale(0.8)'
 			);
 
 			jest.advanceTimersByTime( 2300 );
@@ -859,7 +947,7 @@ describe( 'Core AI Living Block Map', () => {
 			context.cardId = 'plugin';
 
 			expect( mapStore.state.cardTransform ).toBe(
-				'translate(0px, 32px) scale(1)'
+				'translate(-8px, 40px) scale(0.8)'
 			);
 			expect( mapStore.state.isPreviewPathVisible ).toBe( true );
 			expect( mapStore.state.isPreviewTextVisible ).toBe( true );
