@@ -28,6 +28,16 @@ separate required sign-off.
 
 The reviewed date shown by this release is **Reviewed 12 Aug 2026**.
 
+## AI assistance and accountability
+
+- AI assistance: **Yes**
+- Tool: **OpenAI Codex**
+- Used for: implementation, tests, and deployment preparation.
+
+Final work was human-reviewed and tested; the human contributor remains
+responsible for it. Use the same disclosure in the description of any future
+pull request for this work.
+
 ## Cloudflare Pages Playground exhibit
 
 `playground/blueprint.json` packages this same plugin into a browser-executed

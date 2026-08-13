@@ -220,4 +220,34 @@ describe( 'Core AI map render contract', () => {
 			'--check-exploitsProves the test is specified. An empty function goes in, then a bare return. Every one must fail — a test a stub can pass was checking a fixture, not WordPress.',
 		] );
 	} );
+
+	it( 'renders an accessible OpenAI Codex transparency dialog', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup();
+
+		const trigger = container.querySelector(
+			'.core-ai-map__about-trigger'
+		);
+		const dialog = container.querySelector( '.core-ai-map__about' );
+
+		expect( trigger.getAttribute( 'aria-controls' ) ).toMatch(
+			/core-ai-map-test-about/
+		);
+		expect( trigger.getAttribute( 'aria-expanded' ) ).toBe( 'false' );
+		expect( dialog.getAttribute( 'role' ) ).toBe( 'dialog' );
+		expect( dialog.getAttribute( 'aria-modal' ) ).toBe( 'true' );
+		expect( dialog.querySelector( 'dt' ).textContent ).toBe(
+			'AI assistance:'
+		);
+		expect( dialog.querySelector( 'dd' ).textContent ).toBe( 'Yes' );
+		expect( dialog.textContent ).toContain( 'Tool:' );
+		expect( dialog.textContent ).toContain( 'OpenAI Codex' );
+		expect( dialog.textContent ).toContain( 'Used for:' );
+		expect( dialog.textContent ).toContain(
+			'implementation, tests, and deployment preparation.'
+		);
+		expect( dialog.textContent ).toContain(
+			'Final work was human-reviewed and tested; the human contributor remains responsible for it.'
+		);
+	} );
 } );

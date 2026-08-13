@@ -88,6 +88,9 @@ describe( 'Core AI Living Block Map', () => {
 				data-offline-enabled="false"
 			>
 				<button class="core-ai-map__prompt" type="button">Add the blocks</button>
+				<button class="core-ai-map__about-trigger" type="button">
+					About this exhibit
+				</button>
 				<button class="core-ai-map__reset" type="button">Start over</button>
 				<div class="core-ai-map__block">
 					<button class="core-ai-map__block-body" type="button">AI Client</button>
@@ -95,6 +98,11 @@ describe( 'Core AI Living Block Map', () => {
 				<aside class="core-ai-map__details">
 					<button class="core-ai-map__details-close" type="button">
 						Back to the map
+					</button>
+				</aside>
+				<aside class="core-ai-map__about" role="dialog" aria-modal="true">
+					<button class="core-ai-map__about-close" type="button">
+						Close
 					</button>
 				</aside>
 			</section>
@@ -396,6 +404,42 @@ describe( 'Core AI Living Block Map', () => {
 				activeElement: blockButton,
 			},
 		} );
+	} );
+
+	it( 'opens the AI transparency dialog and restores focus to its trigger on Escape', () => {
+		const aboutTrigger = root.querySelector(
+			'.core-ai-map__about-trigger'
+		);
+		const closeButton = root.querySelector( '.core-ai-map__about-close' );
+		const effects = [];
+
+		context.screen = 'map';
+		currentElement = root;
+		useEffect.mockImplementation( ( callback ) => {
+			effects.push( callback );
+		} );
+		mapStore.callbacks.useKiosk();
+		const cleanupKiosk = effects[ 0 ]();
+		aboutTrigger.focus();
+		currentElement = aboutTrigger;
+		mapStore.actions.openAbout();
+		jest.advanceTimersByTime( 80 );
+
+		expect( context.screen ).toBe( 'about' );
+		expect( document.activeElement ).toBe( closeButton );
+
+		currentElement = closeButton;
+		root.dispatchEvent(
+			new window.KeyboardEvent( 'keydown', {
+				key: 'Escape',
+				bubbles: true,
+			} )
+		);
+		jest.advanceTimersByTime( 40 );
+
+		expect( context.screen ).toBe( 'map' );
+		expect( document.activeElement ).toBe( aboutTrigger );
+		cleanupKiosk();
 	} );
 
 	it( 'toggles a story off when its rail button is pressed again', () => {

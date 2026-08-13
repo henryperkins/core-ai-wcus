@@ -626,6 +626,7 @@ $context = array(
 	'abilitiesTab'   => 'overview',
 	'benchStage'     => 'sandbox',
 	'benchPathsLive' => false,
+	'aboutReturnScreen' => '',
 	'applied'        => false,
 	'idleStoryIndex' => 0,
 	'isOffline'      => false,
@@ -841,6 +842,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		'data-wp-class--is-map'     => 'state.isMap',
 		'data-wp-class--is-inspect' => 'state.isInspect',
 		'data-wp-class--is-bench'   => 'state.isBench',
+		'data-wp-class--is-about'   => 'state.isAbout',
 		'data-wp-class--has-story'  => 'state.hasStory',
 		'data-screen-label'          => __( 'Core AI Living Block Map', 'core-ai-map' ),
 		'data-inactivity-timeout'   => (string) ( $inactivity_timeout * 1000 ),
@@ -887,13 +889,25 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				</p>
 			<?php endif; ?>
 
-			<p class="core-ai-map__offline" data-wp-bind--hidden="state.isOnline" hidden>
-				<span aria-hidden="true"></span><?php esc_html_e( 'Offline mode', 'core-ai-map' ); ?>
-			</p>
-
-			<button class="core-ai-map__reset" type="button" data-wp-bind--hidden="state.isResetHidden" data-wp-on--click="actions.reset" hidden>
-				<?php esc_html_e( 'Start over', 'core-ai-map' ); ?>
-			</button>
+			<div class="core-ai-map__topbar-actions">
+				<p class="core-ai-map__offline" data-wp-bind--hidden="state.isOnline" hidden>
+					<span aria-hidden="true"></span><?php esc_html_e( 'Offline mode', 'core-ai-map' ); ?>
+				</p>
+				<button
+					class="core-ai-map__about-trigger"
+					type="button"
+					aria-controls="<?php echo esc_attr( $instance_id . '-about' ); ?>"
+					aria-expanded="false"
+					data-wp-bind--hidden="state.isAboutControlHidden"
+					data-wp-bind--aria-expanded="state.isAbout"
+					data-wp-on--click="actions.openAbout"
+				>
+					<?php esc_html_e( 'About this exhibit', 'core-ai-map' ); ?>
+				</button>
+				<button class="core-ai-map__reset" type="button" data-wp-bind--hidden="state.isResetHidden" data-wp-on--click="actions.reset" hidden>
+					<?php esc_html_e( 'Start over', 'core-ai-map' ); ?>
+				</button>
+			</div>
 		</header>
 
 		<div
@@ -1243,6 +1257,31 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				<?php endforeach; ?>
 			</div>
 		</div>
+
+		<aside
+			id="<?php echo esc_attr( $instance_id . '-about' ); ?>"
+			class="core-ai-map__about"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="<?php echo esc_attr( $instance_id . '-about-title' ); ?>"
+			data-wp-bind--hidden="state.isNotAbout"
+			hidden
+		>
+			<button class="core-ai-map__about-close" type="button" data-wp-on--click="actions.closeAbout">
+				<span aria-hidden="true">&larr;</span>
+				<?php esc_html_e( 'Back to the exhibit', 'core-ai-map' ); ?>
+			</button>
+			<div class="core-ai-map__about-content">
+				<p class="core-ai-map__details-badge"><?php esc_html_e( 'Transparency', 'core-ai-map' ); ?></p>
+				<h2 id="<?php echo esc_attr( $instance_id . '-about-title' ); ?>"><?php esc_html_e( 'About this exhibit', 'core-ai-map' ); ?></h2>
+				<dl class="core-ai-map__about-disclosure">
+					<div><dt><?php esc_html_e( 'AI assistance:', 'core-ai-map' ); ?></dt><dd><?php esc_html_e( 'Yes', 'core-ai-map' ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'Tool:', 'core-ai-map' ); ?></dt><dd><?php esc_html_e( 'OpenAI Codex', 'core-ai-map' ); ?></dd></div>
+					<div><dt><?php esc_html_e( 'Used for:', 'core-ai-map' ); ?></dt><dd><?php esc_html_e( 'implementation, tests, and deployment preparation.', 'core-ai-map' ); ?></dd></div>
+				</dl>
+				<p><?php esc_html_e( 'Final work was human-reviewed and tested; the human contributor remains responsible for it.', 'core-ai-map' ); ?></p>
+			</div>
+		</aside>
 
 		<aside
 			class="core-ai-map__details"

@@ -162,6 +162,17 @@ body.core-ai-kiosk-active {
 		pointer-events: none;
 	}
 
+	&__topbar-actions {
+		position: absolute;
+		top: 0;
+		right: 0;
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		height: 60px;
+		pointer-events: auto;
+	}
+
 	&__brand {
 		display: flex;
 		align-items: center;
@@ -232,9 +243,6 @@ body.core-ai-kiosk-active {
 	}
 
 	&__offline {
-		position: absolute;
-		top: 8px;
-		right: 130px;
 		display: flex;
 		align-items: center;
 		gap: 8px;
@@ -259,9 +267,6 @@ body.core-ai-kiosk-active {
 	}
 
 	&__reset {
-		position: absolute;
-		top: 0;
-		right: 0;
 		min-width: 100px;
 		min-height: 60px;
 		padding: 0 16px;
@@ -276,6 +281,18 @@ body.core-ai-kiosk-active {
 		transition:
 			color 180ms ease,
 			border-color 180ms ease;
+	}
+
+	&__about-trigger {
+		min-height: 60px;
+		padding: 0 16px;
+		color: var(--core-ai-ink);
+		font-size: 14px;
+		font-weight: 620;
+		background: var(--core-ai-surface);
+		border: 1px solid var(--core-ai-line);
+		border-radius: var(--core-ai-radius);
+		cursor: pointer;
 	}
 
 	/* Canvas ----------------------------------------------------------- */
@@ -1394,6 +1411,94 @@ body.core-ai-kiosk-active {
 			font-weight: 500;
 			line-height: 0.98;
 			letter-spacing: -0.045em;
+		}
+	}
+
+	&__about {
+		position: absolute;
+		z-index: 60;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		left: 0;
+		display: grid;
+		place-items: center;
+		padding: 80px 24px 24px;
+		background: rgba(30, 30, 30, 0.22);
+	}
+
+	&__about[hidden] {
+		display: none;
+	}
+
+	&__about-content {
+		width: min(560px, 100%);
+		padding: 36px 42px 42px;
+		background: var(--core-ai-surface);
+		border: 1px solid var(--core-ai-line);
+		border-radius: var(--core-ai-radius);
+		box-shadow: 0 24px 64px rgba(30, 30, 30, 0.2);
+
+		h2 {
+			margin: 12px 0 0;
+			font-family: var(--core-ai-serif);
+			font-size: 54px;
+			font-weight: 500;
+			line-height: 0.98;
+			letter-spacing: -0.045em;
+		}
+
+		p {
+			margin: 24px 0 0;
+			font-size: 17px;
+			line-height: 1.5;
+		}
+	}
+
+	&__about-close {
+		position: absolute;
+		top: 24px;
+		left: 32px;
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		min-height: 60px;
+		padding: 0;
+		font-size: 14px;
+		font-weight: 620;
+		background: transparent;
+		border: 0;
+		cursor: pointer;
+
+		span {
+			font-size: 20px;
+			font-weight: 400;
+		}
+	}
+
+	&__about-disclosure {
+		margin: 26px 0 0;
+
+		div {
+			display: grid;
+			grid-template-columns: 120px minmax(0, 1fr);
+			gap: 16px;
+			padding: 12px 0;
+			border-top: 1px solid var(--core-ai-line);
+		}
+
+		dt {
+			color: var(--core-ai-line-strong);
+			font-family: var(--core-ai-mono);
+			font-size: 12px;
+			letter-spacing: 0.06em;
+			text-transform: uppercase;
+		}
+
+		dd {
+			margin: 0;
+			font-size: 16px;
+			line-height: 1.45;
 		}
 	}
 

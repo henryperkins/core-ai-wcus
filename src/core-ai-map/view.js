@@ -23,6 +23,7 @@ const flowTimers = new WeakMap();
 const attractTimers = new WeakMap();
 const lastCardTriggers = new WeakMap();
 const lastBenchTriggers = new WeakMap();
+const lastAboutTriggers = new WeakMap();
 
 const getRoot = ( element ) => element?.closest( '.core-ai-map' );
 
@@ -183,6 +184,7 @@ const setPreviewPhase = ( context, phase ) => {
 
 const setAttractState = ( context ) => {
 	context.screen = 'attract';
+	context.aboutReturnScreen = '';
 	context.story = '';
 	context.inspect = '';
 	context.previewIndex = 0;
@@ -323,6 +325,17 @@ store( 'core-ai/map', {
 		},
 		get isBench() {
 			return getContext().screen === 'bench';
+		},
+		get isAbout() {
+			return getContext().screen === 'about';
+		},
+		get isNotAbout() {
+			return getContext().screen !== 'about';
+		},
+		get isAboutControlHidden() {
+			return [ 'about', 'inspect', 'bench' ].includes(
+				getContext().screen
+			);
 		},
 		get isNotBench() {
 			return getContext().screen !== 'bench';
@@ -720,6 +733,30 @@ store( 'core-ai/map', {
 			resetSchedulers.get( root )?.();
 			focusWithin( root, '.core-ai-map__details-close', 80 );
 		},
+		openAbout() {
+			const context = getContext();
+			const { ref } = getElement();
+			const root = getRoot( ref );
+			ref?.blur?.();
+			if ( root ) {
+				lastAboutTriggers.set( root, ref );
+			}
+			context.aboutReturnScreen = context.screen;
+			context.screen = 'about';
+			context.announcement = 'About this exhibit open.';
+			resetSchedulers.get( root )?.();
+			focusWithin( root, '.core-ai-map__about-close', 80 );
+		},
+		closeAbout() {
+			const context = getContext();
+			const root = getRoot( getElement().ref );
+			context.screen =
+				context.aboutReturnScreen === 'map' ? 'map' : 'attract';
+			context.aboutReturnScreen = '';
+			context.announcement = 'About this exhibit closed.';
+			resetSchedulers.get( root )?.();
+			focusElement( root ? lastAboutTriggers.get( root ) : undefined );
+		},
 		closeInspect() {
 			const context = getContext();
 			const root = getRoot( getElement().ref );
@@ -954,6 +991,14 @@ store( 'core-ai/map', {
 						context.announcement =
 							'WP-Bench closed. Back on the map.';
 						focusElement( lastBenchTriggers.get( root ) );
+					} else if ( context.screen === 'about' ) {
+						context.screen =
+							context.aboutReturnScreen === 'map'
+								? 'map'
+								: 'attract';
+						context.aboutReturnScreen = '';
+						context.announcement = 'About this exhibit closed.';
+						focusElement( lastAboutTriggers.get( root ) );
 					}
 				};
 				const syncServiceWorker = async () => {
