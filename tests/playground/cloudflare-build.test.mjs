@@ -26,15 +26,37 @@ const createMinimalPlaygroundSource = async ( sourceDirectory ) => {
 		`<!doctype html><html><head>
 			<meta name="commit-id" content="playground-test-commit" />
 			<title>WordPress Playground</title>
-		</head><body></body></html>`
+			<script type="module" src="/assets/index-fixture.js"></script>
+		</head><body><main id="root" aria-label="WordPress Playground"></main></body></html>`
 	);
 	await writeFile(
 		join( sourceDirectory, 'assets-required-for-offline-mode.json' ),
-		'[]'
+		JSON.stringify( [
+			'/assets/index-fixture.js',
+			'/assets/main-fixture.js',
+			'/assets/wordpress-fixture.js',
+		] )
+	);
+	await writeFile(
+		join( sourceDirectory, 'assets', 'index-fixture.js' ),
+		`const dependencies = [ "assets/main-fixture.js" ]; import( "./main-fixture.js" );`
+	);
+	await writeFile(
+		join( sourceDirectory, 'assets', 'main-fixture.js' ),
+		`const loader = { caption: i?.caption??"Preparing WordPress" };`
+	);
+	await writeFile(
+		join( sourceDirectory, 'remote.html' ),
+		`<!doctype html><html><head>
+			<script type="module" crossorigin src="/assets/wordpress-fixture.js"></script>
+		</head><body><iframe id="wp"></iframe></body></html>`
+	);
+	await writeFile(
+		join( sourceDirectory, 'assets', 'wordpress-fixture.js' ),
+		`const caption = 'Preparing WordPress';`
 	);
 
 	for ( const fileName of [
-		'remote.html',
 		'sw.js',
 		'blueprint-schema.json',
 		'favicon.ico',
@@ -59,17 +81,26 @@ test( 'patches the official Playground shell into a local kiosk launcher', () =>
 <link href="https://fonts.googleapis.com/css2?family=Roboto" rel="stylesheet" />
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-test"></script>
 <script>window.dataLayer = window.dataLayer || [];</script>
-</head><body></body></html>` );
+</head><body><main id="root" aria-label="WordPress Playground"></main></body></html>` );
 
 	assert.match( result, /<title>Core AI Living Block Map<\/title>/ );
 	assert.match( result, /kiosk-blueprint\/blueprint\.json/ );
 	assert.match(
 		result,
-		/Building a real WordPress 7\.0 site in your browser — no server, about 45 seconds\./
+		/<h1 id="core-ai-map-playground-loader-heading">Building a real WordPress 7\.0 site in your browser — no server, about 45 seconds\.<\/h1>/
 	);
-	assert.match( result, /Preparing WordPress/ );
-	assert.match( result, /MutationObserver/ );
-	assert.match( result, /closest\('script, style, noscript'\)/ );
+	assert.match(
+		result,
+		/<span class="core-ai-map-playground-loader__status" role="status" aria-live="polite" aria-atomic="true">Building a real WordPress 7\.0 site in your browser — no server, about 45 seconds\.<\/span>/
+	);
+	assert.match(
+		result,
+		/<main id="root" aria-label="WordPress Playground" inert aria-hidden="true" aria-busy="true">/
+	);
+	assert.match( result, /querySelector\('\.core-ai-map\.is-ready'\)/ );
+	assert.match( result, /root\.removeAttribute\('inert'\)/ );
+	assert.doesNotMatch( result, /Preparing WordPress/ );
+	assert.doesNotMatch( result, /MutationObserver/ );
 	assert.doesNotMatch( result, /fonts\.googleapis\.com/ );
 	assert.doesNotMatch( result, /googletagmanager\.com/ );
 } );
@@ -101,6 +132,64 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 	assert.equal(
 		await readFile( join( outputDirectory, '_redirects' ), 'utf8' ),
 		'/remote.html /remote 200\n'
+	);
+	const kioskIndex = await readFile(
+		join( outputDirectory, 'index.html' ),
+		'utf8'
+	);
+	assert.match(
+		kioskIndex,
+		/<h1 id="core-ai-map-playground-loader-heading">Building a real WordPress 7\.0 site in your browser — no server, about 45 seconds\.<\/h1>/
+	);
+	assert.match(
+		kioskIndex,
+		/<main id="root" aria-label="WordPress Playground" inert aria-hidden="true" aria-busy="true">/
+	);
+	const remoteHtml = await readFile(
+		join( outputDirectory, 'remote.html' ),
+		'utf8'
+	);
+	const loaderAssetMatch = remoteHtml.match(
+		/src="(\/assets\/wordpress-core-ai-([a-f0-9]{16})\.js)"/
+	);
+	assert.ok(
+		loaderAssetMatch,
+		'remote.html must load the fingerprinted kiosk loader runtime'
+	);
+	const loaderAssetUrl = loaderAssetMatch[ 1 ];
+	const loaderAssetPath = join(
+		outputDirectory,
+		...loaderAssetUrl.replace( /^\//, '' ).split( '/' )
+	);
+	const loaderAsset = await readFile( loaderAssetPath, 'utf8' );
+	assert.match(
+		loaderAsset,
+		/Building a real WordPress 7\.0 site in your browser — no server, about 45 seconds\./
+	);
+	assert.doesNotMatch( loaderAsset, /Preparing WordPress/ );
+	assert.equal(
+		loaderAssetMatch[ 2 ],
+		createHash( 'sha256' )
+			.update( loaderAsset )
+			.digest( 'hex' )
+			.slice( 0, 16 )
+	);
+	const offlineAssets = JSON.parse(
+		await readFile(
+			join( outputDirectory, 'assets-required-for-offline-mode.json' ),
+			'utf8'
+		)
+	);
+	assert.ok( offlineAssets.includes( '/assets/index-fixture.js' ) );
+	assert.ok( offlineAssets.includes( '/assets/main-fixture.js' ) );
+	assert.ok( offlineAssets.includes( loaderAssetUrl ) );
+	assert.ok( ! offlineAssets.includes( '/assets/wordpress-fixture.js' ) );
+	await assert.rejects(
+		readFile(
+			join( outputDirectory, 'assets', 'wordpress-fixture.js' ),
+			'utf8'
+		),
+		{ code: 'ENOENT' }
 	);
 	assert.equal(
 		await readFile(

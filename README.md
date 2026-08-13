@@ -75,15 +75,48 @@ uses a local Blueprint and plugin ZIP. `npm run plugin-zip` creates the local
 `/kiosk-blueprint/core-ai-map-3.1.2.zip`. It also emits a deployment manifest
 with that path, its byte count, and its SHA-256, plus a Pages rewrite that keeps
 the Playground runtime's literal `/remote.html` endpoint from being redirected
-to Cloudflare's extensionless route. `dist-playground/` is generated and not
-committed. Cloudflare Pages provides the required HTTPS origin; a normal HTTP
-origin cannot run Playground's service worker.
+to Cloudflare's extensionless route. The build owns the accessible outer
+loading screen, keeps Playground's React root inert until the exhibit is
+ready, and changes the matching caption inside the runtime module loaded by
+`remote.html`. That modified runtime module receives a content-derived
+filename and replaces the upstream entry in the offline asset manifest.
+`dist-playground/` is generated and not committed. Cloudflare Pages
+provides the required HTTPS origin; a normal HTTP origin cannot run
+Playground's service worker.
 
 Production is deployed manually from `dist-playground/`. Automatic Git
 production and preview deployments are intentionally disabled for the Pages
 project because the repository root is not a deployable Playground artifact.
 The `wcus.hperkins.com` CNAME points to the Pages hostname in DNS-only mode;
 enabling the orange-cloud proxy prevents Pages from routing this hostname.
+
+### Verify the accessible loader locally
+
+`npm run test:playground` proves the generated outer loader, inert/root
+handoff, runtime module fingerprint, `remote.html`, and offline manifest
+agree. It does not render the nested Playground frame. After building
+`dist-playground/`, serve the exact Pages artifact in one PowerShell window:
+
+```powershell
+npx wrangler pages dev dist-playground `
+    --port 8799 `
+    --compatibility-date 2026-08-13
+```
+
+Then run the cold-frame verifier from a second PowerShell window:
+
+```powershell
+playwright-cli -s=loader open 'http://127.0.0.1:8799/' --browser chrome
+$loaderCheck = Get-Content -Raw -LiteralPath 'tests/browser/playground-loader.js'
+playwright-cli -s=loader run-code $loaderCheck
+playwright-cli -s=loader close
+```
+
+The result must report `ok: true` and the exact approved copy for both the
+outer kiosk-owned heading/status and the nested `remote.html` runtime
+heading/status. It also proves that the upstream React loader is inaccessible
+while loading and that the React root is restored when the exhibit is ready.
+Matching text in generated files alone is not sufficient.
 
 ### Verify every deployment by artifact identity
 
