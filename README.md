@@ -59,7 +59,7 @@ remain 44 logical pixels, so 1024 x 768 is a compatibility view rather than a
 fully supported touch layout. Physical iPad touch acceptance is still a
 separate required sign-off.
 
-The reviewed date carried by this release is **Reviewed 12 Aug 2026**. It is
+The reviewed date carried by this release is **Reviewed 14 Aug 2026**. It is
 shown inside the **About this exhibit** panel, reached from the footnote under
 the story rail, rather than in the kiosk header.
 
@@ -323,9 +323,9 @@ system, touch, foreground-timing, power, or network evidence.
    both results with the browser/device version; investigate a crash or a boot
    that does not complete rather than treating a hidden/background run as a
    valid timing.
-4. Confirm the loader says “Building a real WordPress 7.0 site in your browser
-   — no server, about 45 seconds.” Then confirm the exhibit version using the
-   manifest/ZIP check above, not the unchanged public URL.
+4. Confirm the loader says “Building a real WordPress site in your browser. A
+   cold start can take a minute or more.” Then confirm the exhibit version
+   using the manifest/ZIP check above, not the unchanged public URL.
 5. Exercise Add blocks, all four stories, an inspector, About, Back/Escape, and
    Start over. Leave the engaged exhibit untouched for at least 65 seconds
    while the tab stays visible; it must return to the attract screen at the

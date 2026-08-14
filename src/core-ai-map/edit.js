@@ -20,7 +20,7 @@ const updateItem = ( items, index, key, value ) =>
 export default function Edit( { attributes, setAttributes } ) {
 	const {
 		eyebrow,
-		reviewedDate,
+		reviewedDate: savedReviewedDate,
 		title: savedTitle,
 		intro: savedIntro,
 		prompt,
@@ -39,6 +39,11 @@ export default function Edit( { attributes, setAttributes } ) {
 	const panels = withCurrentDefaults( metadata, 'panels', savedPanels );
 	const title = withCurrentDefault( metadata, 'title', savedTitle );
 	const intro = withCurrentDefault( metadata, 'intro', savedIntro );
+	const reviewedDate = withCurrentDefault(
+		metadata,
+		'reviewedDate',
+		savedReviewedDate
+	);
 
 	const blockProps = useBlockProps( {
 		className: 'core-ai-map-editor',

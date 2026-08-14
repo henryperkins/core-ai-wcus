@@ -36,6 +36,10 @@ describe( 'Living Block Map v3.2.1 metadata', () => {
 		expect( attributes.guidance.default.flow ).toBe(
 			'Follow %1$s. Highlighted components take part in this flow. Tap one to learn what it contributes.'
 		);
+		expect( attributes.guidance.default ).toMatchObject( {
+			cardActionStep: 'Step %1$s: %2$s — view its role in “%3$s.”',
+			cardInactive: '%1$s — not part of this flow.',
+		} );
 	} );
 
 	it( 'gives every flow a situation, conclusion, and predicted outcome', () => {
@@ -196,7 +200,9 @@ describe( 'Living Block Map v3.2.1 metadata', () => {
 		expect( panel.notes[ 0 ].text ).toContain(
 			'supports multiple MCP protocol versions'
 		);
-		expect( panel.notes[ 0 ].text ).not.toContain( '2025-11-25' );
+		expect( panel.notes[ 0 ].text ).toContain(
+			'HTTP transport implements MCP 2025-11-25'
+		);
 	} );
 
 	it( 'uses the v3.1 execution-only framing for WP-Bench', () => {

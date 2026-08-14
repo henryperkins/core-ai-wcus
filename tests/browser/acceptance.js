@@ -74,7 +74,7 @@ async ( page ) => {
 			}
 			const bodies = [
 				...document.querySelectorAll(
-					'.core-ai-map__actor-body, .core-ai-map__block-body, .core-ai-map__provider-plugin'
+					'.core-ai-map__actor-body, .core-ai-map__block-body, .core-ai-map__provider-plugin-body'
 				),
 			].filter( isVisible );
 			const bodyOverflows = [];
@@ -356,6 +356,8 @@ async ( page ) => {
 			pointerOnDimmed: cards
 				.filter( ( card ) => card.disabled )
 				.map( ( card ) => getComputedStyle( card ).cursor ),
+			visibleCards: cards.length,
+			disabledCards: cards.filter( ( card ) => card.disabled ).length,
 		};
 	} );
 	observations.flowFirst = flowFirst;
@@ -379,11 +381,44 @@ async ( page ) => {
 		`Expected five cued participants, saw ${ flowFirst.cued.length }.`
 	);
 	assert(
+		flowFirst.visibleCards === 12 && flowFirst.disabledCards === 7,
+		`The selected flow did not keep all 12 components visible with seven inactive: ${ flowFirst.visibleCards } visible, ${ flowFirst.disabledCards } inactive.`
+	);
+	assert(
 		flowFirst.cued.every( ( label ) =>
 			label?.includes( 'view its role in' )
 		),
 		'A participating card did not name its action in its accessible name.'
 	);
+
+	const nativeStepOrder = [];
+	for ( let expectedStep = 2; expectedStep <= 3; expectedStep += 1 ) {
+		await page.keyboard.press( 'Tab' );
+		nativeStepOrder.push(
+			await page.evaluate( () => {
+				const map = document.querySelector( '.core-ai-map' );
+				const activeElement = map.ownerDocument.activeElement;
+				return {
+				step: activeElement
+					?.querySelector( '.core-ai-map__step' )
+					?.textContent.trim(),
+				label: activeElement?.getAttribute( 'aria-label' ),
+				};
+			} )
+		);
+	}
+	observations.nativeStepOrder = nativeStepOrder;
+	assert(
+		nativeStepOrder.every(
+			( item, index ) =>
+				item.step === String( index + 2 ) &&
+				item.label?.startsWith( `Step ${ index + 2 }:` )
+		),
+		`Native Tab order did not move from numbered step 1 to 2 to 3: ${ JSON.stringify( nativeStepOrder ) }`
+	);
+	await page
+		.locator( '.core-ai-map__block--plugin .core-ai-map__block-body' )
+		.focus();
 
 	await page.waitForTimeout( 3000 );
 	const flowConclusion = await page.evaluate( () => {
@@ -527,15 +562,20 @@ async ( page ) => {
 	);
 	assert(
 		await page.evaluate(
-			() =>
-				[
+			() => {
+				const cards = [
 					...document.querySelectorAll(
-						'.core-ai-map__actor-body, .core-ai-map__block-body'
+						'.core-ai-map__actor-body, .core-ai-map__block-body, .core-ai-map__provider-plugin-body'
 					),
-				].every( ( card ) => ! card.disabled ) &&
-				! [
+				];
+				return (
+					cards.length === 12 &&
+					cards.every( ( card ) => ! card.disabled ) &&
+					! [
 					...document.querySelectorAll( '.core-ai-map__tap-cue' ),
-				].some( ( cue ) => ! cue.hidden )
+					].some( ( cue ) => ! cue.hidden )
+				);
+			}
 		),
 		'Component explorer did not make every component tappable and uncued.'
 	);
@@ -620,7 +660,7 @@ async ( page ) => {
 		}
 		const cardOpacities = [
 			...document.querySelectorAll(
-				'.core-ai-map__actor, .core-ai-map__block-body'
+				'.core-ai-map__actor, .core-ai-map__block-body, .core-ai-map__provider-plugin'
 			),
 		].map( ( card ) => ( {
 			selector: card.className,
@@ -628,7 +668,7 @@ async ( page ) => {
 		} ) );
 		const textContrast = [
 			...document.querySelectorAll(
-				'.core-ai-map__actor-body strong, .core-ai-map__actor-body small, .core-ai-map__block-body strong, .core-ai-map__block-body small'
+				'.core-ai-map__actor-body strong, .core-ai-map__actor-body small, .core-ai-map__block-body strong, .core-ai-map__block-body small, .core-ai-map__provider-plugin-body strong, .core-ai-map__provider-plugin-body small'
 			),
 		]
 			.filter( ( element ) => element.getClientRects().length > 0 )
@@ -648,6 +688,9 @@ async ( page ) => {
 			actorOverlaps,
 			cardOpacities,
 			textContrast,
+			providerPluginActive: document
+				.querySelector( '.core-ai-map__provider-plugin' )
+				.classList.contains( 'is-active' ),
 			footnote: {
 				railOverlap: overlapArea( rail, footnote ),
 				clearsRail: Math.round( footnote.top - rail.bottom ),
@@ -663,6 +706,10 @@ async ( page ) => {
 				( actor ) => ! actor.hidden && actor.opacity === '1'
 			),
 		'Neutral map did not keep all five outside actors visible and fully opaque.'
+	);
+	assert(
+		! neutral.providerPluginActive,
+		'Browse all components retained a stale active provider-plugin class after hydration.'
 	);
 	assert(
 		neutral.cardOpacities.length > 5 &&
@@ -744,12 +791,44 @@ async ( page ) => {
 	);
 
 	const storyButtons = page.locator( '.core-ai-map__rail button' );
+	const assertNumberedTabOrder = async ( expected, flowName ) => {
+		await page.waitForTimeout( 120 );
+		const sequence = [];
+		for ( let index = 0; index < expected.length; index += 1 ) {
+			if ( index > 0 ) {
+				await page.keyboard.press( 'Tab' );
+			}
+			sequence.push(
+				await page.evaluate( () => {
+					const map = document.querySelector( '.core-ai-map' );
+					const activeElement = map.ownerDocument.activeElement;
+					return {
+						step: activeElement
+							?.querySelector( '.core-ai-map__step' )
+							?.textContent.trim(),
+						label: activeElement?.getAttribute( 'aria-label' ),
+					};
+				} )
+			);
+		}
+		observations.flowTabOrders ||= [];
+		observations.flowTabOrders.push( { flowName, sequence } );
+		assert(
+			sequence.every(
+				( item, index ) =>
+					item.step === expected[ index ] &&
+					item.label?.startsWith( `Step ${ expected[ index ] }:` )
+			),
+			`${ flowName } did not focus and tab through its numbered path: ${ JSON.stringify( sequence ) }`
+		);
+	};
 	assert(
 		( await storyButtons.count() ) === 4,
 		'Story rail did not contain four stories.'
 	);
 	await storyButtons.nth( 0 ).click();
 	await page.waitForTimeout( 800 );
+	await assertNumberedTabOrder( [ '1', '2', '3' ], 'WordPress uses AI' );
 	const storyOne = await page.evaluate( () => {
 		const bounds = ( selector ) =>
 			document.querySelector( selector ).getBoundingClientRect().toJSON();
@@ -773,6 +852,9 @@ async ( page ) => {
 			connectorsSidecar: document
 				.querySelector( '.core-ai-map__block--connectors' )
 				.classList.contains( 'is-sidecar' ),
+			providerActive: document
+				.querySelector( '.core-ai-map__actor--provider' )
+				.classList.contains( 'is-active' ),
 			runtimePaths: [
 				...document.querySelectorAll(
 					'.core-ai-map__flow path.is-visible'
@@ -802,18 +884,44 @@ async ( page ) => {
 			storyOne.runtimePaths.length === 3,
 		'Story 01 did not distinguish the Connectors sidecar from the runtime path.'
 	);
+	assert(
+		storyOne.providerActive,
+		'Story 01 did not visually highlight its participating external AI service.'
+	);
 	const storyOneGeometry = await measureCardGeometry();
 	observations.storyOneGeometry = storyOneGeometry;
 	assertCardGeometry( storyOneGeometry, 'Story 01' );
 
 	await storyButtons.nth( 1 ).click();
 	await page.waitForTimeout( 800 );
+	await assertNumberedTabOrder( [ '1', '2', '3' ], 'AI uses WordPress' );
+	const offFlowProviderPlugin = await page.evaluate( () => {
+		const wrapper = document.querySelector(
+			'.core-ai-map__provider-plugin'
+		);
+		const button = wrapper.querySelector(
+			'.core-ai-map__provider-plugin-body'
+		);
+		return {
+			disabled: button.disabled,
+			opacity: getComputedStyle( wrapper ).opacity,
+			cueHidden: button.querySelector( '.core-ai-map__tap-cue' ).hidden,
+		};
+	} );
+	observations.offFlowProviderPlugin = offFlowProviderPlugin;
+	assert(
+		offFlowProviderPlugin.disabled &&
+			offFlowProviderPlugin.opacity === '0.4' &&
+			offFlowProviderPlugin.cueHidden,
+		`Off-flow provider plugin was not fully dimmed and inert: ${ JSON.stringify( offFlowProviderPlugin ) }`
+	);
 	const storyTwoGeometry = await measureCardGeometry();
 	observations.storyTwoGeometry = storyTwoGeometry;
 	assertCardGeometry( storyTwoGeometry, 'Story 02' );
 
 	await storyButtons.nth( 2 ).click();
 	await page.waitForTimeout( 800 );
+	await assertNumberedTabOrder( [ '1', '2', '3' ], 'An agent learns WordPress' );
 	const storyThree = await page.evaluate( () => {
 		const task = document.querySelector(
 			'.core-ai-map__actor--task .core-ai-map__actor-body'
@@ -872,7 +980,8 @@ async ( page ) => {
 	observations.storyThreeGeometry = storyThreeGeometry;
 	assertCardGeometry( storyThreeGeometry, 'Story 03' );
 
-	await storyButtons.nth( 2 ).click();
+	await storyButtons.nth( 1 ).click();
+	await page.waitForTimeout( 120 );
 	await page
 		.locator( '.core-ai-map__block--abilities .core-ai-map__block-body' )
 		.click();
@@ -959,6 +1068,7 @@ async ( page ) => {
 			'.core-ai-map__brand small',
 			'.core-ai-map__actor-badge',
 			'.core-ai-map__rail button:not(.is-active) span',
+			'.core-ai-map__rail button.is-active .core-ai-map__rail-outcome',
 			'.core-ai-map__details-heading',
 		].map( ( selector ) => {
 			const element = document.querySelector( selector );
@@ -1036,9 +1146,14 @@ async ( page ) => {
 		).includes( 'Needs review' ),
 		'Replay did not advance to a new Needs review suggestion.'
 	);
+	await assertNumberedTabOrder(
+		[ '1', '2', '3' ],
+		'WordPress uses AI replay'
+	);
 
 	await storyButtons.nth( 3 ).click();
 	await page.waitForTimeout( 800 );
+	await assertNumberedTabOrder( [ '1', '2' ], 'WordPress tests the result' );
 	const runLoopLink = page.locator( '.core-ai-map__run-loop-link:visible' );
 	const runLoopColor = await runLoopLink.evaluate(
 		( element ) => getComputedStyle( element ).color
@@ -1174,6 +1289,20 @@ async ( page ) => {
 	await page.emulateMedia( { reducedMotion: 'no-preference' } );
 	await page.setViewportSize( { width: 1024, height: 768 } );
 	await page.reload( { waitUntil: 'networkidle' } );
+	const welcomeActionHeights = await page.evaluate( () => ( {
+		primary: document
+			.querySelector( '.core-ai-map__prompt' )
+			.getBoundingClientRect().height,
+		browse: document
+			.querySelector( '.core-ai-map__attract-browse' )
+			.getBoundingClientRect().height,
+	} ) );
+	observations.welcomeActionHeights = welcomeActionHeights;
+	assert(
+		welcomeActionHeights.primary >= 44 &&
+			welcomeActionHeights.browse >= 44,
+		`1024 welcome actions fell below 44px: ${ JSON.stringify( welcomeActionHeights ) }`
+	);
 	await page
 		.getByRole( 'button', { name: 'Explore the first flow' } )
 		.click();

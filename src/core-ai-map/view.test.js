@@ -61,6 +61,10 @@ const LAYOUT = {
 			assistant: [ 24, 156 ],
 			mcp: [ 122, 318 ],
 			abilities: [ 556, 318 ],
+			skills: [ 1150, 112 ],
+			agent: [ 1150, 462 ],
+			provider: [ 1150, 330 ],
+			task: [ 1150, 594 ],
 		},
 		park: [ 'plugin', 'client', 'connectors', 'bench' ],
 		shelfY: 512,
@@ -142,6 +146,7 @@ describe( 'Core AI Living Block Map', () => {
 			isOffline: false,
 			suggestion: 0,
 			announcement: '',
+			pendingTakeawayStory: '',
 			recompose: true,
 			shapes: true,
 			storyIds: [ 'uses-ai', 'uses-wp' ],
@@ -189,6 +194,8 @@ describe( 'Core AI Living Block Map', () => {
 				client: 'AI Client',
 				bench: 'WP-Bench',
 				assistant: 'AI assistant',
+				skills: 'Agent Skills',
+				'provider-plugin': 'AI provider plugin',
 			},
 			guidance: {
 				attract: 'Choose a flow to begin.',
@@ -196,11 +203,21 @@ describe( 'Core AI Living Block Map', () => {
 				inspect: 'You are viewing this component’s role in “%1$s.”',
 				browse: 'Tap any component to learn what it is and where it belongs.',
 				cardAction: '%1$s — view its role in “%2$s.”',
+				cardActionStep: 'Step %1$s: %2$s — view its role in “%3$s.”',
 				cardActionBrowse: '%1$s — open its details.',
+				cardInactive: '%1$s — not part of this flow.',
 			},
 			labels: {
 				railEmptyLabel: 'Choose a flow',
 				railActiveLabel: 'Choose another flow',
+				takeawayHeading: 'What this flow shows',
+			},
+			announcements: {
+				flowSelected: '%1$s.',
+				flowReplayed: '%1$s replayed.',
+				takeaway: '%1$s: %2$s',
+				browse: 'Every component is on the canvas with no flow selected. Tap any component to learn what it is and where it belongs.',
+				nextSuggestion: 'The AI Plugin shows the next suggestion.',
 			},
 			benchTitles: { evidence: 'Pass or fail. Never a percentage' },
 			neutral: {
@@ -215,6 +232,7 @@ describe( 'Core AI Living Block Map', () => {
 				agent: [ 24, 376 ],
 				provider: [ 1150, 330 ],
 				task: [ 24, 508 ],
+				'provider-plugin': [ 912, 400 ],
 			},
 			loose: {
 				plugin: [ -38, 26, -1.4 ],
@@ -515,6 +533,60 @@ describe( 'Core AI Living Block Map', () => {
 		);
 	} );
 
+	it( 'announces a conclusion once after an early inspector visit', () => {
+		const prompt = root.querySelector( '.core-ai-map__prompt' );
+		const card = root.querySelector(
+			'.core-ai-map__block--client .core-ai-map__block-body'
+		);
+		const close = root.querySelector( '.core-ai-map__details-close' );
+
+		currentElement = prompt;
+		mapStore.actions.start();
+		context.cardId = 'client';
+		currentElement = card;
+		mapStore.actions.inspectCard();
+		jest.advanceTimersByTime( 2900 );
+
+		expect( context.screen ).toBe( 'inspect' );
+		expect( context.pendingTakeawayStory ).toBe( 'uses-ai' );
+		expect( context.announcement ).not.toContain( 'What this flow shows' );
+
+		currentElement = close;
+		mapStore.actions.closeInspect();
+		expect( context.pendingTakeawayStory ).toBe( '' );
+		expect( context.announcement ).toContain(
+			'What this flow shows: A WordPress feature uses a common AI interface'
+		);
+
+		context.cardId = 'client';
+		currentElement = card;
+		mapStore.actions.inspectCard();
+		currentElement = close;
+		mapStore.actions.closeInspect();
+		expect( context.announcement ).not.toContain( 'What this flow shows' );
+	} );
+
+	it( 'announces a pending conclusion after returning from About', () => {
+		const aboutTrigger = root.querySelector(
+			'.core-ai-map__about-trigger'
+		);
+		const closeButton = root.querySelector( '.core-ai-map__about-close' );
+		currentElement = root.querySelector( '.core-ai-map__prompt' );
+		mapStore.actions.start();
+		currentElement = aboutTrigger;
+		mapStore.actions.openAbout();
+		jest.advanceTimersByTime( 3000 );
+
+		currentElement = closeButton;
+		mapStore.actions.closeAbout();
+
+		expect( context.announcement ).toContain( 'What this flow shows' );
+		expect( context.announcement ).toContain(
+			'A WordPress feature uses a common AI interface'
+		);
+		expect( context.pendingTakeawayStory ).toBe( '' );
+	} );
+
 	it( 'lets a flow highlight only the cards that take part in it', () => {
 		context.screen = 'map';
 		context.story = 'uses-ai';
@@ -523,23 +595,40 @@ describe( 'Core AI Living Block Map', () => {
 		expect( mapStore.state.isCardNotTappable ).toBe( false );
 		expect( mapStore.state.isTapCueHidden ).toBe( false );
 		expect( mapStore.state.cardActionLabel ).toBe(
-			'AI Client — view its role in “WordPress uses AI.”'
+			'Step 2: AI Client — view its role in “WordPress uses AI.”'
 		);
 
 		context.cardId = 'bench';
 		expect( mapStore.state.isCardNotTappable ).toBe( true );
 		expect( mapStore.state.isTapCueHidden ).toBe( true );
+		expect( mapStore.state.isCardOffstage ).toBe( false );
+		expect( mapStore.state.isCardDimmed ).toBe( true );
+		expect( mapStore.state.cardActionLabel ).toBe(
+			'WP-Bench — not part of this flow.'
+		);
+
+		context.cardId = 'assistant';
+		expect( mapStore.state.isCardOffstage ).toBe( false );
+		expect( mapStore.state.isCardDimmed ).toBe( true );
 	} );
 
 	it( 'makes every component tappable and uncued in the explorer', () => {
 		context.screen = 'map';
 		context.story = '';
 
-		for ( const cardId of [ 'client', 'bench', 'assistant' ] ) {
+		for ( const cardId of [
+			'client',
+			'bench',
+			'assistant',
+			'provider-plugin',
+		] ) {
 			context.cardId = cardId;
 			expect( mapStore.state.isCardNotTappable ).toBe( false );
 			expect( mapStore.state.isTapCueHidden ).toBe( true );
+			expect( mapStore.state.isCardOffstage ).toBe( false );
+			expect( mapStore.state.isCardDimmed ).toBe( false );
 		}
+		expect( mapStore.state.isProviderPluginHidden ).toBe( false );
 
 		context.cardId = 'bench';
 		expect( mapStore.state.cardActionLabel ).toBe(
@@ -556,6 +645,28 @@ describe( 'Core AI Living Block Map', () => {
 		expect( mapStore.state.cardOpacity ).toBe( '1' );
 	} );
 
+	it( 'keeps off-flow actors and the provider plugin visible, dimmed, and inert', () => {
+		context.screen = 'map';
+		context.story = 'uses-wp';
+
+		context.cardId = 'skills';
+		expect( mapStore.state.cardTransform ).toBe(
+			'translate(1126px, -132px)'
+		);
+		expect( mapStore.state.isCardOffstage ).toBe( false );
+		expect( mapStore.state.isCardDimmed ).toBe( true );
+		expect( mapStore.state.isCardNotTappable ).toBe( true );
+		expect( mapStore.state.cardActionLabel ).toBe(
+			'Agent Skills — not part of this flow.'
+		);
+
+		context.cardId = 'provider-plugin';
+		expect( mapStore.state.isProviderPluginHidden ).toBe( false );
+		expect( mapStore.state.providerPluginTransform ).toBe( '' );
+		expect( mapStore.state.isCardDimmed ).toBe( true );
+		expect( mapStore.state.isCardNotTappable ).toBe( true );
+	} );
+
 	it( 'keeps Connectors as an unnumbered configuration sidecar', () => {
 		context.screen = 'map';
 		context.story = 'uses-ai';
@@ -565,7 +676,7 @@ describe( 'Core AI Living Block Map', () => {
 			'translate(-76px, 200px)'
 		);
 		expect( mapStore.state.isCardSidecar ).toBe( true );
-		expect( mapStore.state.isCardActive ).toBe( false );
+		expect( mapStore.state.isCardActive ).toBe( true );
 		expect( mapStore.state.isCardParked ).toBe( false );
 		expect( mapStore.state.isCardOffstage ).toBe( false );
 		expect( mapStore.state.isStripLive ).toBe( false );
@@ -576,10 +687,13 @@ describe( 'Core AI Living Block Map', () => {
 			'translate(30px, -124px)'
 		);
 		expect( mapStore.state.isCardOffstage ).toBe( false );
+		expect( mapStore.state.isCardActive ).toBe( true );
 		expect( mapStore.state.cardStep ).toBe( '' );
 
 		expect( mapStore.state.isProviderPluginHidden ).toBe( false );
-		expect( mapStore.state.providerPluginTransform ).toBe( '' );
+		expect( mapStore.state.providerPluginTransform ).toBe(
+			'translate(-88px, -186px)'
+		);
 
 		// uses-ai starts its compact shelf in slot 3, leaving space around the
 		// active workflow while using the full 176px card width.
@@ -612,7 +726,7 @@ describe( 'Core AI Living Block Map', () => {
 		expect( mapStore.state.cardOpacity ).toBe( '1' );
 		expect( mapStore.state.isProviderPluginHidden ).toBe( false );
 		expect( mapStore.state.providerPluginTransform ).toBe(
-			'translate(-108px, -14px) scale(0.8)'
+			'translate(-196px, -200px) scale(0.8)'
 		);
 
 		context.previewPhase = 'releasing';
@@ -635,7 +749,7 @@ describe( 'Core AI Living Block Map', () => {
 		expect( mapStore.state.isCardDimmed ).toBe( false );
 		expect( mapStore.state.isCardOffstage ).toBe( false );
 		expect( mapStore.state.providerPluginTransform ).toBe(
-			'translate(0px, 118px)'
+			'translate(-88px, -68px)'
 		);
 
 		// Recomposition off falls back to the resting connector paths.
@@ -837,17 +951,18 @@ describe( 'Core AI Living Block Map', () => {
 		const closeButton = root.querySelector( '.core-ai-map__about-close' );
 		const effects = [];
 
-		context.screen = 'map';
 		currentElement = root;
 		useEffect.mockImplementation( ( callback ) => {
 			effects.push( callback );
 		} );
 		mapStore.callbacks.useKiosk();
 		const cleanupKiosk = effects[ 0 ]();
+		currentElement = root.querySelector( '.core-ai-map__prompt' );
+		mapStore.actions.start();
 		aboutTrigger.focus();
 		currentElement = aboutTrigger;
 		mapStore.actions.openAbout();
-		jest.advanceTimersByTime( 80 );
+		jest.advanceTimersByTime( 3000 );
 
 		expect( context.screen ).toBe( 'about' );
 		expect( document.activeElement ).toBe( closeButton );
@@ -863,12 +978,15 @@ describe( 'Core AI Living Block Map', () => {
 
 		expect( context.screen ).toBe( 'map' );
 		expect( document.activeElement ).toBe( aboutTrigger );
+		expect( context.announcement ).toContain( 'What this flow shows' );
+		expect( context.pendingTakeawayStory ).toBe( '' );
 		cleanupKiosk();
 	} );
 
 	it( 'replays rather than clears the flow already showing', () => {
 		const railButton = document.createElement( 'button' );
 		railButton.textContent = 'WordPress uses AI';
+		root.append( railButton );
 		currentElement = railButton;
 
 		context.screen = 'map';
@@ -876,15 +994,44 @@ describe( 'Core AI Living Block Map', () => {
 		context.storyId = 'uses-ai';
 
 		mapStore.actions.selectStory();
+		jest.advanceTimersByTime( 80 );
 		expect( context.story ).toBe( 'uses-ai' );
+		expect( document.activeElement ).toBe(
+			root.querySelector(
+				'.core-ai-map__block--plugin .core-ai-map__block-body'
+			)
+		);
 		expect( context.announcement ).toContain(
 			'A feature inside WordPress needs an AI-generated result.'
 		);
 
 		// The rail switches between flows; leaving them is the explorer's job.
 		mapStore.actions.selectStory();
+		jest.advanceTimersByTime( 80 );
 		expect( context.story ).toBe( 'uses-ai' );
 		expect( context.announcement ).toContain( 'replayed' );
+		expect( document.activeElement ).toBe(
+			root.querySelector(
+				'.core-ai-map__block--plugin .core-ai-map__block-body'
+			)
+		);
+	} );
+
+	it( 'replay returns keyboard focus to the first numbered step', () => {
+		const replay = document.createElement( 'button' );
+		root.append( replay );
+		context.screen = 'map';
+		context.story = 'uses-ai';
+		currentElement = replay;
+
+		mapStore.actions.replayStory();
+		jest.advanceTimersByTime( 80 );
+
+		expect( document.activeElement ).toBe(
+			root.querySelector(
+				'.core-ai-map__block--plugin .core-ai-map__block-body'
+			)
+		);
 	} );
 
 	it( 'cancels a pending conclusion when the visitor resets', () => {
@@ -1477,6 +1624,7 @@ describe( 'Core AI Living Block Map', () => {
 		inspector.append( runButton );
 
 		context.screen = 'map';
+		context.story = 'uses-ai';
 		context.cardId = 'bench';
 		currentElement = card;
 		mapStore.actions.inspectCard();
@@ -1491,7 +1639,62 @@ describe( 'Core AI Living Block Map', () => {
 		jest.advanceTimersByTime( 40 );
 
 		expect( context.screen ).toBe( 'map' );
+		expect( context.announcement ).toContain( 'What this flow shows' );
 		expect( document.activeElement ).toBe( card );
+	} );
+
+	it( 'announces a clean component title when opening details', () => {
+		const card = root.querySelector(
+			'.core-ai-map__block--client .core-ai-map__block-body'
+		);
+		card.append( document.createTextNode( ' Tap for its role' ) );
+		context.screen = 'map';
+		context.story = 'uses-ai';
+		context.cardId = 'client';
+		currentElement = card;
+
+		mapStore.actions.inspectCard();
+
+		expect( context.announcement ).toBe(
+			'AI Client details open in WordPress uses AI.'
+		);
+		expect( context.announcement ).not.toContain( 'Tap for its role' );
+	} );
+
+	it( 'cancels the Bench flow timer when Escape closes the run loop', () => {
+		const effects = [];
+		const card = root.querySelector( '.core-ai-map__block-body' );
+		context.screen = 'map';
+		context.story = 'uses-ai';
+		context.cardId = 'bench';
+		currentElement = root;
+		useEffect.mockImplementation( ( callback ) => {
+			effects.push( callback );
+		} );
+		mapStore.callbacks.useKiosk();
+		const cleanupKiosk = effects[ 0 ]();
+
+		try {
+			currentElement = card;
+			mapStore.actions.openBench();
+			jest.advanceTimersByTime( 1000 );
+			root.dispatchEvent(
+				new window.KeyboardEvent( 'keydown', {
+					bubbles: true,
+					key: 'Escape',
+				} )
+			);
+			const closedAnnouncement = context.announcement;
+
+			expect( context.screen ).toBe( 'map' );
+			expect( context.flowPhase ).toBe( 'settled' );
+			expect( context.storyMotionPhase ).toBe( 'settled' );
+			expect( closedAnnouncement ).toContain( 'What this flow shows' );
+			jest.advanceTimersByTime( 3000 );
+			expect( context.announcement ).toBe( closedAnnouncement );
+		} finally {
+			cleanupKiosk();
+		}
 	} );
 
 	it( 'opens WP-Bench at the sandbox and selects its evidence stage', () => {

@@ -13,6 +13,7 @@ const directory = path.resolve( __dirname );
 const render = fs.readFileSync( path.join( directory, 'render.php' ), 'utf8' );
 const styles = fs.readFileSync( path.join( directory, 'style.scss' ), 'utf8' );
 const view = fs.readFileSync( path.join( directory, 'view.js' ), 'utf8' );
+const edit = fs.readFileSync( path.join( directory, 'edit.js' ), 'utf8' );
 const plugin = fs.readFileSync(
 	path.resolve( directory, '..', '..', 'core-ai-map.php' ),
 	'utf8'
@@ -32,8 +33,21 @@ describe( 'Living Block Map v3.2.1 server render', () => {
 		);
 		expect( render ).toContain( 'core-ai-map__config-path' );
 		expect( render ).toContain( 'Setup · discovery · credentials' );
+		expect( render ).toMatch(
+			/core-ai-map__provider-plugin-body[\s\S]*?data-wp-bind--disabled="state\.isCardNotTappable"/
+		);
 		expect( styles ).toMatch(
 			/&__preview-flow path\.core-ai-map__preview-config\s*\{[\s\S]*?stroke:\s*var\(--core-ai-text-muted\)[\s\S]*?stroke-dasharray:\s*5 6/
+		);
+		expect( styles ).toMatch(
+			/&__provider-plugin\.is-dimmed\s*\{\s*opacity:\s*0\.4/
+		);
+	} );
+
+	it( 'keeps interactive role strips after the contiguous card controls', () => {
+		expect( render ).toContain( 'core-ai-map__strip-anchor' );
+		expect( render ).toMatch(
+			/foreach \( \$card_dom_order as \$card_id \)[\s\S]*?endforeach;[\s\S]*?foreach \( \$block_ids as \$strip_id \)/
 		);
 	} );
 
@@ -165,6 +179,9 @@ describe( 'Living Block Map v3.2.1 server render', () => {
 			/button\.core-ai-map__run-loop-link[\s\S]*?color:\s*#fff/
 		);
 		expect( styles ).toMatch( /&__actor-body[\s\S]*?min-height:\s*120px/ );
+		expect( styles ).toMatch(
+			/button\.core-ai-map__attract-browse[\s\S]*?min-height:\s*60px/
+		);
 		expect( styles ).toMatch( /&__block\.is-parked[\s\S]*?width:\s*176px/ );
 		expect( styles ).toMatch(
 			/&__rail[\s\S]*?button[\s\S]*?min-height:\s*68px/
@@ -175,6 +192,42 @@ describe( 'Living Block Map v3.2.1 server render', () => {
 		);
 		expect( styles ).toMatch(
 			/&__tokens\.is-live[\s\S]*?core-ai-map-token-call[\s\S]*?core-ai-map-token-ability/
+		);
+	} );
+
+	it( 'keeps active outcome text at AA contrast', () => {
+		expect( styles ).toMatch(
+			/&\.is-active[\s\S]*?core-ai-map__rail-outcome[\s\S]*?color:\s*#fff/
+		);
+		expect( styles ).not.toMatch(
+			/core-ai-map__rail-outcome[\s\S]*?rgba\(255,\s*255,\s*255,\s*0\.7\)/
+		);
+	} );
+
+	it( 'renders the inspector hierarchy as named semantic headings', () => {
+		expect( render ).toContain(
+			"aria-labelledby=\"<?php echo esc_attr( $instance_id . '-panel-' . $panel_id . '-title' ); ?>\""
+		);
+		for ( const label of [
+			'roleHeading',
+			'lessonHeading',
+			'definitionHeading',
+			'technicalHeading',
+			'exploreHeading',
+		] ) {
+			expect( render ).toContain(
+				`<h3 class="core-ai-map__details-heading${
+					label === 'technicalHeading'
+						? ' core-ai-map__details-section'
+						: ''
+				}"><?php echo esc_html( $labels['${ label }'] ); ?></h3>`
+			);
+		}
+	} );
+
+	it( 'normalizes the reviewed date in the editor as well as the server', () => {
+		expect( edit ).toMatch(
+			/const reviewedDate = withCurrentDefault\(\s*metadata,\s*'reviewedDate',\s*savedReviewedDate\s*\)/
 		);
 	} );
 

@@ -103,6 +103,14 @@ const renderLegacyMarkup = ( profile = 'legacy' ) => {
 			}
 		);
 	}
+	if ( profile === 'protocol-v320' ) {
+		attributes.panels.find( ( item ) => item.id === 'mcp' ).notes = [
+			{
+				heading: 'Under the hood',
+				text: 'An official WordPress package installed as a plugin, not part of Core: HTTP and STDIO transports against the MCP specification the adapter currently targets (2025-11-25), configurable servers, validation, permission checks, error handling, and observability. Today it answers calls; it does not make them. It does not create the underlying action, and it is not the model — WordPress still owns execution.',
+			},
+		];
+	}
 	attributes.panels = attributes.panels.map( ( panel ) => ( {
 		...panel,
 		href: 'https://legacy.example/generic',
@@ -210,6 +218,19 @@ describe( 'Core AI map render contract', () => {
 				width: 236,
 				height: 148,
 			} ) ),
+			...Array.from(
+				container.querySelectorAll( '.core-ai-map__provider-plugin' )
+			).map( ( providerPlugin ) => ( {
+				id: 'provider-plugin',
+				x: Number.parseFloat(
+					providerPlugin.style.getPropertyValue( '--cai-x' )
+				),
+				y: Number.parseFloat(
+					providerPlugin.style.getPropertyValue( '--cai-y' )
+				),
+				width: 200,
+				height: 104,
+			} ) ),
 		];
 		const overlaps = [];
 
@@ -228,7 +249,7 @@ describe( 'Core AI map render contract', () => {
 			}
 		}
 
-		expect( cards ).toHaveLength( 11 );
+		expect( cards ).toHaveLength( 12 );
 		expect( overlaps ).toEqual( [] );
 	} );
 
@@ -382,6 +403,17 @@ describe( 'Core AI map render contract', () => {
 			'scheduled for WordPress 7.1 on August 19, 2026'
 		);
 		expect( markup ).not.toContain( 'ships 19 August' );
+	} );
+
+	it( 'migrates v3.2.0 MCP copy to the registered protocol wording', () => {
+		const markup = renderLegacyMarkup( 'protocol-v320' );
+
+		expect( markup ).toContain(
+			'HTTP transport implements MCP 2025-11-25'
+		);
+		expect( markup ).not.toContain(
+			'against the MCP specification the adapter currently targets'
+		);
 	} );
 
 	it( 'keeps the WP-Bench process cues and complete evidence rationale', () => {
@@ -581,6 +613,9 @@ describe( 'Core AI map render contract', () => {
 			expect( control.getAttribute( 'data-wp-bind--aria-label' ) ).toBe(
 				'state.cardActionLabel'
 			);
+			expect( control.getAttribute( 'data-wp-bind--disabled' ) ).toBe(
+				'state.isCardNotTappable'
+			);
 			expect(
 				control.querySelector( '.core-ai-map__tap-cue' )
 			).not.toBeNull();
@@ -589,6 +624,56 @@ describe( 'Core AI map render contract', () => {
 			const panelId = control.getAttribute( 'aria-controls' );
 			expect( container.querySelector( `#${ panelId }` ) ).not.toBeNull();
 		}
+	} );
+
+	it( 'orders native card controls along every numbered flow', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup( 'current' );
+		const controls = [
+			...container.querySelectorAll(
+				'.core-ai-map__actor-body, .core-ai-map__block-body, .core-ai-map__provider-plugin-body'
+			),
+		];
+		const controlId = ( control ) => {
+			const card = control.closest(
+				'.core-ai-map__actor, .core-ai-map__block, .core-ai-map__provider-plugin'
+			);
+			if ( card.classList.contains( 'core-ai-map__provider-plugin' ) ) {
+				return 'provider-plugin';
+			}
+			return card.className.match(
+				/core-ai-map__(?:actor|block)--([a-z-]+)/
+			)[ 1 ];
+		};
+		const order = controls.map( controlId );
+		const flows = {
+			'uses-ai': [
+				'plugin',
+				'client',
+				'provider-plugin',
+				'provider',
+				'connectors',
+			],
+			'uses-wp': [ 'assistant', 'mcp', 'abilities' ],
+			learns: [ 'skills', 'agent', 'task' ],
+			tests: [ 'agent', 'bench' ],
+		};
+
+		for ( const expected of Object.values( flows ) ) {
+			expect( order.filter( ( id ) => expected.includes( id ) ) ).toEqual(
+				expected
+			);
+		}
+
+		const allButtons = [ ...container.querySelectorAll( 'button' ) ];
+		const applyIndex = allButtons.indexOf(
+			container.querySelector( '.core-ai-map__workbench-apply' )
+		);
+		expect( applyIndex ).toBeGreaterThan(
+			Math.max(
+				...controls.map( ( control ) => allButtons.indexOf( control ) )
+			)
+		);
 	} );
 
 	it( 'opens each panel with the flow it was reached from', () => {
@@ -615,19 +700,37 @@ describe( 'Core AI map render contract', () => {
 			contextBlock.querySelector( '.core-ai-map__details-lesson' )
 				.textContent
 		).toContain( 'without integrating every external provider separately' );
+		const titleId = 'core-ai-map-test-panel-client-title';
+		expect( client.getAttribute( 'aria-labelledby' ) ).toBe( titleId );
+		expect( client.querySelector( `#${ titleId }` ).tagName ).toBe( 'H2' );
 		expect(
-			Array.from(
-				client.querySelectorAll( '.core-ai-map__details-heading' )
-			).map( ( heading ) => heading.textContent.trim() )
-		).toEqual(
-			expect.arrayContaining( [
-				'Its role in this flow',
-				'Why that matters',
-				'What it is',
-				'Under the hood',
-				'Keep exploring',
-			] )
+			client.querySelector( `#${ titleId }` ).textContent.trim()
+		).toBe( 'AI Client' );
+		expect(
+			Array.from( client.querySelectorAll( 'h3' ) ).map( ( heading ) =>
+				heading.textContent.trim()
+			)
+		).toEqual( [
+			'Its role in this flow',
+			'Why that matters',
+			'What it is',
+			'Under the hood',
+			'Keep exploring',
+		] );
+		expect(
+			Array.from( client.querySelectorAll( ':scope > h3' ) ).map(
+				( heading ) => heading.textContent.trim()
+			)
+		).toEqual( [ 'What it is', 'Under the hood', 'Keep exploring' ] );
+
+		const abilities = container.querySelector(
+			'#core-ai-map-test-panel-abilities'
 		);
+		expect(
+			Array.from( abilities.querySelectorAll( 'h3' ) )
+				.map( ( heading ) => heading.textContent.trim() )
+				.filter( ( heading ) => heading === 'Under the hood' )
+		).toHaveLength( 1 );
 
 		// The coding agent takes part in two flows and explains both.
 		expect(

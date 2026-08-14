@@ -782,6 +782,16 @@ body.core-ai-kiosk-active {
 		cursor: pointer;
 	}
 
+	&__actor.is-active .core-ai-map__actor-body {
+		background: var(--core-ai-blue-wash);
+		border-color: var(--core-ai-blue);
+	}
+
+	&__actor.is-dimmed .core-ai-map__actor-body {
+		opacity: 0.4;
+		transform: scale(0.945);
+	}
+
 	&__actor-badge {
 		display: block;
 		color: var(--core-ai-text-muted);
@@ -940,7 +950,8 @@ body.core-ai-kiosk-active {
 	 * the pointer that mark the participating cards as things to press.
 	 */
 	button.core-ai-map__block-body:disabled,
-	button.core-ai-map__actor-body:disabled {
+	button.core-ai-map__actor-body:disabled,
+	button.core-ai-map__provider-plugin-body:disabled {
 		cursor: default;
 		box-shadow: none;
 	}
@@ -1017,16 +1028,16 @@ body.core-ai-kiosk-active {
 	&__provider-plugin {
 		position: absolute;
 		z-index: 2;
-		top: 214px;
-		left: 824px;
+		top: var(--cai-y);
+		left: var(--cai-x);
 		display: flex;
 		width: 200px;
 		height: 104px;
 		flex-direction: column;
 		justify-content: center;
 		padding: 0;
-		background: var(--core-ai-blue-wash);
-		border: 1px solid var(--core-ai-blue);
+		background: var(--core-ai-surface);
+		border: 1px solid var(--core-ai-line);
 		border-radius: var(--core-ai-radius);
 		box-shadow: 0 1px 2px rgba(30, 30, 30, 0.05);
 		transform-origin: top left;
@@ -1051,6 +1062,19 @@ body.core-ai-kiosk-active {
 			margin-top: 4px;
 			color: var(--core-ai-ink-soft);
 			font-size: 12px;
+		}
+	}
+
+	&__provider-plugin.is-active {
+		background: var(--core-ai-blue-wash);
+		border-color: var(--core-ai-blue);
+	}
+
+	&__provider-plugin.is-dimmed {
+		opacity: 0.4;
+
+		.core-ai-map__provider-plugin-body {
+			transform: scale(0.945);
 		}
 	}
 
@@ -1136,6 +1160,16 @@ body.core-ai-kiosk-active {
 	}
 
 	/* Role strips: shape on activation --------------------------------- */
+	&__strip-anchor {
+		position: absolute;
+		z-index: 3;
+		top: var(--cai-y);
+		left: var(--cai-x);
+		width: 236px;
+		pointer-events: none;
+		transform-origin: top left;
+		transition: transform 620ms var(--core-ai-ease);
+	}
 
 	&__strip {
 		position: absolute;
@@ -1614,7 +1648,7 @@ body.core-ai-kiosk-active {
 
 				.core-ai-map__rail-number,
 				.core-ai-map__rail-outcome {
-					color: rgba(255, 255, 255, 0.7);
+					color: #fff;
 				}
 			}
 		}
@@ -1783,7 +1817,7 @@ body.core-ai-kiosk-active {
 	}
 
 	button.core-ai-map__attract-browse {
-		min-height: 48px;
+		min-height: 60px;
 		padding: 0 8px;
 		color: var(--core-ai-ink-soft);
 		font-size: 15px;
@@ -1853,7 +1887,8 @@ body.core-ai-kiosk-active {
 			margin-top: 22px;
 		}
 
-		h2 {
+		h2,
+		.core-ai-map__details-title {
 			margin: 12px 0 0;
 			font-family: var(--core-ai-serif);
 			font-size: 54px;

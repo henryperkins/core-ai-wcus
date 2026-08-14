@@ -56,6 +56,8 @@
 				"inspect": "You are viewing this component’s role in “%1$s.”",
 				"browse": "Tap any component to learn what it is and where it belongs.",
 				"cardAction": "%1$s — view its role in “%2$s.”",
+				"cardActionStep": "Step %1$s: %2$s — view its role in “%3$s.”",
+				"cardInactive": "%1$s — not part of this flow.",
 				"cardActionBrowse": "%1$s — open its details."
 			}
 		},
@@ -363,7 +365,7 @@
 					"notes": [
 						{
 							"heading": "Under the hood",
-							"text": "An official WordPress package installed as a plugin, not part of Core: HTTP and STDIO transports, configurable servers, validation, permission checks, error handling, and observability. The default server supports multiple MCP protocol versions; its HTTP transport implements MCP 2025-06-18. Today it answers calls; it does not make them. It does not create the underlying action, and it is not the model — WordPress still owns execution."
+							"text": "An official WordPress package installed as a plugin, not part of Core: HTTP and STDIO transports, configurable servers, validation, permission checks, error handling, and observability. The default server supports multiple MCP protocol versions; its HTTP transport implements MCP 2025-11-25. Today it answers calls; it does not make them. It does not create the underlying action, and it is not the model — WordPress still owns execution."
 						}
 					],
 					"href": "https://github.com/WordPress/mcp-adapter",

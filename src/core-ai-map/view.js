@@ -113,6 +113,17 @@ const isLayoutSidecar = ( layout, id ) =>
 const isParticipant = ( context, id ) =>
 	Boolean( context.participants?.[ context.story ]?.includes( id ) );
 
+const activeCardStep = ( context, id ) => {
+	const layout = activeLayout( context );
+	if ( ! layout ) {
+		return 0;
+	}
+	if ( id === 'provider-plugin' ) {
+		return Number( layout.providerPlugin?.step || 0 );
+	}
+	return Number( layout.members?.[ id ] || 0 );
+};
+
 /**
  * Fills the numbered placeholders in an authored template.
  *
@@ -355,13 +366,68 @@ const describeFlowSelection = (
 ) => {
 	const title = context.storyTitles?.[ storyId ] || '';
 	const situation = context.storySituations?.[ storyId ] || '';
-	const takeaway = context.storyTakeaways?.[ storyId ] || '';
+	const announcements = context.announcements || {};
 	const titleSentence = title
-		? `${ title }${ replayed ? ' replayed' : '' }.`
+		? format(
+				replayed
+					? announcements.flowReplayed || '%1$s replayed.'
+					: announcements.flowSelected || '%1$s.',
+				title
+		  )
 		: '';
-	const settledTakeaway = context.flowPhase === 'settled' ? takeaway : '';
+	const settledTakeaway =
+		context.flowPhase === 'settled'
+			? format(
+					announcements.takeaway || '%1$s: %2$s',
+					context.labels?.takeawayHeading || 'What this flow shows',
+					context.storyTakeaways?.[ storyId ] || ''
+			  )
+			: '';
 
 	return [ titleSentence, situation, settledTakeaway ]
+		.filter( Boolean )
+		.join( ' ' );
+};
+
+const consumePendingTakeaway = ( context ) => {
+	const storyId = context.pendingTakeawayStory;
+	if ( ! storyId || storyId !== context.story ) {
+		context.pendingTakeawayStory = '';
+		return '';
+	}
+	context.pendingTakeawayStory = '';
+	return format(
+		context.announcements?.takeaway || '%1$s: %2$s',
+		context.labels?.takeawayHeading || 'What this flow shows',
+		context.storyTakeaways?.[ storyId ] || ''
+	);
+};
+
+const describeCurrentTakeaway = ( context ) => {
+	const takeaway = context.storyTakeaways?.[ context.story ] || '';
+	if ( ! takeaway ) {
+		return '';
+	}
+	return format(
+		context.announcements?.takeaway || '%1$s: %2$s',
+		context.labels?.takeawayHeading || 'What this flow shows',
+		takeaway
+	);
+};
+
+const closeBenchState = ( root, context ) => {
+	if ( root ) {
+		clearTimers( flowTimers, root );
+	}
+	context.screen = 'map';
+	context.benchPathsLive = false;
+	context.flowPhase = 'settled';
+	context.storyMotionPhase = 'settled';
+	context.pendingTakeawayStory = '';
+	context.announcement = [
+		'WP-Bench run loop closed. Back on the map.',
+		describeCurrentTakeaway( context ),
+	]
 		.filter( Boolean )
 		.join( ' ' );
 };
@@ -380,6 +446,7 @@ const setAttractState = ( context ) => {
 	context.previewIndex = 0;
 	context.flowPhase = 'settled';
 	context.storyMotionPhase = 'settled';
+	context.pendingTakeawayStory = '';
 	context.benchPathsLive = false;
 	context.suggestion = Math.floor( ( context.suggestion || 0 ) / 2 ) * 2;
 	setPreviewPhase( context, 'assembling' );
@@ -477,6 +544,7 @@ const runFlow = ( root, context, { bench = false } = {} ) => {
 	}
 	context.flowPhase = reducedMotion( root ) ? 'settled' : 'transition';
 	context.storyMotionPhase = context.flowPhase;
+	context.pendingTakeawayStory = '';
 	context.benchPathsLive = Boolean(
 		bench && context.flowPhase === 'transition'
 	);
@@ -492,11 +560,22 @@ const runFlow = ( root, context, { bench = false } = {} ) => {
 			context.flowPhase = 'settled';
 			context.storyMotionPhase = 'settled';
 			context.benchPathsLive = false;
-			if ( context.screen === 'map' && context.story === storyId ) {
-				const takeaway = context.storyTakeaways?.[ storyId ] || '';
-				if ( takeaway ) {
-					context.announcement = `What this flow shows: ${ takeaway }`;
-				}
+			if ( context.story !== storyId ) {
+				return;
+			}
+			const takeaway = context.storyTakeaways?.[ storyId ] || '';
+			if ( ! takeaway ) {
+				return;
+			}
+			if ( context.screen === 'map' ) {
+				context.announcement = format(
+					context.announcements?.takeaway || '%1$s: %2$s',
+					context.labels?.takeawayHeading || 'What this flow shows',
+					takeaway
+				);
+				context.pendingTakeawayStory = '';
+			} else {
+				context.pendingTakeawayStory = storyId;
 			}
 		},
 		FLOW_SETTLE_DELAY
@@ -695,6 +774,11 @@ store( 'core-ai/map', {
 					return '';
 				}
 				const preview = activePreview( context );
+				if ( context.cardId === 'provider-plugin' ) {
+					return preview?.providerPlugin?.step
+						? String( preview.providerPlugin.step )
+						: '';
+				}
 				const previewStep = preview?.steps?.[ context.cardId ];
 				if ( preview?.steps ) {
 					return previewStep ? String( previewStep ) : '';
@@ -702,7 +786,7 @@ store( 'core-ai/map', {
 				const index = preview?.ids?.indexOf( context.cardId ) ?? -1;
 				return index >= 0 ? String( index + 1 ) : '';
 			}
-			const step = activeLayout( context )?.members?.[ context.cardId ];
+			const step = activeCardStep( context, context.cardId );
 			return step ? String( step ) : '';
 		},
 		get isCardActive() {
@@ -711,9 +795,8 @@ store( 'core-ai/map', {
 				return this.isPreviewMember;
 			}
 			return Boolean(
-				Number(
-					activeLayout( context )?.members?.[ context.cardId ] || 0
-				) > 0
+				activeLayout( context ) &&
+					isParticipant( context, context.cardId )
 			);
 		},
 		get isCardSidecar() {
@@ -735,10 +818,13 @@ store( 'core-ai/map', {
 		},
 		get isPreviewMember() {
 			const context = getContext();
+			const preview = activePreview( context );
 			return Boolean(
 				context.screen === 'attract' &&
 					context.previewPhase !== 'releasing' &&
-					activePreview( context )?.ids?.includes( context.cardId )
+					( preview?.ids?.includes( context.cardId ) ||
+						( context.cardId === 'provider-plugin' &&
+							preview?.providerPlugin ) )
 			);
 		},
 		get isPreviewSidecar() {
@@ -771,25 +857,11 @@ store( 'core-ai/map', {
 			const context = getContext();
 			const layout = activeLayout( context );
 			return Boolean(
-				layout &&
-					! isRecomposed( context ) &&
-					! hasLayoutMember( layout, context.cardId ) &&
-					! isLayoutSidecar( layout, context.cardId )
+				layout && ! isParticipant( context, context.cardId )
 			);
 		},
 		get isCardOffstage() {
-			const context = getContext();
-			if ( context.screen === 'attract' ) {
-				return false;
-			}
-			const layout = activeLayout( context );
-			if ( context.screen === 'map' && ! layout ) {
-				return false;
-			}
-			return ! (
-				hasLayoutMember( layout, context.cardId ) ||
-				isLayoutSidecar( layout, context.cardId )
-			);
+			return false;
 		},
 		get isCardInspected() {
 			const context = getContext();
@@ -830,10 +902,26 @@ store( 'core-ai/map', {
 				activeLayout( context ) &&
 				isParticipant( context, context.cardId )
 			) {
+				const step = activeCardStep( context, context.cardId );
+				if ( step > 0 ) {
+					return format(
+						strings.cardActionStep ||
+							'Step %1$s: %2$s — view its role in “%3$s.”',
+						String( step ),
+						name,
+						context.storyTitles?.[ context.story ] || ''
+					);
+				}
 				return format(
 					strings.cardAction,
 					name,
 					context.storyTitles?.[ context.story ] || ''
+				);
+			}
+			if ( activeLayout( context ) ) {
+				return format(
+					strings.cardInactive || '%1$s — not part of this flow.',
+					name
 				);
 			}
 
@@ -959,8 +1047,8 @@ store( 'core-ai/map', {
 
 		get isProviderPluginHidden() {
 			const context = getContext();
-			if ( context.screen === 'map' ) {
-				return context.story !== 'uses-ai';
+			if ( [ 'map', 'inspect' ].includes( context.screen ) ) {
+				return false;
 			}
 			return ! (
 				context.screen === 'attract' &&
@@ -972,13 +1060,15 @@ store( 'core-ai/map', {
 			const context = getContext();
 			const providerPlugin =
 				context.layout?.[ 'uses-ai' ]?.providerPlugin;
-			if (
-				context.screen === 'map' &&
-				context.story === 'uses-ai' &&
-				context.recompose === false
-			) {
-				const base = providerPlugin?.position;
-				const position = providerPlugin?.restPosition;
+			const base = context.neutral?.[ 'provider-plugin' ];
+			if ( [ 'map', 'inspect' ].includes( context.screen ) ) {
+				if ( context.story !== 'uses-ai' ) {
+					return '';
+				}
+				const position =
+					context.recompose === false
+						? providerPlugin?.restPosition
+						: providerPlugin?.position;
 				if ( ! base || ! position ) {
 					return '';
 				}
@@ -990,7 +1080,6 @@ store( 'core-ai/map', {
 				return '';
 			}
 			const preview = activePreview( context );
-			const base = providerPlugin?.position;
 			const position = preview?.providerPlugin?.position;
 			if ( ! base || ! position ) {
 				return '';
@@ -1096,7 +1185,9 @@ store( 'core-ai/map', {
 			context.flowPhase = 'settled';
 			context.storyMotionPhase = 'settled';
 			context.benchPathsLive = false;
+			context.pendingTakeawayStory = '';
 			context.announcement =
+				context.announcements?.browse ||
 				'Every component is on the canvas with no flow selected. Tap any component to learn what it is and where it belongs.';
 			resetSchedulers.get( root )?.();
 			focusWithin( root, '.core-ai-map__block-body:not([disabled])' );
@@ -1124,24 +1215,30 @@ store( 'core-ai/map', {
 				{ replayed: isCurrent }
 			);
 			resetSchedulers.get( root )?.();
+			focusFirstStep( root );
 		},
 		replayStory() {
 			const context = getContext();
+			const root = getRoot( getElement().ref );
 			const advancesSuggestion = context.story === 'uses-ai';
 			if ( advancesSuggestion ) {
 				context.suggestion =
 					( Math.floor( context.suggestion / 2 ) + 1 ) * 2;
 			}
-			runFlow( getRoot( getElement().ref ), context );
+			runFlow( root, context );
 			context.announcement = `${ describeFlowSelection(
 				context,
 				context.story,
 				{ replayed: true }
 			) }${
 				advancesSuggestion
-					? ' The AI Plugin shows the next suggestion.'
+					? ` ${
+							context.announcements?.nextSuggestion ||
+							'The AI Plugin shows the next suggestion.'
+					  }`
 					: ''
 			}`;
+			focusFirstStep( root );
 		},
 		inspectCard() {
 			const context = getContext();
@@ -1156,7 +1253,21 @@ store( 'core-ai/map', {
 			if ( context.inspect === 'abilities' ) {
 				context.abilitiesTab = 'overview';
 			}
-			context.announcement = `${ ref.textContent.trim() } details open.`;
+			const name =
+				context.cardTitles?.[ context.cardId ] || context.cardId;
+			const storyTitle = context.storyTitles?.[ context.story ] || '';
+			context.announcement = storyTitle
+				? format(
+						context.announcements?.detailsInFlow ||
+							'%1$s details open in %2$s.',
+						name,
+						storyTitle
+				  )
+				: format(
+						context.announcements?.detailsBrowse ||
+							'%1$s details open.',
+						name
+				  );
 			resetSchedulers.get( root )?.();
 			focusWithin( root, '.core-ai-map__details-close', 80 );
 		},
@@ -1180,7 +1291,14 @@ store( 'core-ai/map', {
 			context.screen =
 				context.aboutReturnScreen === 'map' ? 'map' : 'attract';
 			context.aboutReturnScreen = '';
-			context.announcement = 'About this exhibit closed.';
+			context.announcement = [
+				'About this exhibit closed.',
+				context.screen === 'map'
+					? consumePendingTakeaway( context )
+					: '',
+			]
+				.filter( Boolean )
+				.join( ' ' );
 			resetSchedulers.get( root )?.();
 			focusElement( root ? lastAboutTriggers.get( root ) : undefined );
 		},
@@ -1195,9 +1313,12 @@ store( 'core-ai/map', {
 			const title = context.storyTitles?.[ context.story ];
 			context.screen = 'map';
 			context.inspect = '';
-			context.announcement = title
+			const closed = title
 				? `Details closed. Back in ${ title }.`
 				: 'Details closed. Back on the map.';
+			context.announcement = [ closed, consumePendingTakeaway( context ) ]
+				.filter( Boolean )
+				.join( ' ' );
 			resetSchedulers.get( root )?.();
 			focusElement( root ? lastCardTriggers.get( root ) : undefined );
 		},
@@ -1238,13 +1359,7 @@ store( 'core-ai/map', {
 		closeBench() {
 			const context = getContext();
 			const root = getRoot( getElement().ref );
-			if ( root ) {
-				clearTimers( flowTimers, root );
-			}
-			context.screen = 'map';
-			context.benchPathsLive = false;
-			context.flowPhase = 'settled';
-			context.announcement = 'WP-Bench run loop closed. Back on the map.';
+			closeBenchState( root, context );
 			resetSchedulers.get( root )?.();
 			focusElement( root ? lastBenchTriggers.get( root ) : undefined );
 		},
@@ -1422,16 +1537,20 @@ store( 'core-ai/map', {
 					}
 					event.preventDefault();
 					if ( context.screen === 'inspect' ) {
+						const title = context.storyTitles?.[ context.story ];
 						context.screen = 'map';
 						context.inspect = '';
-						context.announcement =
-							'Details closed. Back on the map.';
+						context.announcement = [
+							title
+								? `Details closed. Back in ${ title }.`
+								: 'Details closed. Back on the map.',
+							consumePendingTakeaway( context ),
+						]
+							.filter( Boolean )
+							.join( ' ' );
 						focusElement( lastCardTriggers.get( root ) );
 					} else if ( context.screen === 'bench' ) {
-						context.screen = 'map';
-						context.benchPathsLive = false;
-						context.announcement =
-							'WP-Bench closed. Back on the map.';
+						closeBenchState( root, context );
 						focusElement( lastBenchTriggers.get( root ) );
 					} else if ( context.screen === 'about' ) {
 						context.screen =
@@ -1439,7 +1558,14 @@ store( 'core-ai/map', {
 								? 'map'
 								: 'attract';
 						context.aboutReturnScreen = '';
-						context.announcement = 'About this exhibit closed.';
+						context.announcement = [
+							'About this exhibit closed.',
+							context.screen === 'map'
+								? consumePendingTakeaway( context )
+								: '',
+						]
+							.filter( Boolean )
+							.join( ' ' );
 						focusElement( lastAboutTriggers.get( root ) );
 					}
 				};

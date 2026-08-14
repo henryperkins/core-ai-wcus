@@ -220,6 +220,7 @@ const PEDAGOGICAL_V320_DEFAULTS = {
 };
 
 const LEGACY_SCALAR_DEFAULTS = {
+	reviewedDate: [ 'Reviewed 12 Aug 2026' ],
 	title: [ 'How do WordPress and AI work together?' ],
 	intro: [
 		'Choose a flow, follow the numbered path, then tap a highlighted component to understand its role.',
