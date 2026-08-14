@@ -23,7 +23,7 @@
 		"packages-update": "wp-scripts packages-update",
 		"plugin-zip": "wp-scripts plugin-zip",
 		"start": "wp-scripts start --experimental-modules --webpack-copy-php --blocks-manifest",
-		"test:playground": "node --test tests/playground/blueprint.test.mjs tests/playground/cloudflare-build.test.mjs",
+		"test:playground": "node --test tests/playground/artifact-verification.test.mjs tests/playground/blueprint.test.mjs tests/playground/cloudflare-build.test.mjs tests/playground/plugin-release-identity.test.mjs",
 		"test:unit": "wp-scripts test-unit-js",
 		"verify:playground-artifact": "node scripts/verify-playground-artifact.mjs"
 	},
@@ -39,6 +39,7 @@
 		"@fontsource-variable/inter": "^5.3.0",
 		"@fontsource/ibm-plex-mono": "^5.3.0",
 		"@wordpress/scripts": "34.0.0",
+		"adm-zip": "0.5.18",
 		"qrcode": "1.5.4"
 	}
 }

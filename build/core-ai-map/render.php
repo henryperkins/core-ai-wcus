@@ -1606,6 +1606,10 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				data-wp-bind--hidden="state.isFlowContextHidden"
 				hidden
 			></p>
+			<p class="core-ai-map__details-continuation" aria-hidden="true">
+				<span><?php esc_html_e( 'Scroll or swipe for technical detail and take-away QR', 'core-ai-map' ); ?></span>
+				<span aria-hidden="true">&darr;</span>
+			</p>
 
 			<?php foreach ( $panels as $panel_id => $panel ) : ?>
 				<?php

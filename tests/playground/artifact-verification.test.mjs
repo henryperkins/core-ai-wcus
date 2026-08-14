@@ -13,6 +13,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { verifyPlaygroundArtifact } from '../../scripts/verify-playground-artifact.mjs';
+import { createPluginZipFixture } from './plugin-zip-fixture.mjs';
 
 const projectDirectory = resolve(
 	dirname( fileURLToPath( import.meta.url ) ),
@@ -23,7 +24,9 @@ const packageManifest = JSON.parse(
 );
 const expectedSourceCommit = 'source-commit-fixture';
 const pluginArtifactPath = `kiosk-blueprint/core-ai-map-${ packageManifest.version }.zip`;
-const pluginContents = Buffer.from( 'fixture-plugin-zip' );
+const pluginContents = createPluginZipFixture( {
+	headerVersion: packageManifest.version,
+} );
 
 const createArtifactFixture = async ( t, overrides = {} ) => {
 	const temporaryDirectory = await mkdtemp(
@@ -72,26 +75,36 @@ test( 'independently verifies a fresh Playground artifact manifest', async ( t )
 
 test( 'rejects an in-root artifact symlink that resolves outside the output directory', async ( t ) => {
 	const directory = await createArtifactFixture( t );
-	const externalArtifactPath = join(
+	const externalArtifactDirectory = join(
 		dirname( directory ),
+		'external-artifact'
+	);
+	const externalArtifactPath = join(
+		externalArtifactDirectory,
 		'external-plugin.zip'
 	);
-	const linkedArtifactPath = join(
+	const linkedArtifactDirectory = join(
 		directory,
 		'kiosk-blueprint',
-		'linked-plugin.zip'
+		'linked-artifact'
 	);
+	await mkdir( externalArtifactDirectory, { recursive: true } );
 	await writeFile( externalArtifactPath, pluginContents );
 	try {
-		await symlink( externalArtifactPath, linkedArtifactPath, 'file' );
+		await symlink(
+			externalArtifactDirectory,
+			linkedArtifactDirectory,
+			'junction'
+		);
 	} catch ( error ) {
 		assert.fail(
-			`Unable to create the required file symlink: ${ error.message }`
+			`Unable to create the required directory link: ${ error.message }`
 		);
 	}
 	const manifestPath = join( directory, 'deployment-manifest.json' );
 	const manifest = JSON.parse( await readFile( manifestPath, 'utf8' ) );
-	manifest.pluginArtifact.path = 'kiosk-blueprint/linked-plugin.zip';
+	manifest.pluginArtifact.path =
+		'kiosk-blueprint/linked-artifact/external-plugin.zip';
 	await writeFile(
 		manifestPath,
 		`${ JSON.stringify( manifest, null, 2 ) }\n`,
@@ -104,6 +117,59 @@ test( 'rejects an in-root artifact symlink that resolves outside the output dire
 			sourceCommit: expectedSourceCommit,
 		} ),
 		/outside the output directory/i
+	);
+} );
+
+test( 'rejects a hashed artifact whose internal plug-in identity is stale', async ( t ) => {
+	const directory = await createArtifactFixture( t );
+	const staleContents = createPluginZipFixture( {
+		headerVersion: '3.1.2',
+	} );
+	const artifactPath = join( directory, ...pluginArtifactPath.split( '/' ) );
+	await writeFile( artifactPath, staleContents );
+	const manifestPath = join( directory, 'deployment-manifest.json' );
+	const manifest = JSON.parse( await readFile( manifestPath, 'utf8' ) );
+	manifest.pluginArtifact.bytes = staleContents.byteLength;
+	manifest.pluginArtifact.sha256 = createHash( 'sha256' )
+		.update( staleContents )
+		.digest( 'hex' );
+	await writeFile(
+		manifestPath,
+		`${ JSON.stringify( manifest, null, 2 ) }\n`,
+		'utf8'
+	);
+
+	await assert.rejects(
+		verifyPlaygroundArtifact( {
+			directory,
+			sourceCommit: expectedSourceCommit,
+		} ),
+		/plug-in header version 3\.1\.2 does not match expected 3\.2\.0/i
+	);
+} );
+
+test( 'rejects an artifact that is not published under its versioned filename', async ( t ) => {
+	const directory = await createArtifactFixture( t );
+	const unversionedPath = 'kiosk-blueprint/core-ai-map.zip';
+	await writeFile(
+		join( directory, ...unversionedPath.split( '/' ) ),
+		pluginContents
+	);
+	const manifestPath = join( directory, 'deployment-manifest.json' );
+	const manifest = JSON.parse( await readFile( manifestPath, 'utf8' ) );
+	manifest.pluginArtifact.path = unversionedPath;
+	await writeFile(
+		manifestPath,
+		`${ JSON.stringify( manifest, null, 2 ) }\n`,
+		'utf8'
+	);
+
+	await assert.rejects(
+		verifyPlaygroundArtifact( {
+			directory,
+			sourceCommit: expectedSourceCommit,
+		} ),
+		/artifact path .* must be kiosk-blueprint\/core-ai-map-3\.2\.0\.zip/i
 	);
 } );
 

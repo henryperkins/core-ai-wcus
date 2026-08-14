@@ -525,8 +525,47 @@ async ( page ) => {
 			Math.max(
 				0,
 				Math.min( first.bottom, second.bottom ) -
-					Math.max( first.top, second.top )
+				Math.max( first.top, second.top )
 			);
+		const luminance = ( color ) => {
+			const channels = color
+				.match( /\d+(?:\.\d+)?/g )
+				.slice( 0, 3 )
+				.map( ( channel ) => Number.parseFloat( channel ) / 255 )
+				.map( ( channel ) =>
+					channel <= 0.04045
+						? channel / 12.92
+						: ( ( channel + 0.055 ) / 1.055 ) ** 2.4
+				);
+			return (
+				0.2126 * channels[ 0 ] +
+				0.7152 * channels[ 1 ] +
+				0.0722 * channels[ 2 ]
+			);
+		};
+		const ratio = ( foreground, background ) => {
+			const high = Math.max(
+				luminance( foreground ),
+				luminance( background )
+			);
+			const low = Math.min(
+				luminance( foreground ),
+				luminance( background )
+			);
+			return ( high + 0.05 ) / ( low + 0.05 );
+		};
+		const backgroundFor = ( element ) => {
+			let current = element;
+			while ( current ) {
+				const background = getComputedStyle( current ).backgroundColor;
+				const channels = background.match( /\d+(?:\.\d+)?/g ) || [];
+				if ( channels.length < 4 || Number.parseFloat( channels[ 3 ] ) > 0 ) {
+					return background;
+				}
+				current = current.parentElement;
+			}
+			return 'rgb(255, 255, 255)';
+		};
 		const rail = document
 			.querySelector( '.core-ai-map__rail' )
 			.getBoundingClientRect();
@@ -555,10 +594,36 @@ async ( page ) => {
 				}
 			}
 		}
+		const cardOpacities = [
+			...document.querySelectorAll(
+				'.core-ai-map__actor, .core-ai-map__block-body'
+			),
+		].map( ( card ) => ( {
+			selector: card.className,
+			opacity: getComputedStyle( card ).opacity,
+		} ) );
+		const textContrast = [
+			...document.querySelectorAll(
+				'.core-ai-map__actor-body strong, .core-ai-map__actor-body small, .core-ai-map__block-body strong, .core-ai-map__block-body small'
+			),
+		]
+			.filter( ( element ) => element.getClientRects().length > 0 )
+			.map( ( element ) => {
+				const foreground = getComputedStyle( element ).color;
+				const background = backgroundFor( element );
+				return {
+					text: element.textContent.trim(),
+					foreground,
+					background,
+					ratio: ratio( foreground, background ),
+				};
+			} );
 
 		return {
 			actors,
 			actorOverlaps,
+			cardOpacities,
+			textContrast,
 			footnote: {
 				railOverlap: overlapArea( rail, footnote ),
 				clearsRail: Math.round( footnote.top - rail.bottom ),
@@ -571,9 +636,25 @@ async ( page ) => {
 	assert(
 		neutral.actors.length === 5 &&
 			neutral.actors.every(
-				( actor ) => ! actor.hidden && actor.opacity === '0.42'
+				( actor ) => ! actor.hidden && actor.opacity === '1'
 			),
-		'Neutral map did not keep all five outside actors visible and dimmed.'
+		'Neutral map did not keep all five outside actors visible and fully opaque.'
+	);
+	assert(
+		neutral.cardOpacities.length > 5 &&
+			neutral.cardOpacities.every( ( card ) => card.opacity === '1' ),
+		`Browse-all cards were not fully opaque: ${ neutral.cardOpacities
+			.filter( ( card ) => card.opacity !== '1' )
+			.map( ( card ) => `${ card.selector }=${ card.opacity }` )
+			.join( ', ' ) }`
+	);
+	assert(
+		neutral.textContrast.length > 0 &&
+			neutral.textContrast.every( ( sample ) => sample.ratio >= 4.5 ),
+		`Browse-all card text fell below 4.5:1 contrast: ${ neutral.textContrast
+			.filter( ( sample ) => sample.ratio < 4.5 )
+			.map( ( sample ) => `${ sample.text }=${ sample.ratio.toFixed( 2 ) }` )
+			.join( ', ' ) }`
 	);
 	assert(
 		neutral.actorOverlaps.length === 0,

@@ -1637,9 +1637,10 @@ body.core-ai-kiosk-active {
 		right: 0;
 		bottom: 0;
 		width: 520px;
-		padding: 24px 32px 28px;
+		padding: 24px 32px 92px;
 		overflow-y: auto;
 		overscroll-behavior: contain;
+		container-type: scroll-state;
 		background: var(--core-ai-surface);
 		border-left: 1px solid var(--core-ai-line);
 		box-shadow: -24px 0 64px rgba(30, 30, 30, 0.12);
@@ -1656,6 +1657,56 @@ body.core-ai-kiosk-active {
 			font-weight: 500;
 			line-height: 0.98;
 			letter-spacing: -0.045em;
+		}
+	}
+
+	&__details-continuation {
+		position: fixed;
+		z-index: 51;
+		right: 32px;
+		bottom: 28px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 10px;
+		width: 456px;
+		min-height: 48px;
+		margin: 0;
+		padding: 10px 16px;
+		color: var(--core-ai-ink);
+		font-family: var(--core-ai-mono);
+		font-size: 12px;
+		font-weight: 650;
+		line-height: 1.25;
+		letter-spacing: 0.035em;
+		text-align: center;
+		background: var(--core-ai-surface);
+		border: 1px solid var(--core-ai-line-strong);
+		border-radius: 999px;
+		box-shadow: 0 -16px 32px 12px var(--core-ai-surface);
+		pointer-events: none;
+		transition: opacity 180ms ease, visibility 180ms ease;
+
+		span:last-child {
+			color: var(--core-ai-blue);
+			font-size: 17px;
+			line-height: 1;
+		}
+	}
+
+	@supports (container-type: scroll-state) {
+
+		&__details-continuation {
+			opacity: 0;
+			visibility: hidden;
+		}
+
+		@container scroll-state(scrollable: bottom) {
+
+			.core-ai-map__details-continuation {
+				opacity: 1;
+				visibility: visible;
+			}
 		}
 	}
 

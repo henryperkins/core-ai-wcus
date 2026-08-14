@@ -7,6 +7,8 @@ import { isAbsolute, dirname, join, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { validatePluginArchiveIdentity } from './plugin-release-identity.mjs';
+
 const scriptDirectory = dirname( fileURLToPath( import.meta.url ) );
 const projectDirectory = resolve( scriptDirectory, '..' );
 const defaultOutputDirectory = join( projectDirectory, 'dist-playground' );
@@ -124,6 +126,12 @@ export const verifyPlaygroundArtifact = async ( {
 			'Manifest plugin artifact path is outside the output directory.'
 		);
 	}
+	const expectedArtifactPath = `kiosk-blueprint/core-ai-map-${ releaseIdentity.pluginVersion }.zip`;
+	if ( artifact.path !== expectedArtifactPath ) {
+		throw new Error(
+			`Plugin artifact path ${ artifact.path } must be ${ expectedArtifactPath }.`
+		);
+	}
 
 	const contents = await readFile( canonicalArtifactPath );
 	if ( contents.byteLength !== artifact.bytes ) {
@@ -137,6 +145,7 @@ export const verifyPlaygroundArtifact = async ( {
 			'Plugin artifact SHA-256 does not match the manifest.'
 		);
 	}
+	validatePluginArchiveIdentity( contents, releaseIdentity.pluginVersion );
 
 	return {
 		directory: outputDirectory,

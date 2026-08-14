@@ -178,6 +178,50 @@ describe( 'Living Block Map v3.2.0 server render', () => {
 		);
 	} );
 
+	it( 'keeps the take-away QR discoverable below the inspector fold', () => {
+		expect( render ).toContain(
+			'class="core-ai-map__details-continuation"'
+		);
+		expect( render ).toContain(
+			'Scroll or swipe for technical detail and take-away QR'
+		);
+		expect( styles ).toMatch(
+			/&__details\s*\{[\s\S]*?container-type:\s*scroll-state/
+		);
+		expect( styles ).toMatch(
+			/&__details-continuation\s*\{[\s\S]*?position:\s*fixed[\s\S]*?pointer-events:\s*none/
+		);
+		expect( styles ).toMatch(
+			/@container\s+scroll-state\(scrollable:\s*bottom\)[\s\S]*?core-ai-map__details-continuation/
+		);
+	} );
+
+	it( 'emits modern and Apple install-capability metadata', () => {
+		expect( plugin ).toContain(
+			'<meta name="mobile-web-app-capable" content="yes">'
+		);
+		expect( plugin ).toContain(
+			'<meta name="apple-mobile-web-app-capable" content="yes">'
+		);
+	} );
+
+	it( 'skips only the unreadable split-filesystem theme style on the kiosk', () => {
+		expect( plugin ).toMatch(
+			/function core_ai_map_skip_unreadable_kiosk_theme_inline_path\(\)[\s\S]*?core_ai_map_is_kiosk_page\(\)/
+		);
+		expect( plugin ).toContain( "'/wp-content/themes/twentytwentyfive/'" );
+		expect( plugin ).toContain( "'/assets/css/style.min.css'" );
+		expect( plugin ).toMatch(
+			/is_readable\( \$path \)[\s\S]*?\$wp_styles->add_data\( \$handle, 'path', false \)/
+		);
+		expect( plugin ).toContain(
+			"add_action( 'wp_enqueue_scripts', 'core_ai_map_skip_unreadable_kiosk_theme_inline_path', PHP_INT_MAX );"
+		);
+		expect( plugin ).not.toContain(
+			"remove_action( 'wp_head', 'wp_maybe_inline_styles'"
+		);
+	} );
+
 	it( 'keeps the Bench Back control clickable below the persistent brand bar', () => {
 		expect( styles ).toMatch(
 			/&__topbar\s*\{[\s\S]*?pointer-events:\s*none/

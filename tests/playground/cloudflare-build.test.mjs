@@ -1,13 +1,21 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import {
+	mkdtemp,
+	mkdir,
+	readFile,
+	rm,
+	stat,
+	writeFile,
+} from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
 import { createStaticSourceFixture } from './create-static-source-fixture.mjs';
+import { createPluginZipFixture } from './plugin-zip-fixture.mjs';
 
 import {
 	buildCloudflarePlayground,
@@ -96,6 +104,9 @@ test( 'static Playground source fixture preserves the test runtime tree through 
 } );
 
 test( 'verification workflow runs the complete non-deploying release-build contract', async () => {
+	const packageManifest = JSON.parse(
+		await readFile( join( projectDirectory, 'package.json' ), 'utf8' )
+	);
 	const workflow = await readFile(
 		join( projectDirectory, '.github', 'workflows', 'verify.yml' ),
 		'utf8'
@@ -148,6 +159,14 @@ test( 'verification workflow runs the complete non-deploying release-build contr
 		workflow,
 		/\b(?:deploy|publish|pages|credential|environment)\b|contents:\s*write/i
 	);
+	assert.match(
+		packageManifest.scripts[ 'test:playground' ],
+		/tests\/playground\/artifact-verification\.test\.mjs/
+	);
+	assert.match(
+		packageManifest.scripts[ 'test:playground' ],
+		/tests\/playground\/plugin-release-identity\.test\.mjs/
+	);
 } );
 
 test( 'patches the official Playground shell into a local kiosk launcher', () => {
@@ -161,6 +180,7 @@ test( 'patches the official Playground shell into a local kiosk launcher', () =>
 <meta name="twitter:title" content="WordPress Playground" />
 <meta name="twitter:description" content="Try WordPress in your browser." />
 <meta name="twitter:image" content="https://playground.wordpress.net/ogimage.png" />
+<link rel="manifest" href="/dynamic-manifest.json.php?review=fixture&amp;blueprint-url=fixture" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Roboto" rel="stylesheet" />
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-test"></script>
@@ -196,6 +216,8 @@ test( 'patches the official Playground shell into a local kiosk launcher', () =>
 		result,
 		/<meta name="twitter:image" content="\/ogimage\.png" \/>/
 	);
+	assert.match( result, /<link rel="manifest" href="\/manifest\.json">/ );
+	assert.doesNotMatch( result, /dynamic-manifest\.json\.php/ );
 	assert.match( result, /kiosk-blueprint\/blueprint\.json/ );
 	assert.match(
 		result,
@@ -238,8 +260,11 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 	const sourceDirectory = join( temporaryDirectory, 'source' );
 	const outputDirectory = join( temporaryDirectory, 'output' );
 	const pluginZipPath = join( temporaryDirectory, 'fixture-plugin.zip' );
+	const pluginContents = createPluginZipFixture( {
+		headerVersion: '3.2.0',
+	} );
 	await createStaticSourceFixture( sourceDirectory );
-	await writeFile( pluginZipPath, 'fixture-plugin-zip' );
+	await writeFile( pluginZipPath, pluginContents );
 
 	await buildCloudflarePlayground( {
 		sourceDirectory,
@@ -248,6 +273,9 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 		sourceCommit: 'source-commit-fixture',
 		builtAt: '2026-08-13T12:34:56.000Z',
 	} );
+	await execFileAsync( process.execPath, [
+		join( outputDirectory, 'assets', 'index-fixture.js' ),
+	] );
 
 	assert.equal(
 		await readFile( join( outputDirectory, '_redirects' ), 'utf8' ),
@@ -257,6 +285,8 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 		join( outputDirectory, 'index.html' ),
 		'utf8'
 	);
+	assert.match( kioskIndex, /<link rel="manifest" href="\/manifest\.json">/ );
+	assert.doesNotMatch( kioskIndex, /dynamic-manifest\.json\.php/ );
 	assert.match(
 		kioskIndex,
 		new RegExp(
@@ -311,12 +341,11 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 		),
 		{ code: 'ENOENT' }
 	);
-	assert.equal(
+	assert.deepEqual(
 		await readFile(
-			join( outputDirectory, 'kiosk-blueprint', 'core-ai-map-3.2.0.zip' ),
-			'utf8'
+			join( outputDirectory, 'kiosk-blueprint', 'core-ai-map-3.2.0.zip' )
 		),
-		'fixture-plugin-zip'
+		pluginContents
 	);
 	await assert.rejects(
 		readFile(
@@ -333,14 +362,71 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 	);
 	assert.deepEqual( deploymentManifest.pluginArtifact, {
 		path: 'kiosk-blueprint/core-ai-map-3.2.0.zip',
-		bytes: Buffer.byteLength( 'fixture-plugin-zip' ),
-		sha256: createHash( 'sha256' )
-			.update( 'fixture-plugin-zip' )
-			.digest( 'hex' ),
+		bytes: pluginContents.byteLength,
+		sha256: createHash( 'sha256' ).update( pluginContents ).digest( 'hex' ),
 	} );
 	assert.equal( deploymentManifest.sourceCommit, 'source-commit-fixture' );
 	assert.equal( deploymentManifest.pluginVersion, '3.2.0' );
 	assert.equal( deploymentManifest.builtAt, '2026-08-13T12:34:56.000Z' );
+
+	const webManifest = JSON.parse(
+		await readFile( join( outputDirectory, 'manifest.json' ), 'utf8' )
+	);
+	assert.deepEqual(
+		{
+			name: webManifest.name,
+			shortName: webManifest.short_name,
+			startUrl: webManifest.start_url,
+			scope: webManifest.scope,
+			display: webManifest.display,
+			orientation: webManifest.orientation,
+		},
+		{
+			name: 'Core AI Living Block Map',
+			shortName: 'Living Block Map',
+			startUrl: '/',
+			scope: '/',
+			display: 'fullscreen',
+			orientation: 'landscape',
+		}
+	);
+	assert.match(
+		await readFile( join( outputDirectory, '_headers' ), 'utf8' ),
+		/\/manifest\.json\s+Content-Type: application\/manifest\+json; charset=UTF-8/
+	);
+} );
+
+test( 'rejects a stale plug-in ZIP before replacing existing build output', async ( t ) => {
+	const temporaryDirectory = await mkdtemp(
+		join( projectDirectory, '.tmp-cloudflare-stale-zip-' )
+	);
+	t.after( () => rm( temporaryDirectory, { recursive: true, force: true } ) );
+	const sourceDirectory = join( temporaryDirectory, 'source' );
+	const outputDirectory = join( temporaryDirectory, 'output' );
+	const pluginZipPath = join( temporaryDirectory, 'fixture-plugin.zip' );
+	const sentinelPath = join( outputDirectory, 'existing-output.txt' );
+	await createStaticSourceFixture( sourceDirectory );
+	await mkdir( outputDirectory, { recursive: true } );
+	await writeFile( sentinelPath, 'preserve-on-validation-failure', 'utf8' );
+	await writeFile(
+		pluginZipPath,
+		createPluginZipFixture( { headerVersion: '3.1.2' } )
+	);
+
+	await assert.rejects(
+		buildCloudflarePlayground( {
+			sourceDirectory,
+			outputDirectory,
+			pluginZipPath,
+			sourceCommit: 'source-commit-fixture',
+			builtAt: '2026-08-13T12:34:56.000Z',
+		} ),
+		/plug-in header version 3\.1\.2 does not match expected 3\.2\.0/i
+	);
+	assert.equal(
+		await readFile( sentinelPath, 'utf8' ),
+		'preserve-on-validation-failure'
+	);
 } );
 
 test( 'ships the pinned WordPress static fallback tree', () => {

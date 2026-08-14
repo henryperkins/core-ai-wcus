@@ -460,13 +460,13 @@ describe( 'Core AI Living Block Map', () => {
 		);
 	} );
 
-	it( 'keeps outside actors visible but dimmed on the neutral map', () => {
+	it( 'keeps every operable card fully opaque on the neutral map', () => {
 		context.screen = 'map';
 		context.story = '';
 		context.cardId = 'assistant';
 
 		expect( mapStore.state.isCardOffstage ).toBe( false );
-		expect( mapStore.state.cardOpacity ).toBe( '0.42' );
+		expect( mapStore.state.cardOpacity ).toBe( '1' );
 	} );
 
 	it( 'keeps Connectors as an unnumbered configuration sidecar', () => {

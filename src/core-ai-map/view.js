@@ -718,7 +718,7 @@ store( 'core-ai/map', {
 		get cardOpacity() {
 			const context = getContext();
 			if ( context.screen === 'map' && ! activeLayout( context ) ) {
-				return '0.42';
+				return '1';
 			}
 			if ( context.screen !== 'attract' ) {
 				return '';

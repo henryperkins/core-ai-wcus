@@ -18,6 +18,7 @@ export const createStaticSourceFixture = async ( sourceDirectory ) => {
 			<meta name="twitter:title" content="WordPress Playground" />
 			<meta name="twitter:description" content="Try WordPress in your browser." />
 			<meta name="twitter:image" content="https://playground.wordpress.net/ogimage.png" />
+			<link rel="manifest" href="/dynamic-manifest.json.php?review=fixture&amp;blueprint-url=fixture" />
 			<title>WordPress Playground</title>
 			<script type="module" src="/assets/index-fixture.js"></script>
 		</head><body><main id="root" aria-label="WordPress Playground"></main></body></html>`
@@ -36,7 +37,7 @@ export const createStaticSourceFixture = async ( sourceDirectory ) => {
 	);
 	await writeFile(
 		join( sourceDirectory, 'assets', 'main-fixture.js' ),
-		`const loader = { caption: i?.caption??"Preparing WordPress" };`
+		`const i = undefined; const loader = { caption: i?.caption ?? "Preparing WordPress" }; void loader;`
 	);
 	await writeFile(
 		join( sourceDirectory, 'remote.html' ),
@@ -48,12 +49,24 @@ export const createStaticSourceFixture = async ( sourceDirectory ) => {
 		join( sourceDirectory, 'assets', 'wordpress-fixture.js' ),
 		`const caption = 'Preparing WordPress';`
 	);
+	await writeFile(
+		join( sourceDirectory, 'manifest.json' ),
+		`${ JSON.stringify(
+			{
+				name: 'WordPress Playground',
+				short_name: 'Playground',
+				start_url: '/',
+				scope: '/',
+			},
+			null,
+			2
+		) }\n`
+	);
 
 	for ( const fileName of [
 		'sw.js',
 		'blueprint-schema.json',
 		'favicon.ico',
-		'manifest.json',
 		'apple-touch-icon.png',
 		'ogimage.png',
 		'logo-192.png',

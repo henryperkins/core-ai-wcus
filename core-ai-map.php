@@ -173,12 +173,57 @@ function core_ai_map_print_web_app_metadata() {
 	<link rel="icon" href="<?php echo esc_url( CORE_AI_MAP_URL . 'assets/icon.svg' ); ?>" type="image/svg+xml">
 	<link rel="apple-touch-icon" href="<?php echo esc_url( CORE_AI_MAP_URL . 'assets/icon-192.png' ); ?>">
 	<meta name="theme-color" content="#3858e9">
+	<meta name="mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 	<meta name="apple-mobile-web-app-title" content="<?php esc_attr_e( 'Living Block Map', 'core-ai-map' ); ?>">
 	<?php
 }
 add_action( 'wp_head', 'core_ai_map_print_web_app_metadata', 1 );
+
+/**
+ * Skips an unavailable Twenty Twenty-Five inline-style optimization on kiosks.
+ *
+ * The pinned static Playground can serve this stylesheet over HTTP while the
+ * corresponding file is absent from PHP's virtual filesystem. Clearing only
+ * the optional path metadata preserves the queued stylesheet URL and prevents
+ * WordPress 7.0 from reporting the unreadable optimization path.
+ */
+function core_ai_map_skip_unreadable_kiosk_theme_inline_path() {
+	if ( ! core_ai_map_is_kiosk_page() ) {
+		return;
+	}
+
+	global $wp_styles;
+
+	if ( ! $wp_styles instanceof WP_Styles ) {
+		return;
+	}
+
+	$theme_path = '/wp-content/themes/twentytwentyfive/';
+	$style_path = '/assets/css/style.min.css';
+
+	foreach ( $wp_styles->queue as $handle ) {
+		$path = $wp_styles->get_data( $handle, 'path' );
+
+		if ( ! is_string( $path ) || '' === $path ) {
+			continue;
+		}
+
+		$path = wp_normalize_path( $path );
+
+		if (
+			false === strpos( $path, $theme_path ) ||
+			$style_path !== substr( $path, -strlen( $style_path ) ) ||
+			is_readable( $path )
+		) {
+			continue;
+		}
+
+		$wp_styles->add_data( $handle, 'path', false );
+	}
+}
+add_action( 'wp_enqueue_scripts', 'core_ai_map_skip_unreadable_kiosk_theme_inline_path', PHP_INT_MAX );
 
 /**
  * Serves the same-origin service worker and web-app manifest.

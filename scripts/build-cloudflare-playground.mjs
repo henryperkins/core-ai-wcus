@@ -16,6 +16,8 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { validatePluginArchiveIdentity } from './plugin-release-identity.mjs';
+
 const PAGES_MAX_FILES = 20_000;
 const PAGES_MAX_ASSET_BYTES = 25 * 1024 * 1024;
 const scriptDirectory = dirname( fileURLToPath( import.meta.url ) );
@@ -35,6 +37,31 @@ export const kioskLoadingMessage =
 	'Building a real WordPress site in your browser. A cold start can take a minute or more.';
 export const kioskTitle = 'Core AI Living Block Map';
 export const kioskDescription = packageManifest.description;
+export const kioskManifest = {
+	name: kioskTitle,
+	short_name: 'Living Block Map',
+	description: kioskDescription,
+	start_url: '/',
+	scope: '/',
+	display: 'fullscreen',
+	orientation: 'landscape',
+	background_color: '#f6f7f7',
+	theme_color: '#3858e9',
+	icons: [
+		{
+			src: '/logo-192.png',
+			sizes: '192x192',
+			type: 'image/png',
+			purpose: 'any',
+		},
+		{
+			src: '/maskable-icon-512.png',
+			sizes: '512x512',
+			type: 'image/png',
+			purpose: 'maskable',
+		},
+	],
+};
 
 const normalizeRelativePath = ( filePath ) =>
 	filePath.replaceAll( sep, '/' ).replace( /^\/+/, '' );
@@ -85,6 +112,25 @@ const upsertKioskMetadata = ( html ) => {
 			)
 			.join( '\n\t' ) }\n\t</head>`
 	);
+};
+
+const upsertStaticManifestLink = ( html ) => {
+	const manifestLinkMatcher =
+		/<link\b(?=[^>]*\brel\s*=\s*(["'])manifest\1)[^>]*>/gi;
+	const manifestLinks = html.match( manifestLinkMatcher ) ?? [];
+	const staticManifestLink = '<link rel="manifest" href="/manifest.json">';
+
+	if ( manifestLinks.length > 1 ) {
+		throw new Error(
+			`Expected at most one web manifest link in the upstream index; found ${ manifestLinks.length }.`
+		);
+	}
+
+	if ( manifestLinks.length === 1 ) {
+		return html.replace( manifestLinkMatcher, staticManifestLink );
+	}
+
+	return html.replace( '</head>', `${ staticManifestLink }\n\t</head>` );
 };
 
 const getRepositoryHead = async () => {
@@ -185,6 +231,7 @@ export const patchKioskIndex = ( html ) => {
 		)
 		.replace( 'https://playground.wordpress.net/', '/' );
 	patched = upsertKioskMetadata( patched );
+	patched = upsertStaticManifestLink( patched );
 
 	const loaderMarkup = `
 		<div id="core-ai-map-playground-loader" data-core-ai-loader aria-labelledby="core-ai-map-playground-loader-heading">
@@ -506,6 +553,10 @@ export const pagesHeaders = `/*
   Referrer-Policy: no-referrer
   X-Content-Type-Options: nosniff
 
+/manifest.json
+  Content-Type: application/manifest+json; charset=UTF-8
+  Cache-Control: public, max-age=0, must-revalidate
+
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
@@ -587,6 +638,7 @@ export const buildCloudflarePlayground = async ( {
 	}
 	const pluginArtifactPath = `kiosk-blueprint/${ pluginFileName }`;
 	const pluginContents = await readFile( pluginZipPath );
+	validatePluginArchiveIdentity( pluginContents, pluginVersion );
 
 	if ( ! isInside( projectDirectory, output ) ) {
 		throw new Error(
@@ -601,6 +653,11 @@ export const buildCloudflarePlayground = async ( {
 	for ( const runtimeFile of runtimeFiles ) {
 		await copyRuntimeFile( source, output, runtimeFile );
 	}
+	await writeFile(
+		join( output, 'manifest.json' ),
+		`${ JSON.stringify( kioskManifest, null, 2 ) }\n`,
+		'utf8'
+	);
 
 	await patchPlaygroundLoaderRuntime( output );
 
