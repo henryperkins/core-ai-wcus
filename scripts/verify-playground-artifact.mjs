@@ -2,7 +2,7 @@
 
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, realpath } from 'node:fs/promises';
 import { isAbsolute, dirname, join, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -76,7 +76,7 @@ export const verifyPlaygroundArtifact = async ( {
 	directory = defaultOutputDirectory,
 	sourceCommit: suppliedSourceCommit,
 } = {} ) => {
-	const outputDirectory = resolve( directory );
+	const outputDirectory = await realpath( resolve( directory ) );
 	const sourceCommit = suppliedSourceCommit ?? ( await getRepositoryHead() );
 	const manifest = JSON.parse(
 		await readFile(
@@ -118,8 +118,14 @@ export const verifyPlaygroundArtifact = async ( {
 			'Manifest plugin artifact path is outside the output directory.'
 		);
 	}
+	const canonicalArtifactPath = await realpath( artifactPath );
+	if ( ! isInside( outputDirectory, canonicalArtifactPath ) ) {
+		throw new Error(
+			'Manifest plugin artifact path is outside the output directory.'
+		);
+	}
 
-	const contents = await readFile( artifactPath );
+	const contents = await readFile( canonicalArtifactPath );
 	if ( contents.byteLength !== artifact.bytes ) {
 		throw new Error(
 			`Plugin artifact byte count ${ contents.byteLength } does not match ${ artifact.bytes }.`

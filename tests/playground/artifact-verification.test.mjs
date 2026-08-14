@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import {
+	mkdtemp,
+	mkdir,
+	readFile,
+	rm,
+	symlink,
+	writeFile,
+} from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -61,6 +68,43 @@ test( 'independently verifies a fresh Playground artifact manifest', async ( t )
 
 	assert.equal( result.sourceCommit, expectedSourceCommit );
 	assert.equal( result.pluginVersion, packageManifest.version );
+} );
+
+test( 'rejects an in-root artifact symlink that resolves outside the output directory', async ( t ) => {
+	const directory = await createArtifactFixture( t );
+	const externalArtifactPath = join(
+		dirname( directory ),
+		'external-plugin.zip'
+	);
+	const linkedArtifactPath = join(
+		directory,
+		'kiosk-blueprint',
+		'linked-plugin.zip'
+	);
+	await writeFile( externalArtifactPath, pluginContents );
+	try {
+		await symlink( externalArtifactPath, linkedArtifactPath, 'file' );
+	} catch ( error ) {
+		assert.fail(
+			`Unable to create the required file symlink: ${ error.message }`
+		);
+	}
+	const manifestPath = join( directory, 'deployment-manifest.json' );
+	const manifest = JSON.parse( await readFile( manifestPath, 'utf8' ) );
+	manifest.pluginArtifact.path = 'kiosk-blueprint/linked-plugin.zip';
+	await writeFile(
+		manifestPath,
+		`${ JSON.stringify( manifest, null, 2 ) }\n`,
+		'utf8'
+	);
+
+	await assert.rejects(
+		verifyPlaygroundArtifact( {
+			directory,
+			sourceCommit: expectedSourceCommit,
+		} ),
+		/outside the output directory/i
+	);
 } );
 
 for ( const [ label, overrides, expectedError ] of [
