@@ -2439,6 +2439,19 @@ body.core-ai-kiosk-active {
 .core-ai-map__actor--provider {
 	--cai-float: core-ai-map-float-a;
 	--cai-float-time: 6.8s;
+
+	.core-ai-map__actor-body {
+		padding-block: 10px;
+
+		strong {
+			margin-top: 5px;
+		}
+
+		small {
+			margin-top: 1px;
+			line-height: 1.2;
+		}
+	}
 }
 
 .core-ai-map__actor--task {

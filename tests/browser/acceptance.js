@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-expressions */
-/* global getComputedStyle */
+/* global getComputedStyle, NodeFilter */
 
 /* prettier-ignore */
 async ( page ) => {
@@ -13,6 +13,126 @@ async ( page ) => {
 		}
 	};
 	const root = page.locator( '.core-ai-map' );
+	const measureCardGeometry = () =>
+		page.evaluate( () => {
+			const isVisible = ( element ) => {
+				const rect = element.getBoundingClientRect();
+				const style = getComputedStyle( element );
+				return (
+					! element.hidden &&
+					style.visibility !== 'hidden' &&
+					rect.width > 0 &&
+					rect.height > 0
+				);
+			};
+			const overlapArea = ( first, second ) =>
+				Math.max(
+					0,
+					Math.min( first.right, second.right ) -
+						Math.max( first.left, second.left )
+				) *
+				Math.max(
+					0,
+					Math.min( first.bottom, second.bottom ) -
+						Math.max( first.top, second.top )
+				);
+			const cardId = ( card ) =>
+				card.classList.contains( 'core-ai-map__provider-plugin' )
+					? 'provider-plugin'
+					: card.className.match(
+							/core-ai-map__(?:actor|block)--([a-z-]+)/
+						)[ 1 ];
+			const cards = [
+				...document.querySelectorAll(
+					'.core-ai-map__actor, .core-ai-map__block, .core-ai-map__provider-plugin'
+				),
+			].filter( isVisible ).map( ( card ) => ( {
+				id: cardId( card ),
+				rect: card.getBoundingClientRect().toJSON(),
+			} ) );
+			const intersections = [];
+			for ( let first = 0; first < cards.length; first += 1 ) {
+				for (
+					let second = first + 1;
+					second < cards.length;
+					second += 1
+				) {
+					const area = overlapArea(
+						cards[ first ].rect,
+						cards[ second ].rect
+					);
+					if ( area > 0 ) {
+						intersections.push(
+							`${ cards[ first ].id }/${ cards[ second ].id }:${ area }`
+						);
+					}
+				}
+			}
+			const bodies = [
+				...document.querySelectorAll(
+					'.core-ai-map__actor-body, .core-ai-map__block-body, .core-ai-map__provider-plugin'
+				),
+			].filter( isVisible );
+			const bodyOverflows = [];
+			const textOverflows = [];
+			for ( const body of bodies ) {
+				const card = body.closest(
+					'.core-ai-map__actor, .core-ai-map__block, .core-ai-map__provider-plugin'
+				);
+				const id = cardId( card );
+				if ( body.scrollHeight > body.clientHeight ) {
+					bodyOverflows.push( id );
+				}
+				const textNodes = [];
+				const walker = document.createTreeWalker(
+					body,
+					NodeFilter.SHOW_TEXT
+				);
+				while ( walker.nextNode() ) {
+					if ( walker.currentNode.nodeValue.trim() ) {
+						textNodes.push( walker.currentNode );
+					}
+				}
+				const lastText = textNodes.at( -1 );
+				if ( ! lastText ) {
+					continue;
+				}
+				const range = document.createRange();
+				range.selectNodeContents( lastText );
+				const textRect = range.getBoundingClientRect();
+				const bodyRect = body.getBoundingClientRect();
+				if (
+					textRect.left < bodyRect.left ||
+					textRect.right > bodyRect.right ||
+					textRect.top < bodyRect.top ||
+					textRect.bottom > bodyRect.bottom
+				) {
+					textOverflows.push( id );
+				}
+			}
+
+			return { cards, intersections, bodyOverflows, textOverflows };
+		} );
+	const assertCardGeometry = ( geometry, composition ) => {
+		assert(
+			geometry.intersections.length === 0,
+			`${ composition } card intersections: ${ geometry.intersections.join(
+				', '
+			) }`
+		);
+		assert(
+			geometry.bodyOverflows.length === 0,
+			`${ composition } card body overflow: ${ geometry.bodyOverflows.join(
+				', '
+			) }`
+		);
+		assert(
+			geometry.textOverflows.length === 0,
+			`${ composition } card text overflow: ${ geometry.textOverflows.join(
+				', '
+			) }`
+		);
+	};
 
 	page.on( 'console', ( message ) => {
 		if ( message.type() === 'error' ) {
@@ -156,6 +276,9 @@ async ( page ) => {
 			attract.runtimePaths.length === 3,
 		'Attract did not distinguish Connectors configuration from the three runtime paths.'
 	);
+	const attractGeometry = await measureCardGeometry();
+	observations.attractGeometry = attractGeometry;
+	assertCardGeometry( attractGeometry, 'Attract composition' );
 
 	await page
 		.getByRole( 'button', { name: 'Add the blocks to the canvas' } )
@@ -236,6 +359,9 @@ async ( page ) => {
 		neutral.reviewedHintOverlap === 0,
 		'Reviewed date overlapped the neutral-map hint.'
 	);
+	const neutralGeometry = await measureCardGeometry();
+	observations.neutralGeometry = neutralGeometry;
+	assertCardGeometry( neutralGeometry, 'Neutral map' );
 
 	const aboutTrigger = page.getByRole( 'button', {
 		name: 'About this exhibit',
@@ -341,6 +467,15 @@ async ( page ) => {
 			storyOne.runtimePaths.length === 3,
 		'Story 01 did not distinguish the Connectors sidecar from the runtime path.'
 	);
+	const storyOneGeometry = await measureCardGeometry();
+	observations.storyOneGeometry = storyOneGeometry;
+	assertCardGeometry( storyOneGeometry, 'Story 01' );
+
+	await storyButtons.nth( 1 ).click();
+	await page.waitForTimeout( 800 );
+	const storyTwoGeometry = await measureCardGeometry();
+	observations.storyTwoGeometry = storyTwoGeometry;
+	assertCardGeometry( storyTwoGeometry, 'Story 02' );
 
 	await storyButtons.nth( 2 ).click();
 	await page.waitForTimeout( 800 );
@@ -398,6 +533,9 @@ async ( page ) => {
 		storyThree.nothingHereRuns,
 		'Story 03 absence panel lost its dashed cue.'
 	);
+	const storyThreeGeometry = await measureCardGeometry();
+	observations.storyThreeGeometry = storyThreeGeometry;
+	assertCardGeometry( storyThreeGeometry, 'Story 03' );
 
 	await storyButtons.nth( 2 ).click();
 	await page
@@ -575,6 +713,9 @@ async ( page ) => {
 		runLoopColor === 'rgb(255, 255, 255)',
 		'Run-loop link text was not white on its blue background.'
 	);
+	const storyFourGeometry = await measureCardGeometry();
+	observations.storyFourGeometry = storyFourGeometry;
+	assertCardGeometry( storyFourGeometry, 'Story 04' );
 	await runLoopLink.click();
 	await page.waitForTimeout( 120 );
 	const bench = await page.evaluate( () => {
@@ -718,6 +859,9 @@ async ( page ) => {
 		compatibility.storyHeight >= 44 && compatibility.resetHeight >= 44,
 		'1024 controls fell below 44px.'
 	);
+	const compatibilityNeutralGeometry = await measureCardGeometry();
+	observations.compatibilityNeutralGeometry = compatibilityNeutralGeometry;
+	assertCardGeometry( compatibilityNeutralGeometry, '1024 neutral map' );
 	await page.locator( '.core-ai-map__rail button' ).nth( 0 ).click();
 	await page.waitForTimeout( 800 );
 	const compatibilityStoryOne = await page.evaluate( () => {
@@ -768,6 +912,12 @@ async ( page ) => {
 		compatibilityStoryOne.scrollWidth <= 1024 &&
 			compatibilityStoryOne.scrollHeight <= 768,
 		'Story 01 introduced scrolling in the 1024 compatibility view.'
+	);
+	const compatibilityStoryOneGeometry = await measureCardGeometry();
+	observations.compatibilityStoryOneGeometry = compatibilityStoryOneGeometry;
+	assertCardGeometry(
+		compatibilityStoryOneGeometry,
+		'1024 Story 01'
 	);
 
 	await page.waitForFunction(

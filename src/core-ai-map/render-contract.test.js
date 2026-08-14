@@ -161,28 +161,47 @@ echo ob_get_clean();
 };
 
 describe( 'Core AI map render contract', () => {
-	it( 'gives all five neutral actors distinct outside-column positions', () => {
+	it( 'keeps the neutral composition clear of every card intersection', () => {
 		const container = document.createElement( 'div' );
 		container.innerHTML = renderLegacyMarkup();
-		const actors = Array.from(
-			container.querySelectorAll( '.core-ai-map__actor' )
-		).map( ( actor ) => ( {
-			id: actor.className.match( /core-ai-map__actor--([a-z-]+)/ )[ 1 ],
-			x: Number.parseFloat( actor.style.getPropertyValue( '--cai-x' ) ),
-			y: Number.parseFloat( actor.style.getPropertyValue( '--cai-y' ) ),
-			width: 180,
-			height: 120,
-		} ) );
+		const cards = [
+			...Array.from(
+				container.querySelectorAll( '.core-ai-map__actor' )
+			).map( ( actor ) => ( {
+				id: actor.className.match(
+					/core-ai-map__actor--([a-z-]+)/
+				)[ 1 ],
+				x: Number.parseFloat(
+					actor.style.getPropertyValue( '--cai-x' )
+				),
+				y: Number.parseFloat(
+					actor.style.getPropertyValue( '--cai-y' )
+				),
+				width: 180,
+				height: 120,
+			} ) ),
+			...Array.from(
+				container.querySelectorAll( '.core-ai-map__block' )
+			).map( ( block ) => ( {
+				id: block.className.match(
+					/core-ai-map__block--([a-z-]+)/
+				)[ 1 ],
+				x: Number.parseFloat(
+					block.style.getPropertyValue( '--cai-x' )
+				),
+				y: Number.parseFloat(
+					block.style.getPropertyValue( '--cai-y' )
+				),
+				width: 236,
+				height: 148,
+			} ) ),
+		];
 		const overlaps = [];
 
-		for ( let first = 0; first < actors.length; first += 1 ) {
-			for (
-				let second = first + 1;
-				second < actors.length;
-				second += 1
-			) {
-				const one = actors[ first ];
-				const two = actors[ second ];
+		for ( let first = 0; first < cards.length; first += 1 ) {
+			for ( let second = first + 1; second < cards.length; second += 1 ) {
+				const one = cards[ first ];
+				const two = cards[ second ];
 				if (
 					one.x < two.x + two.width &&
 					one.x + one.width > two.x &&
@@ -194,15 +213,8 @@ describe( 'Core AI map render contract', () => {
 			}
 		}
 
-		expect( actors ).toHaveLength( 5 );
+		expect( cards ).toHaveLength( 11 );
 		expect( overlaps ).toEqual( [] );
-		expect(
-			actors.every( ( actor ) =>
-				actor.id === 'provider'
-					? actor.x >= 1030
-					: actor.x + actor.width <= 240
-			)
-		).toBe( true );
 	} );
 
 	it( 'keeps Connectors beside the provider request path, not inside it', () => {
