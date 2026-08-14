@@ -10,7 +10,7 @@ import { __ } from '@wordpress/i18n';
 
 import metadata from './block.json';
 import './editor.scss';
-import { withCurrentDefaults } from './normalize';
+import { withCurrentDefault, withCurrentDefaults } from './normalize';
 
 const updateItem = ( items, index, key, value ) =>
 	items.map( ( item, itemIndex ) =>
@@ -21,8 +21,8 @@ export default function Edit( { attributes, setAttributes } ) {
 	const {
 		eyebrow,
 		reviewedDate,
-		title,
-		intro,
+		title: savedTitle,
+		intro: savedIntro,
 		prompt,
 		inactivityTimeout,
 		offlineEnabled,
@@ -37,6 +37,8 @@ export default function Edit( { attributes, setAttributes } ) {
 	const actors = withCurrentDefaults( metadata, 'actors', savedActors );
 	const stories = withCurrentDefaults( metadata, 'stories', savedStories );
 	const panels = withCurrentDefaults( metadata, 'panels', savedPanels );
+	const title = withCurrentDefault( metadata, 'title', savedTitle );
+	const intro = withCurrentDefault( metadata, 'intro', savedIntro );
 
 	const blockProps = useBlockProps( {
 		className: 'core-ai-map-editor',
@@ -310,6 +312,24 @@ export default function Edit( { attributes, setAttributes } ) {
 								}
 							/>
 							<TextareaControl
+								label={ __( 'Situation', 'core-ai-map' ) }
+								help={ __(
+									'Explains why this flow is about to move.',
+									'core-ai-map'
+								) }
+								value={ story.situation }
+								onChange={ ( value ) =>
+									setAttributes( {
+										stories: updateItem(
+											stories,
+											index,
+											'situation',
+											value
+										),
+									} )
+								}
+							/>
+							<TextareaControl
 								label={ __(
 									'What this flow shows',
 									'core-ai-map'
@@ -325,6 +345,24 @@ export default function Edit( { attributes, setAttributes } ) {
 											stories,
 											index,
 											'takeaway',
+											value
+										),
+									} )
+								}
+							/>
+							<TextControl
+								label={ __( 'Outcome label', 'core-ai-map' ) }
+								help={ __(
+									'Predicts the result beneath the flow title.',
+									'core-ai-map'
+								) }
+								value={ story.outcome }
+								onChange={ ( value ) =>
+									setAttributes( {
+										stories: updateItem(
+											stories,
+											index,
+											'outcome',
 											value
 										),
 									} )

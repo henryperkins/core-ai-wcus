@@ -6,16 +6,70 @@ const metadata = JSON.parse(
 );
 const { attributes } = metadata;
 
-describe( 'Living Block Map v3.2.0 metadata', () => {
-	it( 'identifies the block as Living Block Map v3.2.0', () => {
+describe( 'Living Block Map v3.2.1 metadata', () => {
+	it( 'identifies the block as Living Block Map v3.2.1', () => {
 		expect( metadata.title ).toBe( 'Core AI Living Block Map' );
-		expect( metadata.version ).toBe( '3.2.0' );
+		expect( metadata.version ).toBe( '3.2.1' );
 	} );
 
 	it( 'sets the reviewed date used by the About panel', () => {
 		expect( attributes.reviewedDate ).toEqual( {
 			type: 'string',
-			default: 'Reviewed 12 Aug 2026',
+			default: 'Reviewed 14 Aug 2026',
+		} );
+	} );
+
+	it( 'opens with the approved orientation, instructions, and legend language', () => {
+		expect( attributes.title.default ).toBe( 'What is WordPress Core AI?' );
+		expect( attributes.intro.default ).toBe(
+			'WordPress Core AI is a set of open building blocks that let WordPress use AI services and work with outside assistants—without tying WordPress to one provider.\n\nExplore four flows to see what happens inside WordPress, what happens outside it, and how the projects connect.'
+		);
+		expect( attributes.prompt.default ).toBe( 'Explore the first flow' );
+		expect( attributes.labels.default ).toMatchObject( {
+			railEmptyLabel: 'Choose a flow',
+			railActiveLabel: 'Choose another flow',
+			lessonHeading: 'Why that matters',
+			definitionHeading: 'What it is',
+			technicalHeading: 'Under the hood',
+			exploreHeading: 'Keep exploring',
+		} );
+		expect( attributes.guidance.default.flow ).toBe(
+			'Follow %1$s. Highlighted components take part in this flow. Tap one to learn what it contributes.'
+		);
+	} );
+
+	it( 'gives every flow a situation, conclusion, and predicted outcome', () => {
+		const stories = Object.fromEntries(
+			attributes.stories.default.map( ( story ) => [ story.id, story ] )
+		);
+
+		expect( stories[ 'uses-ai' ] ).toMatchObject( {
+			situation:
+				'A feature inside WordPress needs an AI-generated result.',
+			outcome: 'WordPress requests an AI result',
+			takeaway:
+				'A WordPress feature uses a common AI interface instead of integrating directly with every provider. Provider configuration supports the request, while the AI service remains outside WordPress.',
+		} );
+		expect( stories[ 'uses-wp' ] ).toMatchObject( {
+			situation:
+				'An outside assistant asks WordPress to perform an allowed action.',
+			outcome: 'An assistant requests a WordPress action',
+			takeaway:
+				'The assistant does not bypass WordPress. The MCP Adapter translates the request, and the selected ability still applies WordPress permissions.',
+		} );
+		expect( stories.learns ).toMatchObject( {
+			situation:
+				'A coding agent receives WordPress-specific guidance before writing code.',
+			outcome: 'A coding agent receives WordPress guidance',
+			takeaway:
+				'Agent Skills changes the information available to the coding agent. Nothing runs on the WordPress site during this flow.',
+		} );
+		expect( stories.tests ).toMatchObject( {
+			situation:
+				'Code written by an agent needs to be tested against real WordPress behavior.',
+			outcome: 'WordPress evaluates generated code',
+			takeaway:
+				"The generated code runs in a disposable WordPress environment and is judged by WordPress tests, not by another model's opinion.",
 		} );
 	} );
 
@@ -139,6 +193,10 @@ describe( 'Living Block Map v3.2.0 metadata', () => {
 
 		expect( card.badge ).toBe( 'WordPress plugin · not in Core' );
 		expect( panel.badge ).toBe( 'WordPress plugin · not in Core' );
+		expect( panel.notes[ 0 ].text ).toContain(
+			'supports multiple MCP protocol versions'
+		);
+		expect( panel.notes[ 0 ].text ).not.toContain( '2025-11-25' );
 	} );
 
 	it( 'uses the v3.1 execution-only framing for WP-Bench', () => {
@@ -163,11 +221,11 @@ describe( 'Living Block Map v3.2.0 metadata', () => {
 		expect( panel.lede ).toBe(
 			'A test bench, not part of any live request. It measures whether the code an agent writes for WordPress actually runs.'
 		);
-		expect( panel.notes ).toEqual( [
-			{
-				heading: 'Under the hood',
-				text: 'One suite, one dimension: 185 execution tests, each a PHP snippet, run inside a real WordPress 7.0 — and WordPress itself runs the assertions that grade it. Passing is all-or-nothing: two of three assertions is a fail. Static analysis only diagnoses, unless the code trips a forbidden pattern. A separate audit throws trivial cheats at each test — an empty function, a bare return — and flags any test a cheat can satisfy.',
-			},
-		] );
+		expect( panel.notes[ 0 ].text ).toContain(
+			'code generation tasks graded by static checks and runtime assertions in a real WordPress environment'
+		);
+		expect( panel.notes[ 0 ].text ).toContain( 'check-reference-solution' );
+		expect( panel.notes[ 0 ].text ).toContain( 'check-exploits' );
+		expect( panel.notes[ 0 ].text ).not.toMatch( /\b185\b/ );
 	} );
 } );

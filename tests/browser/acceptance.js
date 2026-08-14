@@ -316,6 +316,9 @@ async ( page ) => {
 		const takeaway = [
 			...document.querySelectorAll( '.core-ai-map__takeaway' ),
 		].find( ( node ) => visible( node ) );
+		const situation = [
+			...document.querySelectorAll( '.core-ai-map__situation' ),
+		].find( ( node ) => visible( node ) );
 		const cards = [
 			...document.querySelectorAll(
 				'.core-ai-map__actor-body, .core-ai-map__block-body, .core-ai-map__provider-plugin-body'
@@ -326,6 +329,7 @@ async ( page ) => {
 			guidance: document
 				.querySelector( '.core-ai-map__guidance' )
 				?.textContent.trim(),
+			situation: situation?.textContent.replace( /\s+/g, ' ' ).trim(),
 			takeaway: takeaway?.textContent.replace( /\s+/g, ' ' ).trim(),
 			focusedStep: document
 				.querySelector( '.core-ai-map' )
@@ -357,13 +361,14 @@ async ( page ) => {
 	observations.flowFirst = flowFirst;
 	assert(
 		flowFirst.guidance ===
-			'Follow 1 → 2 → 3. Tap a highlighted component to see what it contributes to this flow.',
+			'Follow 1 → 2 → 3. Highlighted components take part in this flow. Tap one to learn what it contributes.',
 		`Flow guidance was wrong: ${ flowFirst.guidance }`
 	);
 	assert(
-		flowFirst.takeaway?.startsWith( 'What this flow shows' ) &&
-			flowFirst.takeaway.includes( 'one common client' ),
-		`Flow takeaway was missing or wrong: ${ flowFirst.takeaway }`
+		flowFirst.situation?.includes(
+			'A feature inside WordPress needs an AI-generated result.'
+		) && ! flowFirst.takeaway,
+		`Flow did not open on its situation: ${ flowFirst.situation }; takeaway: ${ flowFirst.takeaway }`
 	);
 	assert(
 		flowFirst.focusedStep === '1',
@@ -378,6 +383,25 @@ async ( page ) => {
 			label?.includes( 'view its role in' )
 		),
 		'A participating card did not name its action in its accessible name.'
+	);
+
+	await page.waitForTimeout( 3000 );
+	const flowConclusion = await page.evaluate( () => {
+		const takeaway = [
+			...document.querySelectorAll( '.core-ai-map__takeaway' ),
+		].find(
+			( node ) =>
+				! node.hidden && node.getBoundingClientRect().height > 0
+		);
+
+		return takeaway?.textContent.replace( /\s+/g, ' ' ).trim();
+	} );
+	observations.flowConclusion = flowConclusion;
+	assert(
+		flowConclusion?.startsWith( 'What this flow shows' ) &&
+			flowConclusion.includes( 'common AI interface' ) &&
+			flowConclusion.includes( 'AI service remains outside WordPress' ),
+		`Flow conclusion was missing or wrong: ${ flowConclusion }`
 	);
 	assert(
 		flowFirst.dimmedWithCue === 0 && flowFirst.enabledWithoutCue === 0,

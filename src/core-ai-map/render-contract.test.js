@@ -517,7 +517,7 @@ describe( 'Core AI map render contract', () => {
 		}
 	} );
 
-	it( 'gives every flow a takeaway and a numbered run to follow', () => {
+	it( 'gives every flow a situation, takeaway, outcome, and numbered run', () => {
 		const context = renderDefaultContext();
 
 		expect( context.openingStory ).toBe( 'uses-ai' );
@@ -530,6 +530,24 @@ describe( 'Core AI map render contract', () => {
 		for ( const takeaway of Object.values( context.storyTakeaways ) ) {
 			expect( takeaway.length ).toBeGreaterThan( 0 );
 		}
+		expect( Object.keys( context.storySituations ) ).toEqual( [
+			'uses-ai',
+			'uses-wp',
+			'learns',
+			'tests',
+		] );
+		expect( Object.values( context.storySituations ) ).toEqual(
+			expect.arrayContaining( [
+				'A feature inside WordPress needs an AI-generated result.',
+				'An outside assistant asks WordPress to perform an allowed action.',
+			] )
+		);
+		expect( context.storyOutcomes ).toEqual( {
+			'uses-ai': 'WordPress requests an AI result',
+			'uses-wp': 'An assistant requests a WordPress action',
+			learns: 'A coding agent receives WordPress guidance',
+			tests: 'WordPress evaluates generated code',
+		} );
 
 		expect( context.storySteps ).toEqual( {
 			'uses-ai': '1 → 2 → 3',
@@ -597,6 +615,19 @@ describe( 'Core AI map render contract', () => {
 			contextBlock.querySelector( '.core-ai-map__details-lesson' )
 				.textContent
 		).toContain( 'without integrating every external provider separately' );
+		expect(
+			Array.from(
+				client.querySelectorAll( '.core-ai-map__details-heading' )
+			).map( ( heading ) => heading.textContent.trim() )
+		).toEqual(
+			expect.arrayContaining( [
+				'Its role in this flow',
+				'Why that matters',
+				'What it is',
+				'Under the hood',
+				'Keep exploring',
+			] )
+		);
 
 		// The coding agent takes part in two flows and explains both.
 		expect(
@@ -606,14 +637,56 @@ describe( 'Core AI map render contract', () => {
 		).toHaveLength( 2 );
 	} );
 
-	it( 'labels the flow controls and the component explorer in the open', () => {
+	it( 'teaches the interaction grammar on the welcome screen', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup( 'current' );
+		const welcome = container.querySelector( '.core-ai-map__attract' );
+
+		expect( welcome.querySelector( 'h1' ).textContent.trim() ).toBe(
+			'What is WordPress Core AI?'
+		);
+		expect(
+			welcome.querySelector( '.core-ai-map__intro' ).textContent
+		).toContain( 'open building blocks' );
+		expect(
+			Array.from(
+				welcome.querySelectorAll( '.core-ai-map__welcome-steps li' )
+			).map( ( item ) => item.textContent.replace( /\s+/g, ' ' ).trim() )
+		).toEqual( [
+			'1 Choose a flow',
+			'2 Follow the numbered path',
+			'3 Tap a highlighted component to see its role',
+		] );
+		expect(
+			Array.from(
+				welcome.querySelectorAll( '.core-ai-map__legend-item' )
+			).map( ( item ) => item.textContent.replace( /\s+/g, ' ' ).trim() )
+		).toEqual( [
+			'Solid arrow: active request or work',
+			'Dashed line: configuration or supporting information',
+			'Dimmed component: not part of this flow',
+		] );
+		expect(
+			welcome.querySelector( '.core-ai-map__prompt' ).textContent
+		).toContain( 'Explore the first flow' );
+		expect(
+			welcome
+				.querySelector( '.core-ai-map__attract-browse' )
+				.textContent.trim()
+		).toBe( 'Browse all components' );
+	} );
+
+	it( 'labels the flow controls and premises in the open', () => {
 		const container = document.createElement( 'div' );
 		container.innerHTML = renderLegacyMarkup( 'current' );
 
 		const rail = container.querySelector( '.core-ai-map__rail' );
 		const railLabel = rail.querySelector( '.core-ai-map__rail-label' );
 
-		expect( railLabel.textContent.trim() ).toBe( 'Choose another flow' );
+		expect( railLabel.textContent.trim() ).toBe( 'Choose a flow' );
+		expect( railLabel.getAttribute( 'data-wp-text' ) ).toBe(
+			'state.railLabel'
+		);
 		expect( rail.getAttribute( 'aria-labelledby' ) ).toBe(
 			railLabel.getAttribute( 'id' )
 		);
@@ -623,7 +696,26 @@ describe( 'Core AI map render contract', () => {
 
 		const guidance = container.querySelector( '.core-ai-map__guidance' );
 		expect( guidance.closest( '.core-ai-map__topbar' ) ).not.toBeNull();
-		expect( guidance.textContent.trim() ).toBe( 'Choose a flow to begin.' );
+		expect( guidance.hidden ).toBe( true );
+
+		expect(
+			Array.from(
+				rail.querySelectorAll( '.core-ai-map__rail-outcome' )
+			).map( ( outcome ) => outcome.textContent.trim() )
+		).toEqual( [
+			'WordPress requests an AI result',
+			'An assistant requests a WordPress action',
+			'A coding agent receives WordPress guidance',
+			'WordPress evaluates generated code',
+		] );
+
+		const situations = [
+			...container.querySelectorAll( '.core-ai-map__situation' ),
+		];
+		expect( situations ).toHaveLength( 4 );
+		expect( situations[ 0 ].textContent ).toContain(
+			'A feature inside WordPress needs an AI-generated result.'
+		);
 
 		const takeaways = [
 			...container.querySelectorAll( '.core-ai-map__takeaway' ),
@@ -632,6 +724,9 @@ describe( 'Core AI map render contract', () => {
 		for ( const takeaway of takeaways ) {
 			expect( takeaway.querySelector( 'strong' ).textContent ).toBe(
 				'What this flow shows'
+			);
+			expect( takeaway.getAttribute( 'data-wp-bind--hidden' ) ).toBe(
+				'state.isTakeawayHidden'
 			);
 		}
 	} );

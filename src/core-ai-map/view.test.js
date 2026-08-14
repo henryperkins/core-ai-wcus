@@ -96,6 +96,9 @@ describe( 'Core AI Living Block Map', () => {
 				data-offline-enabled="false"
 			>
 				<button class="core-ai-map__prompt" type="button">Explore the first flow</button>
+				<button class="core-ai-map__attract-browse" type="button">
+					Browse all components
+				</button>
 				<button class="core-ai-map__about-trigger" type="button">
 					About this exhibit
 				</button>
@@ -154,8 +157,18 @@ describe( 'Core AI Living Block Map', () => {
 			},
 			storyTakeaways: {
 				'uses-ai':
-					'A WordPress feature uses one common client to request an AI result.',
-				'uses-wp': 'An outside assistant does not bypass WordPress.',
+					'A WordPress feature uses a common AI interface instead of integrating directly with every provider.',
+				'uses-wp': 'The assistant does not bypass WordPress.',
+			},
+			storySituations: {
+				'uses-ai':
+					'A feature inside WordPress needs an AI-generated result.',
+				'uses-wp':
+					'An outside assistant asks WordPress to perform an allowed action.',
+			},
+			storyOutcomes: {
+				'uses-ai': 'WordPress requests an AI result',
+				'uses-wp': 'An assistant requests a WordPress action',
 			},
 			storySteps: {
 				'uses-ai': '1 → 2 → 3',
@@ -179,11 +192,15 @@ describe( 'Core AI Living Block Map', () => {
 			},
 			guidance: {
 				attract: 'Choose a flow to begin.',
-				flow: 'Follow %1$s. Tap a highlighted component to see what it contributes to this flow.',
+				flow: 'Follow %1$s. Highlighted components take part in this flow. Tap one to learn what it contributes.',
 				inspect: 'You are viewing this component’s role in “%1$s.”',
 				browse: 'Tap any component to learn what it is and where it belongs.',
 				cardAction: '%1$s — view its role in “%2$s.”',
 				cardActionBrowse: '%1$s — open its details.',
+			},
+			labels: {
+				railEmptyLabel: 'Choose a flow',
+				railActiveLabel: 'Choose another flow',
 			},
 			benchTitles: { evidence: 'Pass or fail. Never a percentage' },
 			neutral: {
@@ -383,19 +400,28 @@ describe( 'Core AI Living Block Map', () => {
 		expect( context.story ).toBe( 'uses-ai' );
 		expect( context.announcement ).toContain( 'WordPress uses AI' );
 		expect( context.announcement ).toContain(
-			'A WordPress feature uses one common client to request an AI result.'
+			'A feature inside WordPress needs an AI-generated result.'
 		);
+		expect( context.flowPhase ).toBe( 'transition' );
+		expect( mapStore.state.isTakeawayHidden ).toBe( true );
 		expect( document.activeElement ).toBe(
 			root.querySelector(
 				'.core-ai-map__block--plugin .core-ai-map__block-body'
 			)
 		);
+
+		jest.advanceTimersByTime( 2820 );
+		expect( context.flowPhase ).toBe( 'settled' );
+		expect( mapStore.state.isTakeawayHidden ).toBe( false );
+		expect( context.announcement ).toContain(
+			'A WordPress feature uses a common AI interface'
+		);
 	} );
 
-	it( 'opens the component explorer from the browse control', () => {
-		context.screen = 'map';
+	it( 'opens the component explorer from the welcome browse control', () => {
+		context.screen = 'attract';
 		context.story = 'uses-ai';
-		currentElement = root.querySelector( '.core-ai-map__browse' );
+		currentElement = root.querySelector( '.core-ai-map__attract-browse' );
 
 		mapStore.actions.browseAll();
 		jest.advanceTimersByTime( 40 );
@@ -403,28 +429,89 @@ describe( 'Core AI Living Block Map', () => {
 		expect( context.screen ).toBe( 'map' );
 		expect( context.story ).toBe( '' );
 		expect( context.announcement ).toContain( 'no flow selected' );
+		expect( document.activeElement ).toBe(
+			root.querySelector(
+				'.core-ai-map__block--plugin .core-ai-map__block-body'
+			)
+		);
 	} );
 
 	it( 'names the state the visitor is in, one instruction at a time', () => {
 		expect( mapStore.state.guidance ).toBe( 'Choose a flow to begin.' );
-		expect( mapStore.state.isGuidanceHidden ).toBe( false );
+		expect( mapStore.state.isGuidanceHidden ).toBe( true );
 
 		context.screen = 'map';
 		context.story = 'uses-ai';
 		expect( mapStore.state.guidance ).toBe(
-			'Follow 1 → 2 → 3. Tap a highlighted component to see what it contributes to this flow.'
+			'Follow 1 → 2 → 3. Highlighted components take part in this flow. Tap one to learn what it contributes.'
 		);
+		expect( mapStore.state.isGuidanceHidden ).toBe( false );
+		expect( mapStore.state.railLabel ).toBe( 'Choose another flow' );
 
 		context.story = '';
 		expect( mapStore.state.guidance ).toBe(
 			'Tap any component to learn what it is and where it belongs.'
 		);
+		expect( mapStore.state.railLabel ).toBe( 'Choose a flow' );
 
 		context.story = 'uses-ai';
 		context.screen = 'inspect';
 		expect( mapStore.state.isGuidanceHidden ).toBe( true );
 		expect( mapStore.state.inspectGuidance ).toBe(
 			'You are viewing this component’s role in “WordPress uses AI.”'
+		);
+	} );
+
+	it( 'shows the complete teaching state immediately with reduced motion', () => {
+		window.matchMedia.mockImplementation( () => ( { matches: true } ) );
+		currentElement = root.querySelector( '.core-ai-map__prompt' );
+
+		try {
+			mapStore.actions.start();
+
+			expect( context.story ).toBe( 'uses-ai' );
+			expect( context.flowPhase ).toBe( 'settled' );
+			expect( mapStore.state.isTakeawayHidden ).toBe( false );
+			expect( context.announcement ).toContain(
+				'A feature inside WordPress needs an AI-generated result.'
+			);
+			expect( context.announcement ).toContain(
+				'A WordPress feature uses a common AI interface'
+			);
+		} finally {
+			window.matchMedia.mockImplementation( () => ( {
+				matches: false,
+			} ) );
+		}
+	} );
+
+	it( 'cancels a stale conclusion when another flow is selected', () => {
+		const railButton = document.createElement( 'button' );
+		root.append( railButton );
+		currentElement = railButton;
+		context.screen = 'map';
+		context.storyId = 'uses-ai';
+
+		mapStore.actions.selectStory();
+		jest.advanceTimersByTime( 1000 );
+
+		context.storyId = 'uses-wp';
+		mapStore.actions.selectStory();
+		jest.advanceTimersByTime( 1900 );
+
+		expect( context.story ).toBe( 'uses-wp' );
+		expect( context.flowPhase ).toBe( 'transition' );
+		expect( context.announcement ).toContain(
+			'An outside assistant asks WordPress to perform an allowed action.'
+		);
+		expect( context.announcement ).not.toContain(
+			'A WordPress feature uses a common AI interface'
+		);
+
+		jest.advanceTimersByTime( 1000 );
+		expect( context.flowPhase ).toBe( 'settled' );
+		expect( context.announcement ).toContain(
+			'The assistant does not bypass WordPress.'
 		);
 	} );
 
@@ -652,13 +739,24 @@ describe( 'Core AI Living Block Map', () => {
 		expect( context.suggestion ).toBe( 2 );
 		expect( mapStore.state.suggestionPhase ).toBe( 'Needs review' );
 		expect( mapStore.state.suggestionLabel ).toBe( 'Post title' );
-		expect( context.announcement ).toBe(
-			'The story flow replayed with the next AI Plugin suggestion.'
+		expect( context.announcement ).toContain(
+			'WordPress uses AI replayed.'
+		);
+		expect( context.announcement ).toContain(
+			'A feature inside WordPress needs an AI-generated result.'
+		);
+		expect( context.announcement ).toContain(
+			'The AI Plugin shows the next suggestion.'
 		);
 
 		context.story = 'uses-wp';
 		mapStore.actions.replayStory();
-		expect( context.announcement ).toBe( 'The story flow replayed.' );
+		expect( context.announcement ).toContain(
+			'AI uses WordPress replayed.'
+		);
+		expect( context.announcement ).toContain(
+			'An outside assistant asks WordPress to perform an allowed action.'
+		);
 	} );
 
 	it( 'does not turn Escape into an undocumented map reset', () => {
@@ -780,13 +878,29 @@ describe( 'Core AI Living Block Map', () => {
 		mapStore.actions.selectStory();
 		expect( context.story ).toBe( 'uses-ai' );
 		expect( context.announcement ).toContain(
-			'A WordPress feature uses one common client to request an AI result.'
+			'A feature inside WordPress needs an AI-generated result.'
 		);
 
 		// The rail switches between flows; leaving them is the explorer's job.
 		mapStore.actions.selectStory();
 		expect( context.story ).toBe( 'uses-ai' );
 		expect( context.announcement ).toContain( 'replayed' );
+	} );
+
+	it( 'cancels a pending conclusion when the visitor resets', () => {
+		currentElement = root.querySelector( '.core-ai-map__prompt' );
+		mapStore.actions.start();
+		jest.advanceTimersByTime( 1000 );
+
+		currentElement = root.querySelector( '.core-ai-map__reset' );
+		mapStore.actions.reset();
+		jest.advanceTimersByTime( 3000 );
+
+		expect( context.screen ).toBe( 'attract' );
+		expect( context.story ).toBe( '' );
+		expect( context.announcement ).toBe(
+			'The Living Block Map returned to its welcome screen.'
+		);
 	} );
 
 	it( 'keeps the flow and restores focus when a panel closes', () => {

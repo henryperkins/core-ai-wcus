@@ -22,7 +22,7 @@ const worker = fs.readFileSync(
 	'utf8'
 );
 
-describe( 'Living Block Map v3.2.0 server render', () => {
+describe( 'Living Block Map v3.2.1 server render', () => {
 	it( 'renders the provider plugin runtime layer and Connectors sidecar', () => {
 		expect( render ).toContain( 'core-ai-map__provider-plugin' );
 		expect( render ).toContain( 'AI provider plugin' );
@@ -167,7 +167,7 @@ describe( 'Living Block Map v3.2.0 server render', () => {
 		expect( styles ).toMatch( /&__actor-body[\s\S]*?min-height:\s*120px/ );
 		expect( styles ).toMatch( /&__block\.is-parked[\s\S]*?width:\s*176px/ );
 		expect( styles ).toMatch(
-			/&__rail[\s\S]*?button[\s\S]*?min-height:\s*60px/
+			/&__rail[\s\S]*?button[\s\S]*?min-height:\s*68px/
 		);
 		expect( styles ).toMatch( /&__qr-url[\s\S]*?user-select:\s*text/ );
 		expect( styles ).toMatch(
@@ -183,7 +183,7 @@ describe( 'Living Block Map v3.2.0 server render', () => {
 			'class="core-ai-map__details-continuation"'
 		);
 		expect( render ).toContain(
-			'Scroll or swipe for technical detail and take-away QR'
+			'Scroll or swipe for Under the hood and Keep exploring'
 		);
 		expect( styles ).toMatch(
 			/&__details\s*\{[\s\S]*?container-type:\s*scroll-state/
@@ -263,7 +263,7 @@ describe( 'Living Block Map v3.2.0 server render', () => {
 
 	it( 'normalizes versioned cache keys and precaches built local fonts', () => {
 		expect( worker ).toContain(
-			'const CACHE_NAME = `${ CACHE_SCOPE_PREFIX }v3.2.0-review-1`;'
+			'const CACHE_NAME = `${ CACHE_SCOPE_PREFIX }v3.2.1-review-1`;'
 		);
 		expect( worker ).toContain( "searchParams.delete( 'ver' )" );
 		expect( worker ).toMatch(

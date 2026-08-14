@@ -1,8 +1,32 @@
 import currentMetadata from './block.json';
 import legacyMetadata from './fixtures/block-v0.2.json';
-import { withCurrentDefaults } from './normalize';
+import { withCurrentDefault, withCurrentDefaults } from './normalize';
 
 describe( 'editor copy normalization', () => {
+	it( 'upgrades only exact legacy welcome defaults', () => {
+		expect(
+			withCurrentDefault(
+				currentMetadata,
+				'title',
+				'How do WordPress and AI work together?'
+			)
+		).toBe( 'What is WordPress Core AI?' );
+		expect(
+			withCurrentDefault(
+				currentMetadata,
+				'intro',
+				'Choose a flow, follow the numbered path, then tap a highlighted component to understand its role.'
+			)
+		).toContain( 'set of open building blocks' );
+		expect(
+			withCurrentDefault(
+				currentMetadata,
+				'title',
+				'A custom exhibit heading'
+			)
+		).toBe( 'A custom exhibit heading' );
+	} );
+
 	it( 'upgrades untouched v0.2 defaults to the v3.1.1 editor copy', () => {
 		const blocks = withCurrentDefaults(
 			currentMetadata,

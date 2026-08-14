@@ -348,6 +348,24 @@ const addTimer = ( timers, root, callback, delay ) => {
 	return timer;
 };
 
+const describeFlowSelection = (
+	context,
+	storyId,
+	{ replayed = false } = {}
+) => {
+	const title = context.storyTitles?.[ storyId ] || '';
+	const situation = context.storySituations?.[ storyId ] || '';
+	const takeaway = context.storyTakeaways?.[ storyId ] || '';
+	const titleSentence = title
+		? `${ title }${ replayed ? ' replayed' : '' }.`
+		: '';
+	const settledTakeaway = context.flowPhase === 'settled' ? takeaway : '';
+
+	return [ titleSentence, situation, settledTakeaway ]
+		.filter( Boolean )
+		.join( ' ' );
+};
+
 const setPreviewPhase = ( context, phase ) => {
 	context.previewPhase = phase;
 	// Retained as an alias for the original RED contract and assistive tooling.
@@ -466,6 +484,7 @@ const runFlow = ( root, context, { bench = false } = {} ) => {
 	if ( context.flowPhase !== 'transition' || ! root ) {
 		return;
 	}
+	const storyId = context.story;
 	addTimer(
 		flowTimers,
 		root,
@@ -473,6 +492,12 @@ const runFlow = ( root, context, { bench = false } = {} ) => {
 			context.flowPhase = 'settled';
 			context.storyMotionPhase = 'settled';
 			context.benchPathsLive = false;
+			if ( context.screen === 'map' && context.story === storyId ) {
+				const takeaway = context.storyTakeaways?.[ storyId ] || '';
+				if ( takeaway ) {
+					context.announcement = `What this flow shows: ${ takeaway }`;
+				}
+			}
 		},
 		FLOW_SETTLE_DELAY
 	);
@@ -524,6 +549,12 @@ store( 'core-ai/map', {
 		get isRailHidden() {
 			return getContext().screen !== 'map';
 		},
+		get railLabel() {
+			const context = getContext();
+			return activeLayout( context )
+				? context.labels?.railActiveLabel || ''
+				: context.labels?.railEmptyLabel || '';
+		},
 		get hasStory() {
 			return Boolean( activeLayout( getContext() ) );
 		},
@@ -540,6 +571,11 @@ store( 'core-ai/map', {
 		get isStoryNotSelected() {
 			const context = getContext();
 			return context.storyId !== context.story;
+		},
+		get isTakeawayHidden() {
+			const context = getContext();
+			const storyId = context.storyId || context.story;
+			return storyId !== context.story || context.flowPhase !== 'settled';
 		},
 		/*
 		 * The band under the map is always present on the map screen. A flow
@@ -582,7 +618,7 @@ store( 'core-ai/map', {
 			);
 		},
 		get isGuidanceHidden() {
-			return [ 'inspect', 'bench', 'about' ].includes(
+			return [ 'attract', 'inspect', 'bench', 'about' ].includes(
 				getContext().screen
 			);
 		},
@@ -1040,15 +1076,20 @@ store( 'core-ai/map', {
 			context.suggestion =
 				Math.floor( ( context.suggestion || 0 ) / 2 ) * 2;
 			runFlow( root, context );
-			context.announcement = `${
-				context.storyTitles?.[ context.story ] || ''
-			}. ${ context.storyTakeaways?.[ context.story ] || '' }`;
+			context.announcement = describeFlowSelection(
+				context,
+				context.story
+			);
 			resetSchedulers.get( root )?.();
 			focusFirstStep( root );
 		},
 		browseAll() {
 			const context = getContext();
 			const root = getRoot( getElement().ref );
+			if ( root ) {
+				clearTimers( flowTimers, root );
+				clearTimers( attractTimers, root );
+			}
 			context.screen = 'map';
 			context.story = '';
 			context.inspect = '';
@@ -1077,12 +1118,11 @@ store( 'core-ai/map', {
 			context.suggestion =
 				Math.floor( ( context.suggestion || 0 ) / 2 ) * 2;
 			runFlow( root, context );
-			context.announcement = `${
-				context.storyTitles?.[ context.storyId ] ||
-				ref.textContent.trim()
-			}${ isCurrent ? ' replayed' : '' }. ${
-				context.storyTakeaways?.[ context.storyId ] || ''
-			}`;
+			context.announcement = describeFlowSelection(
+				context,
+				context.storyId,
+				{ replayed: isCurrent }
+			);
 			resetSchedulers.get( root )?.();
 		},
 		replayStory() {
@@ -1093,9 +1133,15 @@ store( 'core-ai/map', {
 					( Math.floor( context.suggestion / 2 ) + 1 ) * 2;
 			}
 			runFlow( getRoot( getElement().ref ), context );
-			context.announcement = advancesSuggestion
-				? 'The story flow replayed with the next AI Plugin suggestion.'
-				: 'The story flow replayed.';
+			context.announcement = `${ describeFlowSelection(
+				context,
+				context.story,
+				{ replayed: true }
+			) }${
+				advancesSuggestion
+					? ' The AI Plugin shows the next suggestion.'
+					: ''
+			}`;
 		},
 		inspectCard() {
 			const context = getContext();
@@ -1192,6 +1238,9 @@ store( 'core-ai/map', {
 		closeBench() {
 			const context = getContext();
 			const root = getRoot( getElement().ref );
+			if ( root ) {
+				clearTimers( flowTimers, root );
+			}
 			context.screen = 'map';
 			context.benchPathsLive = false;
 			context.flowPhase = 'settled';
@@ -1216,6 +1265,9 @@ store( 'core-ai/map', {
 		reset() {
 			const context = getContext();
 			const root = getRoot( getElement().ref );
+			if ( root ) {
+				clearTimers( flowTimers, root );
+			}
 			setAttractState( context );
 			attractSchedulers.get( root )?.();
 			focusWithin( root, '.core-ai-map__prompt' );
@@ -1262,6 +1314,7 @@ store( 'core-ai/map', {
 						document.visibilityState === 'visible' &&
 						context.screen !== 'attract'
 					) {
+						clearTimers( flowTimers, root );
 						setAttractState( context );
 						context.announcement =
 							'The map reset after a period of inactivity.';
