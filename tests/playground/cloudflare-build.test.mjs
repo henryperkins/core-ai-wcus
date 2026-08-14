@@ -17,6 +17,8 @@ const projectDirectory = resolve(
 	dirname( fileURLToPath( import.meta.url ) ),
 	'../..'
 );
+const approvedLoadingMessage =
+	'Building a real WordPress site in your browser. A cold start can take a minute or more.';
 
 const createMinimalPlaygroundSource = async ( sourceDirectory ) => {
 	await mkdir( join( sourceDirectory, 'assets' ), { recursive: true } );
@@ -25,6 +27,13 @@ const createMinimalPlaygroundSource = async ( sourceDirectory ) => {
 		join( sourceDirectory, 'index.html' ),
 		`<!doctype html><html><head>
 			<meta name="commit-id" content="playground-test-commit" />
+			<meta name="description" content="Try WordPress in your browser." />
+			<meta property="og:title" content="WordPress Playground" />
+			<meta property="og:description" content="Try WordPress in your browser." />
+			<meta name="twitter:card" content="summary_large_image" />
+			<meta name="twitter:title" content="WordPress Playground" />
+			<meta name="twitter:description" content="Try WordPress in your browser." />
+			<meta name="twitter:image" content="https://playground.wordpress.net/ogimage.png" />
 			<title>WordPress Playground</title>
 			<script type="module" src="/assets/index-fixture.js"></script>
 		</head><body><main id="root" aria-label="WordPress Playground"></main></body></html>`
@@ -77,6 +86,13 @@ test( 'patches the official Playground shell into a local kiosk launcher', () =>
 	const result = patchKioskIndex( `<!doctype html>
 <html><head>
 <title>WordPress Playground</title>
+<meta name="description" content="Try WordPress in your browser." />
+<meta property="og:title" content="WordPress Playground" />
+<meta property="og:description" content="Try WordPress in your browser." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="WordPress Playground" />
+<meta name="twitter:description" content="Try WordPress in your browser." />
+<meta name="twitter:image" content="https://playground.wordpress.net/ogimage.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Roboto" rel="stylesheet" />
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-test"></script>
@@ -84,14 +100,46 @@ test( 'patches the official Playground shell into a local kiosk launcher', () =>
 </head><body><main id="root" aria-label="WordPress Playground"></main></body></html>` );
 
 	assert.match( result, /<title>Core AI Living Block Map<\/title>/ );
-	assert.match( result, /kiosk-blueprint\/blueprint\.json/ );
 	assert.match(
 		result,
-		/<h1 id="core-ai-map-playground-loader-heading">Building a real WordPress 7\.0 site in your browser — no server, about 45 seconds\.<\/h1>/
+		/<meta name="description" content="An interactive Living Block Map of the building blocks connecting WordPress and AI\." \/>/
 	);
 	assert.match(
 		result,
-		/<span class="core-ai-map-playground-loader__status" role="status" aria-live="polite" aria-atomic="true">Building a real WordPress 7\.0 site in your browser — no server, about 45 seconds\.<\/span>/
+		/<meta property="og:title" content="Core AI Living Block Map" \/>/
+	);
+	assert.match(
+		result,
+		/<meta property="og:description" content="An interactive Living Block Map of the building blocks connecting WordPress and AI\." \/>/
+	);
+	assert.match(
+		result,
+		/<meta name="twitter:card" content="summary_large_image" \/>/
+	);
+	assert.match(
+		result,
+		/<meta name="twitter:title" content="Core AI Living Block Map" \/>/
+	);
+	assert.match(
+		result,
+		/<meta name="twitter:description" content="An interactive Living Block Map of the building blocks connecting WordPress and AI\." \/>/
+	);
+	assert.match(
+		result,
+		/<meta name="twitter:image" content="\/ogimage\.png" \/>/
+	);
+	assert.match( result, /kiosk-blueprint\/blueprint\.json/ );
+	assert.match(
+		result,
+		new RegExp(
+			`<h1 id="core-ai-map-playground-loader-heading">${ approvedLoadingMessage }<\\/h1>`
+		)
+	);
+	assert.match(
+		result,
+		new RegExp(
+			`<span class="core-ai-map-playground-loader__status" role="status" aria-live="polite" aria-atomic="true">${ approvedLoadingMessage }<\\/span>`
+		)
 	);
 	assert.match(
 		result,
@@ -100,6 +148,8 @@ test( 'patches the official Playground shell into a local kiosk launcher', () =>
 	assert.match( result, /querySelector\('\.core-ai-map\.is-ready'\)/ );
 	assert.match( result, /root\.removeAttribute\('inert'\)/ );
 	assert.doesNotMatch( result, /Preparing WordPress/ );
+	assert.doesNotMatch( result, /about 45 seconds/ );
+	assert.doesNotMatch( result, /Try WordPress in your browser/ );
 	assert.doesNotMatch( result, /MutationObserver/ );
 	assert.doesNotMatch( result, /fonts\.googleapis\.com/ );
 	assert.doesNotMatch( result, /googletagmanager\.com/ );
@@ -127,6 +177,8 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 		sourceDirectory,
 		outputDirectory,
 		pluginZipPath,
+		sourceCommit: 'source-commit-fixture',
+		builtAt: '2026-08-13T12:34:56.000Z',
 	} );
 
 	assert.equal(
@@ -139,7 +191,9 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 	);
 	assert.match(
 		kioskIndex,
-		/<h1 id="core-ai-map-playground-loader-heading">Building a real WordPress 7\.0 site in your browser — no server, about 45 seconds\.<\/h1>/
+		new RegExp(
+			`<h1 id="core-ai-map-playground-loader-heading">${ approvedLoadingMessage }<\\/h1>`
+		)
 	);
 	assert.match(
 		kioskIndex,
@@ -162,11 +216,9 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 		...loaderAssetUrl.replace( /^\//, '' ).split( '/' )
 	);
 	const loaderAsset = await readFile( loaderAssetPath, 'utf8' );
-	assert.match(
-		loaderAsset,
-		/Building a real WordPress 7\.0 site in your browser — no server, about 45 seconds\./
-	);
+	assert.ok( loaderAsset.includes( approvedLoadingMessage ) );
 	assert.doesNotMatch( loaderAsset, /Preparing WordPress/ );
+	assert.doesNotMatch( loaderAsset, /about 45 seconds/ );
 	assert.equal(
 		loaderAssetMatch[ 2 ],
 		createHash( 'sha256' )
@@ -218,6 +270,9 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 			.update( 'fixture-plugin-zip' )
 			.digest( 'hex' ),
 	} );
+	assert.equal( deploymentManifest.sourceCommit, 'source-commit-fixture' );
+	assert.equal( deploymentManifest.pluginVersion, '3.1.2' );
+	assert.equal( deploymentManifest.builtAt, '2026-08-13T12:34:56.000Z' );
 } );
 
 test( 'ships the pinned WordPress static fallback tree', () => {

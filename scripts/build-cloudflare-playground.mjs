@@ -11,7 +11,9 @@ import {
 } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { execFile } from 'node:child_process';
 import { dirname, join, relative, resolve, sep } from 'node:path';
+import { promisify } from 'node:util';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const PAGES_MAX_FILES = 20_000;
@@ -19,6 +21,10 @@ const PAGES_MAX_ASSET_BYTES = 25 * 1024 * 1024;
 const scriptDirectory = dirname( fileURLToPath( import.meta.url ) );
 const projectDirectory = resolve( scriptDirectory, '..' );
 const defaultOutputDirectory = join( projectDirectory, 'dist-playground' );
+const packageManifest = JSON.parse(
+	await readFile( join( projectDirectory, 'package.json' ), 'utf8' )
+);
+const execFileAsync = promisify( execFile );
 
 // The virtual-site service worker falls back to this unpacked tree when a
 // WordPress core, theme, or plugin asset is not available from the PHP
@@ -26,7 +32,9 @@ const defaultOutputDirectory = join( projectDirectory, 'dist-playground' );
 export const requiredRuntimeDirectories = [ 'wp-7.0' ];
 export const playgroundLoadingMessage = 'Preparing WordPress';
 export const kioskLoadingMessage =
-	'Building a real WordPress 7.0 site in your browser — no server, about 45 seconds.';
+	'Building a real WordPress site in your browser. A cold start can take a minute or more.';
+export const kioskTitle = 'Core AI Living Block Map';
+export const kioskDescription = packageManifest.description;
 
 const normalizeRelativePath = ( filePath ) =>
 	filePath.replaceAll( sep, '/' ).replace( /^\/+/, '' );
@@ -39,6 +47,57 @@ const isInside = ( parent, child ) => {
 		! relativePath.startsWith( '..' ) &&
 		! relativePath.includes( `..${ sep }` )
 	);
+};
+
+const escapeRegularExpression = ( value ) =>
+	value.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' );
+
+const metadataTag = ( attribute, name, content ) =>
+	`<meta ${ attribute }="${ name }" content="${ content }" />`;
+
+const upsertKioskMetadata = ( html ) => {
+	const metadata = [
+		[ 'name', 'description', kioskDescription ],
+		[ 'property', 'og:title', kioskTitle ],
+		[ 'property', 'og:description', kioskDescription ],
+		[ 'name', 'twitter:card', 'summary_large_image' ],
+		[ 'name', 'twitter:title', kioskTitle ],
+		[ 'name', 'twitter:description', kioskDescription ],
+		[ 'name', 'twitter:image', '/ogimage.png' ],
+	];
+	let patched = html;
+
+	for ( const [ attribute, name ] of metadata ) {
+		const matcher = new RegExp(
+			`<meta\\b[^>]*\\b${ attribute }\\s*=\\s*(["'])${ escapeRegularExpression(
+				name
+			) }\\1[^>]*\\/?\\s*>`,
+			'gi'
+		);
+		patched = patched.replace( matcher, '' );
+	}
+
+	return patched.replace(
+		'</head>',
+		`${ metadata
+			.map( ( [ attribute, name, content ] ) =>
+				metadataTag( attribute, name, content )
+			)
+			.join( '\n\t' ) }\n\t</head>`
+	);
+};
+
+const getRepositoryHead = async () => {
+	const { stdout } = await execFileAsync( 'git', [ 'rev-parse', 'HEAD' ], {
+		cwd: projectDirectory,
+	} );
+	const sourceCommit = stdout.trim();
+
+	if ( ! sourceCommit ) {
+		throw new Error( 'Unable to determine the repository source commit.' );
+	}
+
+	return sourceCommit;
 };
 
 const walkFiles = async ( directory, root = directory ) => {
@@ -94,7 +153,7 @@ export const validatePagesAssetBudget = ( files ) => {
 export const patchKioskIndex = ( html ) => {
 	let patched = html.replace(
 		'<title>WordPress Playground</title>',
-		'<title>Core AI Living Block Map</title>'
+		`<title>${ kioskTitle }</title>`
 	);
 
 	if ( patched === html ) {
@@ -125,6 +184,7 @@ export const patchKioskIndex = ( html ) => {
 			'/ogimage.png'
 		)
 		.replace( 'https://playground.wordpress.net/', '/' );
+	patched = upsertKioskMetadata( patched );
 
 	const loaderMarkup = `
 		<div id="core-ai-map-playground-loader" data-core-ai-loader aria-labelledby="core-ai-map-playground-loader-heading">
@@ -476,9 +536,13 @@ export const buildCloudflarePlayground = async ( {
 	sourceDirectory,
 	outputDirectory = defaultOutputDirectory,
 	pluginZipPath = join( projectDirectory, 'core-ai-map.zip' ),
+	sourceCommit: suppliedSourceCommit,
+	builtAt: suppliedBuiltAt,
 } ) => {
 	const source = resolve( sourceDirectory );
 	const output = resolve( outputDirectory );
+	const sourceCommit = suppliedSourceCommit ?? ( await getRepositoryHead() );
+	const builtAt = suppliedBuiltAt ?? new Date().toISOString();
 	const blueprintPath = join(
 		projectDirectory,
 		'playground',
@@ -489,7 +553,7 @@ export const buildCloudflarePlayground = async ( {
 	const pluginSource = blueprint.plugins?.[ 0 ]?.source;
 	const pluginSourceMatch =
 		typeof pluginSource === 'string'
-			? pluginSource.match( /^\.\/(core-ai-map-\d+\.\d+\.\d+\.zip)$/ )
+			? pluginSource.match( /^\.\/(core-ai-map-(\d+\.\d+\.\d+)\.zip)$/ )
 			: null;
 
 	if ( blueprint.plugins?.length !== 1 || ! pluginSourceMatch ) {
@@ -499,6 +563,28 @@ export const buildCloudflarePlayground = async ( {
 	}
 
 	const pluginFileName = pluginSourceMatch[ 1 ];
+	const pluginVersion = pluginSourceMatch[ 2 ];
+	if (
+		packageManifest.version !== pluginVersion ||
+		blueprint.blueprintMeta?.version !== pluginVersion
+	) {
+		throw new Error(
+			'The package, Blueprint, and plugin ZIP versions must remain aligned.'
+		);
+	}
+	if ( typeof sourceCommit !== 'string' || ! sourceCommit.trim() ) {
+		throw new Error(
+			'The deployment manifest source commit must be non-empty.'
+		);
+	}
+	if (
+		typeof builtAt !== 'string' ||
+		Number.isNaN( Date.parse( builtAt ) )
+	) {
+		throw new Error(
+			'The deployment manifest builtAt timestamp must be parseable.'
+		);
+	}
 	const pluginArtifactPath = `kiosk-blueprint/${ pluginFileName }`;
 	const pluginContents = await readFile( pluginZipPath );
 
@@ -558,6 +644,9 @@ export const buildCloudflarePlayground = async ( {
 		`${ JSON.stringify(
 			{
 				playgroundCommit: commit,
+				sourceCommit,
+				pluginVersion,
+				builtAt,
 				wordpressVersion: '7.0',
 				phpVersion: '8.3',
 				pluginArtifact: {
@@ -582,6 +671,9 @@ export const buildCloudflarePlayground = async ( {
 		fileCount: files.length,
 		outputDirectory: output,
 		playgroundCommit: commit,
+		sourceCommit,
+		pluginVersion,
+		builtAt,
 	};
 };
 
@@ -594,6 +686,12 @@ const parseArguments = ( argumentsList ) => {
 			index += 1;
 		} else if ( argument === '--output' ) {
 			options.outputDirectory = argumentsList[ index + 1 ];
+			index += 1;
+		} else if ( argument === '--source-commit' ) {
+			options.sourceCommit = argumentsList[ index + 1 ];
+			index += 1;
+		} else if ( argument === '--built-at' ) {
+			options.builtAt = argumentsList[ index + 1 ];
 			index += 1;
 		}
 	}
@@ -617,6 +715,8 @@ if (
 	const result = await buildCloudflarePlayground( {
 		sourceDirectory,
 		outputDirectory: options.outputDirectory,
+		sourceCommit: options.sourceCommit,
+		builtAt: options.builtAt,
 	} );
 	process.stdout.write(
 		`Built ${ result.fileCount } Cloudflare Pages files from Playground ${ result.playgroundCommit } at ${ result.outputDirectory }.\n`

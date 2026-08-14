@@ -2,7 +2,7 @@
 /* prettier-ignore */
 async ( page ) => {
 	const expected =
-		'Building a real WordPress 7.0 site in your browser — no server, about 45 seconds.';
+		'Building a real WordPress site in your browser. A cold start can take a minute or more.';
 	const failures = [];
 	const consoleErrors = [];
 	const pageErrors = [];
