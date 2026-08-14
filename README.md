@@ -1,10 +1,22 @@
 # Core AI Living Block Map
 
-Version and design: **3.2.0**. Core AI Living Block Map is one dynamic,
+Version and design: **3.2.1**. Core AI Living Block Map is one dynamic,
 server-rendered `core-ai/core-ai-map` block for explaining how WordPress and AI
 building blocks fit together on a kiosk. Its server markup is enhanced by the
 WordPress Interactivity API. The repository also contains a reproducible,
 self-hosted WordPress Playground artifact for static-hosted demonstrations.
+
+## 3.2.1 release notes
+
+This release turns the guided map into a self-guided teaching experience. The
+welcome screen now defines Core AI as open, provider-neutral building blocks,
+teaches the choose-follow-tap interaction, and explains the diagram key. Every
+flow states its situation before movement, reveals its conclusion after the
+path settles, and predicts its outcome in the flow navigation. Component
+panels lead with their role and importance in the selected flow, while reduced
+motion, replay, flow switching, and focus restoration preserve the same lesson.
+The factual review also removes a volatile WP-Bench test count and aligns MCP
+Adapter protocol wording with the current project documentation.
 
 ## 3.2.0 release notes
 
@@ -47,7 +59,7 @@ remain 44 logical pixels, so 1024 x 768 is a compatibility view rather than a
 fully supported touch layout. Physical iPad touch acceptance is still a
 separate required sign-off.
 
-The reviewed date carried by this release is **Reviewed 12 Aug 2026**. It is
+The reviewed date carried by this release is **Reviewed 14 Aug 2026**. It is
 shown inside the **About this exhibit** panel, reached from the footnote under
 the story rail, rather than in the kiosk header.
 
@@ -95,7 +107,7 @@ The build copies only the assets needed by the pinned runtime plus WordPress
 and 25 MiB-per-asset limits, removes upstream Google Fonts and analytics, and
 uses a local Blueprint and plugin ZIP. `npm run plugin-zip` creates the local
 `core-ai-map.zip`; the Pages build copies those exact bytes to the release URL
-`/kiosk-blueprint/core-ai-map-3.2.0.zip`. It also emits a deployment manifest
+`/kiosk-blueprint/core-ai-map-3.2.1.zip`. It also emits a deployment manifest
 with that path, its byte count, and its SHA-256, plus a Pages rewrite that keeps
 the Playground runtime's literal `/remote.html` endpoint from being redirected
 to Cloudflare's extensionless route. The build owns the accessible outer
@@ -187,7 +199,7 @@ $dist = (Resolve-Path -LiteralPath 'dist-playground').Path
 $manifestPath = Join-Path $dist 'deployment-manifest.json'
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $artifactRelative = [string] $manifest.pluginArtifact.path
-$expectedArtifact = 'kiosk-blueprint/core-ai-map-3.2.0.zip'
+$expectedArtifact = 'kiosk-blueprint/core-ai-map-3.2.1.zip'
 
 if ($artifactRelative -ne $expectedArtifact) {
     throw "Expected $expectedArtifact; manifest has $artifactRelative."
@@ -256,13 +268,13 @@ foreach ($hostName in $hosts) {
 
     $remoteBlueprint = Invoke-RestMethod `
         -Uri "$hostName/kiosk-blueprint/blueprint.json?probe=$probe"
-    if ($remoteBlueprint.plugins.Count -ne 1 -or $remoteBlueprint.plugins[0].source -ne './core-ai-map-3.2.0.zip') {
+    if ($remoteBlueprint.plugins.Count -ne 1 -or $remoteBlueprint.plugins[0].source -ne './core-ai-map-3.2.1.zip') {
         throw "Blueprint plugin source mismatch on $hostName."
     }
 
     $originName = ([Uri] $hostName).Host
     $downloadPath = [IO.Path]::GetFullPath(
-        (Join-Path ([IO.Path]::GetTempPath()) "core-ai-map-${originName}-3.2.0-${PID}.zip")
+        (Join-Path ([IO.Path]::GetTempPath()) "core-ai-map-${originName}-3.2.1-${PID}.zip")
     )
     if (Test-Path -LiteralPath $downloadPath) {
         throw "Refusing to overwrite existing verification file: $downloadPath"
@@ -311,9 +323,9 @@ system, touch, foreground-timing, power, or network evidence.
    both results with the browser/device version; investigate a crash or a boot
    that does not complete rather than treating a hidden/background run as a
    valid timing.
-4. Confirm the loader says “Building a real WordPress 7.0 site in your browser
-   — no server, about 45 seconds.” Then confirm the exhibit version using the
-   manifest/ZIP check above, not the unchanged public URL.
+4. Confirm the loader says “Building a real WordPress site in your browser. A
+   cold start can take a minute or more.” Then confirm the exhibit version
+   using the manifest/ZIP check above, not the unchanged public URL.
 5. Exercise Add blocks, all four stories, an inspector, About, Back/Escape, and
    Start over. Leave the engaged exhibit untouched for at least 65 seconds
    while the tab stays visible; it must return to the attract screen at the

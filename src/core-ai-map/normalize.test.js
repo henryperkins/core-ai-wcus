@@ -1,8 +1,70 @@
 import currentMetadata from './block.json';
 import legacyMetadata from './fixtures/block-v0.2.json';
-import { withCurrentDefaults } from './normalize';
+import { withCurrentDefault, withCurrentDefaults } from './normalize';
 
 describe( 'editor copy normalization', () => {
+	it( 'upgrades only exact legacy welcome defaults', () => {
+		expect(
+			withCurrentDefault(
+				currentMetadata,
+				'title',
+				'How do WordPress and AI work together?'
+			)
+		).toBe( 'What is WordPress Core AI?' );
+		expect(
+			withCurrentDefault(
+				currentMetadata,
+				'intro',
+				'Choose a flow, follow the numbered path, then tap a highlighted component to understand its role.'
+			)
+		).toContain( 'set of open building blocks' );
+		expect(
+			withCurrentDefault(
+				currentMetadata,
+				'title',
+				'A custom exhibit heading'
+			)
+		).toBe( 'A custom exhibit heading' );
+		expect(
+			withCurrentDefault(
+				currentMetadata,
+				'reviewedDate',
+				'Reviewed 12 Aug 2026'
+			)
+		).toBe( 'Reviewed 14 Aug 2026' );
+		expect(
+			withCurrentDefault(
+				currentMetadata,
+				'reviewedDate',
+				'Reviewed after a custom audit'
+			)
+		).toBe( 'Reviewed after a custom audit' );
+	} );
+
+	it( 'keeps the current MCP transport version when upgrading v3.2.0 copy', () => {
+		const panels = withCurrentDefaults( currentMetadata, 'panels', [
+			{
+				...currentMetadata.attributes.panels.default.find(
+					( item ) => item.id === 'mcp'
+				),
+				notes: [
+					{
+						heading: 'Under the hood',
+						text: 'An official WordPress package installed as a plugin, not part of Core: HTTP and STDIO transports against the MCP specification the adapter currently targets (2025-11-25), configurable servers, validation, permission checks, error handling, and observability. Today it answers calls; it does not make them. It does not create the underlying action, and it is not the model — WordPress still owns execution.',
+					},
+				],
+			},
+		] );
+
+		expect(
+			panels.find( ( item ) => item.id === 'mcp' ).notes[ 0 ].text
+		).toBe(
+			currentMetadata.attributes.panels.default.find(
+				( item ) => item.id === 'mcp'
+			).notes[ 0 ].text
+		);
+	} );
+
 	it( 'upgrades untouched v0.2 defaults to the v3.1.1 editor copy', () => {
 		const blocks = withCurrentDefaults(
 			currentMetadata,

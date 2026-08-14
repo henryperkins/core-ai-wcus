@@ -103,6 +103,14 @@ const renderLegacyMarkup = ( profile = 'legacy' ) => {
 			}
 		);
 	}
+	if ( profile === 'protocol-v320' ) {
+		attributes.panels.find( ( item ) => item.id === 'mcp' ).notes = [
+			{
+				heading: 'Under the hood',
+				text: 'An official WordPress package installed as a plugin, not part of Core: HTTP and STDIO transports against the MCP specification the adapter currently targets (2025-11-25), configurable servers, validation, permission checks, error handling, and observability. Today it answers calls; it does not make them. It does not create the underlying action, and it is not the model — WordPress still owns execution.',
+			},
+		];
+	}
 	attributes.panels = attributes.panels.map( ( panel ) => ( {
 		...panel,
 		href: 'https://legacy.example/generic',
@@ -210,6 +218,19 @@ describe( 'Core AI map render contract', () => {
 				width: 236,
 				height: 148,
 			} ) ),
+			...Array.from(
+				container.querySelectorAll( '.core-ai-map__provider-plugin' )
+			).map( ( providerPlugin ) => ( {
+				id: 'provider-plugin',
+				x: Number.parseFloat(
+					providerPlugin.style.getPropertyValue( '--cai-x' )
+				),
+				y: Number.parseFloat(
+					providerPlugin.style.getPropertyValue( '--cai-y' )
+				),
+				width: 200,
+				height: 104,
+			} ) ),
 		];
 		const overlaps = [];
 
@@ -228,7 +249,7 @@ describe( 'Core AI map render contract', () => {
 			}
 		}
 
-		expect( cards ).toHaveLength( 11 );
+		expect( cards ).toHaveLength( 12 );
 		expect( overlaps ).toEqual( [] );
 	} );
 
@@ -384,6 +405,17 @@ describe( 'Core AI map render contract', () => {
 		expect( markup ).not.toContain( 'ships 19 August' );
 	} );
 
+	it( 'migrates v3.2.0 MCP copy to the registered protocol wording', () => {
+		const markup = renderLegacyMarkup( 'protocol-v320' );
+
+		expect( markup ).toContain(
+			'HTTP transport implements MCP 2025-11-25'
+		);
+		expect( markup ).not.toContain(
+			'against the MCP specification the adapter currently targets'
+		);
+	} );
+
 	it( 'keeps the WP-Bench process cues and complete evidence rationale', () => {
 		const container = document.createElement( 'div' );
 		container.innerHTML = renderLegacyMarkup();
@@ -459,7 +491,7 @@ describe( 'Core AI map render contract', () => {
 		);
 		expect(
 			dialog.querySelector( '.core-ai-map__about-reviewed' ).textContent
-		).toBe( 'Reviewed 12 Aug 2026' );
+		).toBe( 'Reviewed 14 Aug 2026' );
 	} );
 
 	it( 'keeps the About trigger in the colophon rather than the top bar', () => {
@@ -517,7 +549,7 @@ describe( 'Core AI map render contract', () => {
 		}
 	} );
 
-	it( 'gives every flow a takeaway and a numbered run to follow', () => {
+	it( 'gives every flow a situation, takeaway, outcome, and numbered run', () => {
 		const context = renderDefaultContext();
 
 		expect( context.openingStory ).toBe( 'uses-ai' );
@@ -530,6 +562,24 @@ describe( 'Core AI map render contract', () => {
 		for ( const takeaway of Object.values( context.storyTakeaways ) ) {
 			expect( takeaway.length ).toBeGreaterThan( 0 );
 		}
+		expect( Object.keys( context.storySituations ) ).toEqual( [
+			'uses-ai',
+			'uses-wp',
+			'learns',
+			'tests',
+		] );
+		expect( Object.values( context.storySituations ) ).toEqual(
+			expect.arrayContaining( [
+				'A feature inside WordPress needs an AI-generated result.',
+				'An outside assistant asks WordPress to perform an allowed action.',
+			] )
+		);
+		expect( context.storyOutcomes ).toEqual( {
+			'uses-ai': 'WordPress requests an AI result',
+			'uses-wp': 'An assistant requests a WordPress action',
+			learns: 'A coding agent receives WordPress guidance',
+			tests: 'WordPress evaluates generated code',
+		} );
 
 		expect( context.storySteps ).toEqual( {
 			'uses-ai': '1 → 2 → 3',
@@ -563,6 +613,9 @@ describe( 'Core AI map render contract', () => {
 			expect( control.getAttribute( 'data-wp-bind--aria-label' ) ).toBe(
 				'state.cardActionLabel'
 			);
+			expect( control.getAttribute( 'data-wp-bind--disabled' ) ).toBe(
+				'state.isCardNotTappable'
+			);
 			expect(
 				control.querySelector( '.core-ai-map__tap-cue' )
 			).not.toBeNull();
@@ -571,6 +624,56 @@ describe( 'Core AI map render contract', () => {
 			const panelId = control.getAttribute( 'aria-controls' );
 			expect( container.querySelector( `#${ panelId }` ) ).not.toBeNull();
 		}
+	} );
+
+	it( 'orders native card controls along every numbered flow', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup( 'current' );
+		const controls = [
+			...container.querySelectorAll(
+				'.core-ai-map__actor-body, .core-ai-map__block-body, .core-ai-map__provider-plugin-body'
+			),
+		];
+		const controlId = ( control ) => {
+			const card = control.closest(
+				'.core-ai-map__actor, .core-ai-map__block, .core-ai-map__provider-plugin'
+			);
+			if ( card.classList.contains( 'core-ai-map__provider-plugin' ) ) {
+				return 'provider-plugin';
+			}
+			return card.className.match(
+				/core-ai-map__(?:actor|block)--([a-z-]+)/
+			)[ 1 ];
+		};
+		const order = controls.map( controlId );
+		const flows = {
+			'uses-ai': [
+				'plugin',
+				'client',
+				'provider-plugin',
+				'provider',
+				'connectors',
+			],
+			'uses-wp': [ 'assistant', 'mcp', 'abilities' ],
+			learns: [ 'skills', 'agent', 'task' ],
+			tests: [ 'agent', 'bench' ],
+		};
+
+		for ( const expected of Object.values( flows ) ) {
+			expect( order.filter( ( id ) => expected.includes( id ) ) ).toEqual(
+				expected
+			);
+		}
+
+		const allButtons = [ ...container.querySelectorAll( 'button' ) ];
+		const applyIndex = allButtons.indexOf(
+			container.querySelector( '.core-ai-map__workbench-apply' )
+		);
+		expect( applyIndex ).toBeGreaterThan(
+			Math.max(
+				...controls.map( ( control ) => allButtons.indexOf( control ) )
+			)
+		);
 	} );
 
 	it( 'opens each panel with the flow it was reached from', () => {
@@ -597,6 +700,37 @@ describe( 'Core AI map render contract', () => {
 			contextBlock.querySelector( '.core-ai-map__details-lesson' )
 				.textContent
 		).toContain( 'without integrating every external provider separately' );
+		const titleId = 'core-ai-map-test-panel-client-title';
+		expect( client.getAttribute( 'aria-labelledby' ) ).toBe( titleId );
+		expect( client.querySelector( `#${ titleId }` ).tagName ).toBe( 'H2' );
+		expect(
+			client.querySelector( `#${ titleId }` ).textContent.trim()
+		).toBe( 'AI Client' );
+		expect(
+			Array.from( client.querySelectorAll( 'h3' ) ).map( ( heading ) =>
+				heading.textContent.trim()
+			)
+		).toEqual( [
+			'Its role in this flow',
+			'Why that matters',
+			'What it is',
+			'Under the hood',
+			'Keep exploring',
+		] );
+		expect(
+			Array.from( client.querySelectorAll( ':scope > h3' ) ).map(
+				( heading ) => heading.textContent.trim()
+			)
+		).toEqual( [ 'What it is', 'Under the hood', 'Keep exploring' ] );
+
+		const abilities = container.querySelector(
+			'#core-ai-map-test-panel-abilities'
+		);
+		expect(
+			Array.from( abilities.querySelectorAll( 'h3' ) )
+				.map( ( heading ) => heading.textContent.trim() )
+				.filter( ( heading ) => heading === 'Under the hood' )
+		).toHaveLength( 1 );
 
 		// The coding agent takes part in two flows and explains both.
 		expect(
@@ -606,14 +740,62 @@ describe( 'Core AI map render contract', () => {
 		).toHaveLength( 2 );
 	} );
 
-	it( 'labels the flow controls and the component explorer in the open', () => {
+	it( 'teaches the interaction grammar on the welcome screen', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup( 'current' );
+		const welcome = container.querySelector( '.core-ai-map__attract' );
+
+		expect( welcome.querySelector( 'h1' ).textContent.trim() ).toBe(
+			'What is WordPress Core AI?'
+		);
+		expect(
+			welcome.querySelector( '.core-ai-map__intro' ).textContent
+		).toContain( 'open building blocks' );
+		expect(
+			Array.from(
+				welcome.querySelectorAll( '.core-ai-map__welcome-steps li' )
+			).map( ( item ) => ( {
+				number: item.querySelector( 'span' ).textContent,
+				instruction: item.querySelector( 'strong' ).textContent,
+			} ) )
+		).toEqual( [
+			{ number: '1', instruction: 'Choose a flow' },
+			{ number: '2', instruction: 'Follow the numbered path' },
+			{
+				number: '3',
+				instruction: 'Tap a highlighted component to see its role',
+			},
+		] );
+		expect(
+			Array.from(
+				welcome.querySelectorAll( '.core-ai-map__legend-item' )
+			).map( ( item ) => item.textContent.replace( /\s+/g, ' ' ).trim() )
+		).toEqual( [
+			'Solid arrow: active request or work',
+			'Dashed line: configuration or supporting information',
+			'Dimmed component: not part of this flow',
+		] );
+		expect(
+			welcome.querySelector( '.core-ai-map__prompt' ).textContent
+		).toContain( 'Explore the first flow' );
+		expect(
+			welcome
+				.querySelector( '.core-ai-map__attract-browse' )
+				.textContent.trim()
+		).toBe( 'Browse all components' );
+	} );
+
+	it( 'labels the flow controls and premises in the open', () => {
 		const container = document.createElement( 'div' );
 		container.innerHTML = renderLegacyMarkup( 'current' );
 
 		const rail = container.querySelector( '.core-ai-map__rail' );
 		const railLabel = rail.querySelector( '.core-ai-map__rail-label' );
 
-		expect( railLabel.textContent.trim() ).toBe( 'Choose another flow' );
+		expect( railLabel.textContent.trim() ).toBe( 'Choose a flow' );
+		expect( railLabel.getAttribute( 'data-wp-text' ) ).toBe(
+			'state.railLabel'
+		);
 		expect( rail.getAttribute( 'aria-labelledby' ) ).toBe(
 			railLabel.getAttribute( 'id' )
 		);
@@ -623,7 +805,26 @@ describe( 'Core AI map render contract', () => {
 
 		const guidance = container.querySelector( '.core-ai-map__guidance' );
 		expect( guidance.closest( '.core-ai-map__topbar' ) ).not.toBeNull();
-		expect( guidance.textContent.trim() ).toBe( 'Choose a flow to begin.' );
+		expect( guidance.hidden ).toBe( true );
+
+		expect(
+			Array.from(
+				rail.querySelectorAll( '.core-ai-map__rail-outcome' )
+			).map( ( outcome ) => outcome.textContent.trim() )
+		).toEqual( [
+			'WordPress requests an AI result',
+			'An assistant requests a WordPress action',
+			'A coding agent receives WordPress guidance',
+			'WordPress evaluates generated code',
+		] );
+
+		const situations = [
+			...container.querySelectorAll( '.core-ai-map__situation' ),
+		];
+		expect( situations ).toHaveLength( 4 );
+		expect( situations[ 0 ].textContent ).toContain(
+			'A feature inside WordPress needs an AI-generated result.'
+		);
 
 		const takeaways = [
 			...container.querySelectorAll( '.core-ai-map__takeaway' ),
@@ -632,6 +833,9 @@ describe( 'Core AI map render contract', () => {
 		for ( const takeaway of takeaways ) {
 			expect( takeaway.querySelector( 'strong' ).textContent ).toBe(
 				'What this flow shows'
+			);
+			expect( takeaway.getAttribute( 'data-wp-bind--hidden' ) ).toBe(
+				'state.isTakeawayHidden'
 			);
 		}
 	} );
