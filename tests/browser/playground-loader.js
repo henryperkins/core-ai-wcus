@@ -1,5 +1,9 @@
 /* eslint-disable no-unused-expressions */
 /* prettier-ignore */
+/*
+ * Agent runs use Browser Run against a public HTTPS preview; see README.md.
+ * Retain this callback as the assertion contract, not a local agent entry point.
+ */
 async ( page ) => {
 	const expected =
 		'Building a real WordPress site in your browser. A cold start can take a minute or more.';
@@ -32,8 +36,10 @@ async ( page ) => {
 	} );
 
 	const origin = await page.evaluate( () => window.location.origin );
-	if ( ! /^https?:\/\//.test( origin ) ) {
-		throw new Error( 'Open the Playground origin before running the loader verifier.' );
+	if ( ! /^https:\/\//.test( origin ) ) {
+		throw new Error(
+			'Open the public HTTPS Playground preview before running the retained loader assertions.'
+		);
 	}
 	await page.addInitScript( () => {
 		globalThis.__coreAiLoaderObservations = [];

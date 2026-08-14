@@ -347,7 +347,19 @@ npm.cmd run verify:playground-artifact -- --directory dist-playground --source-c
 
 - [ ] **Step 5: Run rendered browser QA**
 
-At 1366 × 1024 and 1024 × 768, run the loader verifier and acceptance script. Require zero all-card collisions/overflows in attract, neutral, and all four stories; preserved SVG path/signal/boundary behavior; no PHP notice exposed in the page; and zero console errors, page errors, or failed requests.
+Make the exact Pages artifact available at a publicly reachable HTTPS preview,
+then use the globally configured Browser Run MCP service at 1366 × 1024 and
+1024 × 768. Treat the retained loader and acceptance scripts as the assertion
+contract; do not launch them with local Playwright for an agent run. Use
+`browser_snapshot` to locate and verify controls through attract, neutral, and
+all four stories, and use screenshots only where collision, overflow, or SVG
+visual evidence is required. Require zero all-card collisions/overflows;
+preserved SVG path/signal/boundary behavior; no PHP notice exposed in the page;
+and zero console errors, page errors, or failed requests. Record returned run
+IDs and artifact references with the release evidence, do not commit private
+artifact bodies or credentials, and call `browser_close` in final cleanup on
+success or failure. If no preview URL exists, report that single blocker and do
+not fall back to a local browser.
 
 - [ ] **Step 6: Inspect source/build agreement**
 

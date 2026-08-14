@@ -36,10 +36,15 @@ upstream root, caption, module reference, or manifest contract changes.
     the original runtime module is replaced, the modified module has a
     content-derived filename, `remote.html` and the offline manifest point to
     it, and the original module is absent.
-- A cold-browser verifier will navigate a Pages-compatible local artifact,
-    require the outer heading and `role=status` to expose the approved copy with
-    no exposed upstream fallback, verify the same copy inside `remote.html`, and
-    prove the outer shell restores the Playground root when the map is ready.
+- A cold-browser verifier will use the globally configured Browser Run MCP
+    service to navigate a publicly reachable HTTPS preview of the exact
+    Pages-compatible artifact, require the outer heading and `role=status` to
+    expose the approved copy with no exposed upstream fallback, verify the same
+    copy inside `remote.html`, and prove the outer shell restores the Playground
+    root when the map is ready. It will prefer accessibility snapshots, record
+    returned run and artifact references, and call `browser_close` even on
+    failure. A missing preview URL is the browser gate's single blocker; it is
+    not permission to use a local browser.
 - The existing Playground suite, linters, WordPress unit suite, artifact
     build, literal `/remote.html` routing check, and kiosk browser acceptance
     remain release gates.

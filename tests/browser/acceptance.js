@@ -1,5 +1,9 @@
 /* eslint-disable no-unused-expressions */
 /* global getComputedStyle, NodeFilter */
+/*
+ * Agent runs use Browser Run against a public HTTPS preview; see README.md.
+ * Retain this callback as the assertion contract, not a local agent entry point.
+ */
 
 /* prettier-ignore */
 async ( page ) => {
@@ -141,10 +145,16 @@ async ( page ) => {
 	} );
 	page.on( 'pageerror', ( error ) => pageErrors.push( error.message ) );
 
+	const origin = await page.evaluate( () => window.location.origin );
+	if ( ! /^https:\/\//.test( origin ) ) {
+		throw new Error(
+			'Open the public HTTPS WordPress preview before running the retained acceptance assertions.'
+		);
+	}
 	await page.context().setOffline( false );
 	await page.emulateMedia( { reducedMotion: 'no-preference' } );
 	await page.setViewportSize( { width: 1366, height: 1024 } );
-	await page.goto( 'http://127.0.0.1:9400/living-block-map/', {
+	await page.goto( `${ origin }/living-block-map/`, {
 		waitUntil: 'networkidle',
 	} );
 	await root.waitFor();

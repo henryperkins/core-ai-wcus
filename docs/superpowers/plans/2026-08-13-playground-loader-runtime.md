@@ -15,7 +15,8 @@ filename. Remove the outer-document text observer because iframe DOM and
 progress state are separate ownership boundaries.
 
 **Tech Stack:** Node.js ESM, `node:test`, WordPress Playground static assets,
-Cloudflare Pages static routing, Playwright browser verification.
+Cloudflare Pages static routing, Browser Run MCP agent verification, and
+retained Playwright callback assertions for non-agent harnesses.
 
 ## Global Constraints
 
@@ -29,6 +30,10 @@ Cloudflare Pages static routing, Playwright browser verification.
     diagnosable.
 - Do not modify, delete, or stage existing untracked artifacts.
 - Do not commit, push, or deploy without separate authorization.
+- Agent-run browser verification must use Browser Run against a public HTTPS
+    preview, prefer accessibility snapshots, record private run/artifact
+    references, and call `browser_close` on success or failure. If no preview
+    URL exists, report that blocker instead of launching a local browser.
 
 ---
 
@@ -89,23 +94,29 @@ Expected: all Playground tests pass and the fixture proves the new asset graph.
 
 **Interfaces:**
 
-- Consumes: a locally served `dist-playground` Pages artifact.
-- Produces: a browser result containing the runtime frame URL, visible heading
-    text, live-region text, and any browser/network errors.
+- Consumes: a publicly reachable HTTPS preview of the exact `dist-playground`
+    Pages artifact.
+- Produces: Browser Run evidence containing the runtime frame URL, accessible
+    heading text, live-region text, browser/network errors, and private run and
+    artifact references.
 
 - [x] **Step 1: Write the browser regression**
 
-Navigate a cache-busted local root and require the kiosk-owned heading/status
-while the React root is inert. Then wait for `/remote.html`, require the same
+Using Browser Run, navigate a cache-busted public HTTPS preview root and require
+the kiosk-owned heading/status while the React root is absent from the
+accessibility tree. Then wait for `/remote.html`, require the same
 heading/status there, and verify the outer loader closes and restores the root
 when the map is ready. Reject any exposed `Preparing WordPress`, HTTP error,
-console error, page error, or failed request.
+console error, page error, or failed request. Use `browser_snapshot` for these
+control and accessibility assertions, retain the callback's assertions as the
+contract, and call `browser_close` in final cleanup.
 
 - [x] **Step 2: Document the cold-loader command and evidence boundary**
 
-Add the local Pages/browser command beside `npm run test:playground`. State that
-the Node suite proves the artifact graph while the browser verifier proves the
-accessible runtime surface.
+Add the Browser Run procedure and public-preview prerequisite beside
+`npm run test:playground`. State that the Node suite proves the artifact graph
+while Browser Run proves the accessible runtime surface. Record returned run
+IDs and artifact references without committing their private bodies.
 
 - [x] **Step 3: Run against the pre-fix artifact and confirm failure**
 
@@ -141,8 +152,13 @@ the pinned official Playground source directory.
 
 - [x] **Step 3: Verify routing and browser behavior**
 
-Require `/remote.html` to return 200 with no `Location`, then run the new loader
-verifier and the existing kiosk acceptance at 1366×1024 and 1024×768.
+Require `/remote.html` to return 200 with no `Location`, then use Browser Run
+against the exact public HTTPS preview for the loader and kiosk acceptance
+assertions at 1366×1024 and 1024×768. Prefer accessibility snapshots for
+controls, use screenshots only for visual assertions, record the private run
+and artifact references, and call `browser_close` in final cleanup. Without a
+preview URL, report this browser gate as blocked rather than using local
+Playwright.
 
 - [x] **Step 4: Inspect the final diff and repository status**
 

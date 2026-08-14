@@ -105,33 +105,59 @@ dispatch using a deterministic local Playground source fixture. It does not
 publish an artifact or deploy Pages; manual publication from a verified
 `dist-playground/` remains the production boundary.
 
-### Verify the accessible loader locally
+### Agent-run browser policy
+
+Any agent step that requires a real browser must use the globally configured
+`browser_run` MCP service. If that service is unavailable, stop and ask for
+Codex to be restarted or reloaded. Never install or launch Playwright,
+Puppeteer, Selenium, Cypress, Chrome, Chromium, Edge, Firefox, WebKit, or
+`headless_shell` locally for an agent-run browser task.
+
+Use `quick_*` for one-page rendering, accessibility output, screenshots, PDFs,
+Markdown, scraping, JSON, or links; `browser_*` for navigation and multi-step
+interaction; `crawl_*` for multi-page crawling; and `artifact_*` to retrieve
+private evidence. In stateful workflows, use `browser_snapshot` or other
+accessibility output to locate and verify controls, take screenshots only for
+claims that need visual evidence, and call `browser_close` in a final cleanup
+step whether the workflow passes or fails.
+
+Browser Run cannot reach localhost or private-network URLs. An agent browser
+gate therefore requires a publicly reachable HTTPS preview of the exact
+artifact under test. If no preview URL exists, record that single blocker and
+stop the browser portion; do not fall back to a locally served artifact or a
+local browser. Browser Run evidence is private for 14 days. Record returned run
+IDs and artifact references in the release evidence, but do not commit
+screenshot/PDF bodies or credentials.
+
+### Verify the accessible loader with Browser Run
 
 `npm run test:playground` proves the generated outer loader, inert/root
 handoff, runtime module fingerprint, `remote.html`, and offline manifest
 agree. It does not render the nested Playground frame. After building
-`dist-playground/`, serve the exact Pages artifact in one PowerShell window:
+`dist-playground/`, make those exact bytes available at a publicly reachable
+HTTPS preview URL. Preview deployments are not provisioned by this repository,
+so the release operator must supply that URL before this browser gate can run.
 
-```powershell
-npx wrangler pages dev dist-playground `
-    --port 8799 `
-    --compatibility-date 2026-08-13
-```
+Use one stateful Browser Run workflow against a cache-busted preview URL:
 
-Then run the cold-frame verifier from a second PowerShell window:
+1. Use `browser_navigate`, then `browser_snapshot`, to require the kiosk-owned
+   heading and status while the upstream root is absent from the accessibility
+   tree. Prefer this accessibility evidence to a screenshot.
+2. Wait for the nested `/remote.html` runtime and use `browser_snapshot` to
+   require the same approved heading and status with no exposed
+   `Preparing WordPress` fallback.
+3. Wait for the exhibit's attract prompt, snapshot again, and require the
+   kiosk loader to be absent and the Playground root to be accessible.
+4. Collect `browser_console_messages` and `browser_network_requests`; reject
+   console or page errors, failed requests, and HTTP errors.
+5. Call `browser_close` in the workflow's final cleanup step, then use
+   `artifact_manifest` or `artifact_list`/`artifact_get` to record the run ID
+   and relevant private artifact references.
 
-```powershell
-playwright-cli -s=loader open 'http://127.0.0.1:8799/' --browser chrome
-$loaderCheck = Get-Content -Raw -LiteralPath 'tests/browser/playground-loader.js'
-playwright-cli -s=loader run-code $loaderCheck
-playwright-cli -s=loader close
-```
-
-The result must report `ok: true` and the exact approved copy for both the
-outer kiosk-owned heading/status and the nested `remote.html` runtime
-heading/status. It also proves that the upstream React loader is inaccessible
-while loading and that the React root is restored when the exhibit is ready.
-Matching text in generated files alone is not sufficient.
+Treat the result as `ok: true` only when it satisfies the same approved-copy,
+loader-handoff, and error assertions retained in
+`tests/browser/playground-loader.js`. Matching text in generated files alone is
+not sufficient.
 
 ### Verify every deployment by artifact identity
 
@@ -255,6 +281,9 @@ foreach ($hostName in $hosts) {
 
 Run this checklist on every booth browser after the artifact check above. Site
 data clearing is a standing deployment step, not a one-time migration.
+This is a human, physical-device sign-off: agents must not launch a local
+browser to imitate it, and Browser Run cannot replace its hardware, operating
+system, touch, foreground-timing, power, or network evidence.
 
 1. Close unrelated tabs, keep the kiosk on external power, disable display
    sleep/auto-lock, prefer wired networking, and do not add a persisted
@@ -288,8 +317,9 @@ data clearing is a standing deployment step, not a one-time migration.
 
 Record the hostname, deployed commit, manifest SHA-256, cold/warm times,
 60-second reset result, reduced-motion result, device/browser versions, and
-operator initials. These physical-device gates cannot be replaced by the local
-unit or browser suites.
+operator initials. Append any separate Browser Run run IDs and artifact
+references to the same release record. These physical-device gates cannot be
+replaced by repository automation or Browser Run.
 
 ## What visitors see
 

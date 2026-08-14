@@ -36,7 +36,7 @@ The release is reviewed 12 Aug 2026. The authored target is 1366 x 1024 landscap
 2. Activate Core AI Living Block Map.
 3. Create a fresh page and choose a blank or full-width theme template.
 4. Insert the Core AI Living Block Map block, set it to full width, and publish a non-home/root permalink.
-5. Verify the published browser experience before any kiosk setup.
+5. Verify the published browser experience before any kiosk setup. Agent-run checks use the globally configured Browser Run MCP service against the public HTTPS URL; physical kiosk checks remain a human on-device sign-off.
 
 The plugin ZIP contains the PHP bootstrap, committed build assets, local assets (icons, service worker, fonts, and QR SVGs), and readmes. Node.js is needed only to build from source. Local EB Garamond, IBM Plex Mono, and Inter WOFF2 files include their license texts in `assets/fonts/`.
 
@@ -70,7 +70,7 @@ Before deactivating or deleting the plugin, turn off Offline mode in the block a
 
 = Does local verification prove the iPad kiosk is ready? =
 
-No. Unit tests, lint, and builds prove only local source/package state. Browser verification is separate. Safari, Add to Home Screen, Guided Access, worker behavior, and physical iPad touch and landscape acceptance require separate on-device sign-off. This plugin does not claim deployment.
+No. Unit tests, lint, and builds prove only local source/package state. Agent-run browser verification uses the globally configured Browser Run MCP service against a publicly reachable HTTPS preview or deployment, never localhost or a locally launched browser. Safari, Add to Home Screen, Guided Access, worker behavior, and physical iPad touch and landscape acceptance require separate human on-device sign-off. This plugin does not claim deployment.
 
 For every Playground booth deployment, bump all release metadata, use a fingerprinted plugin ZIP URL, compare the deployed ZIP's byte count and SHA-256 with the build manifest on both public hostnames, and clear Cache Storage, OPFS data, and service workers on every booth browser. Then perform foreground cold and warm boots, verify the visible-only 60-second reset and the operating system's reduced-motion mode, disable sleep, prefer wired networking, and prewarm the kiosk. Do not enable a persisted Playground `site-slug`; if the upstream crash dialog recurs after one foreground reload, clear site data and cold-boot again.
 

@@ -466,11 +466,17 @@ single artifact-build gate as unrun rather than substituting another runtime.
 
 - [ ] **Step 3: Run rendered browser QA**
 
-The flow under test is: local root → explanatory boot → Add blocks → neutral
-actors/date-hint → About containment/focus → Back to exhibit. At 1418 × 828 and
-1366 × 1024 verify page identity, meaningful content, no error overlay, healthy
-console, exact loading copy, five actors at 0.42, zero intersections, dialog
-containment/focus, and screenshot evidence.
+Make the exact artifact available at a publicly reachable HTTPS preview, then
+use the globally configured Browser Run MCP service for: preview root →
+explanatory boot → Add blocks → neutral actors/date-hint → About
+containment/focus → Back to exhibit. At 1418 × 828 and 1366 × 1024 verify page
+identity, meaningful content, no error overlay, healthy console, exact loading
+copy, five actors at 0.42, zero intersections, dialog containment/focus, and
+screenshot evidence. Prefer `browser_snapshot` for controls and focus; use
+screenshots for the required visual geometry evidence. Record returned run IDs
+and artifact references without committing private bodies or credentials, and
+call `browser_close` in final cleanup on success or failure. If no preview URL
+exists, report that single blocker and do not fall back to a local browser.
 
 - [ ] **Step 4: Inspect the full branch diff**
 
