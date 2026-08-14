@@ -459,7 +459,7 @@ describe( 'Core AI map render contract', () => {
 		);
 		expect(
 			dialog.querySelector( '.core-ai-map__about-reviewed' ).textContent
-		).toBe( 'Reviewed 12 Aug 2026' );
+		).toBe( 'Reviewed 14 Aug 2026' );
 	} );
 
 	it( 'keeps the About trigger in the colophon rather than the top bar', () => {
@@ -651,11 +651,17 @@ describe( 'Core AI map render contract', () => {
 		expect(
 			Array.from(
 				welcome.querySelectorAll( '.core-ai-map__welcome-steps li' )
-			).map( ( item ) => item.textContent.replace( /\s+/g, ' ' ).trim() )
+			).map( ( item ) => ( {
+				number: item.querySelector( 'span' ).textContent,
+				instruction: item.querySelector( 'strong' ).textContent,
+			} ) )
 		).toEqual( [
-			'1 Choose a flow',
-			'2 Follow the numbered path',
-			'3 Tap a highlighted component to see its role',
+			{ number: '1', instruction: 'Choose a flow' },
+			{ number: '2', instruction: 'Follow the numbered path' },
+			{
+				number: '3',
+				instruction: 'Tap a highlighted component to see its role',
+			},
 		] );
 		expect(
 			Array.from(
