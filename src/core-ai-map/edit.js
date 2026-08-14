@@ -21,7 +21,6 @@ export default function Edit( { attributes, setAttributes } ) {
 	const {
 		eyebrow,
 		reviewedDate,
-		hint,
 		title,
 		intro,
 		prompt,
@@ -76,20 +75,9 @@ export default function Edit( { attributes, setAttributes } ) {
 						}
 					/>
 					<TextControl
-						label={ __( 'Map hint', 'core-ai-map' ) }
-						help={ __(
-							'Shown in the top bar once the blocks are on the canvas.',
-							'core-ai-map'
-						) }
-						value={ hint }
-						onChange={ ( value ) =>
-							setAttributes( { hint: value } )
-						}
-					/>
-					<TextControl
 						label={ __( 'Reviewed date', 'core-ai-map' ) }
 						help={ __(
-							'Shown in the kiosk header so visitors know when the factual copy was reviewed.',
+							'Shown in the About this exhibit panel so visitors know when the factual copy was reviewed.',
 							'core-ai-map'
 						) }
 						value={ reviewedDate }

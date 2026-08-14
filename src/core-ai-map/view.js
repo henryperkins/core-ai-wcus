@@ -462,9 +462,6 @@ store( 'core-ai/map', {
 		get isCanvasInert() {
 			return getContext().screen !== 'map';
 		},
-		get isHintHidden() {
-			return getContext().screen !== 'map';
-		},
 		get isResetHidden() {
 			return getContext().screen !== 'map';
 		},

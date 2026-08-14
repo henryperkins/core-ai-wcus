@@ -457,5 +457,24 @@ describe( 'Core AI map render contract', () => {
 		expect( dialog.textContent ).toContain(
 			'Final work was human-reviewed and tested; the human contributor remains responsible for it.'
 		);
+		expect(
+			dialog.querySelector( '.core-ai-map__about-reviewed' ).textContent
+		).toBe( 'Reviewed 12 Aug 2026' );
+	} );
+
+	it( 'keeps the About trigger in the colophon rather than the top bar', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup();
+
+		const trigger = container.querySelector(
+			'.core-ai-map__about-trigger'
+		);
+
+		expect( trigger.closest( '.core-ai-map__colophon' ) ).not.toBeNull();
+		expect( trigger.closest( '.core-ai-map__topbar' ) ).toBeNull();
+		expect( container.querySelector( '.core-ai-map__hint' ) ).toBeNull();
+		expect(
+			container.querySelector( '.core-ai-map__brand small' )
+		).toBeNull();
 	} );
 } );

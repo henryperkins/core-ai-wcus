@@ -12,11 +12,15 @@ describe( 'Living Block Map v3.1.3 metadata', () => {
 		expect( metadata.version ).toBe( '3.1.3' );
 	} );
 
-	it( 'sets the reviewed date used by the kiosk header', () => {
+	it( 'sets the reviewed date used by the About panel', () => {
 		expect( attributes.reviewedDate ).toEqual( {
 			type: 'string',
 			default: 'Reviewed 12 Aug 2026',
 		} );
+	} );
+
+	it( 'no longer carries the retired kiosk-header hint', () => {
+		expect( attributes.hint ).toBeUndefined();
 	} );
 
 	it( 'includes the WordPress task as the fifth outside actor', () => {

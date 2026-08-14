@@ -574,8 +574,7 @@ foreach ( $attributes['suggestions'] ?? array() as $suggestion ) {
 }
 
 $eyebrow            = $attributes['eyebrow'] ?? __( 'WordPress Core AI', 'core-ai-map' );
-$reviewed_date       = $attributes['reviewedDate'] ?? __( 'Reviewed 12 Aug 2026', 'core-ai-map' );
-$hint               = $attributes['hint'] ?? '';
+$reviewed_date      = $attributes['reviewedDate'] ?? __( 'Reviewed 12 Aug 2026', 'core-ai-map' );
 $inactivity_timeout = isset( $attributes['inactivityTimeout'] ) ? absint( $attributes['inactivityTimeout'] ) : 60;
 $inactivity_timeout = max( 30, min( 180, $inactivity_timeout ) );
 $offline_enabled    = ! empty( $attributes['offlineEnabled'] );
@@ -965,37 +964,12 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				<span><?php echo esc_html( $eyebrow ); ?></span>
 				<span class="core-ai-map__brand-separator" aria-hidden="true"></span>
 				<strong><?php esc_html_e( 'Living Block Map', 'core-ai-map' ); ?></strong>
-				<span class="core-ai-map__brand-separator" aria-hidden="true"></span>
-				<small><?php echo esc_html( $reviewed_date ); ?></small>
 			</div>
-
-			<?php if ( $hint ) : ?>
-				<p class="core-ai-map__hint" data-wp-bind--hidden="state.isHintHidden" hidden>
-					<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-						<rect x="3.5" y="3.5" width="7" height="7" rx="1"></rect>
-						<rect x="13.5" y="3.5" width="7" height="7" rx="1"></rect>
-						<rect x="3.5" y="13.5" width="7" height="7" rx="1"></rect>
-						<rect x="13.5" y="13.5" width="7" height="7" rx="1"></rect>
-					</svg>
-					<?php echo esc_html( $hint ); ?>
-				</p>
-			<?php endif; ?>
 
 			<div class="core-ai-map__topbar-actions">
 				<p class="core-ai-map__offline" data-wp-bind--hidden="state.isOnline" hidden>
 					<span aria-hidden="true"></span><?php esc_html_e( 'Offline mode', 'core-ai-map' ); ?>
 				</p>
-				<button
-					class="core-ai-map__about-trigger"
-					type="button"
-					aria-controls="<?php echo esc_attr( $instance_id . '-about' ); ?>"
-					aria-expanded="false"
-					data-wp-bind--hidden="state.isAboutControlHidden"
-					data-wp-bind--aria-expanded="state.isAbout"
-					data-wp-on--click="actions.openAbout"
-				>
-					<?php esc_html_e( 'About this exhibit', 'core-ai-map' ); ?>
-				</button>
 				<button class="core-ai-map__reset" type="button" data-wp-bind--hidden="state.isResetHidden" data-wp-on--click="actions.reset" hidden>
 					<?php esc_html_e( 'Start over', 'core-ai-map' ); ?>
 				</button>
@@ -1342,6 +1316,20 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<?php endforeach; ?>
 		</nav>
 
+		<footer class="core-ai-map__colophon">
+			<button
+				class="core-ai-map__about-trigger"
+				type="button"
+				aria-controls="<?php echo esc_attr( $instance_id . '-about' ); ?>"
+				aria-expanded="false"
+				data-wp-bind--hidden="state.isAboutControlHidden"
+				data-wp-bind--aria-expanded="state.isAbout"
+				data-wp-on--click="actions.openAbout"
+			>
+				<?php esc_html_e( 'About this exhibit', 'core-ai-map' ); ?>
+			</button>
+		</footer>
+
 		<div class="core-ai-map__attract" data-screen-label="<?php esc_attr_e( 'Living Block Map welcome', 'core-ai-map' ); ?>" data-wp-bind--hidden="state.isNotAttract">
 			<p class="core-ai-map__eyebrow"><?php echo esc_html( $eyebrow ); ?></p>
 			<h1><?php echo esc_html( $attributes['title'] ?? '' ); ?></h1>
@@ -1390,6 +1378,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					<div><dt><?php esc_html_e( 'Used for:', 'core-ai-map' ); ?></dt><dd><?php esc_html_e( 'implementation, tests, and deployment preparation.', 'core-ai-map' ); ?></dd></div>
 				</dl>
 				<p><?php esc_html_e( 'Final work was human-reviewed and tested; the human contributor remains responsible for it.', 'core-ai-map' ); ?></p>
+				<p class="core-ai-map__about-reviewed"><?php echo esc_html( $reviewed_date ); ?></p>
 			</div>
 		</aside>
 

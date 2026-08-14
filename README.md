@@ -34,7 +34,9 @@ remain 44 logical pixels, so 1024 x 768 is a compatibility view rather than a
 fully supported touch layout. Physical iPad touch acceptance is still a
 separate required sign-off.
 
-The reviewed date shown by this release is **Reviewed 12 Aug 2026**.
+The reviewed date carried by this release is **Reviewed 12 Aug 2026**. It is
+shown inside the **About this exhibit** panel, reached from the footnote under
+the story rail, rather than in the kiosk header.
 
 ## AI assistance and accountability
 

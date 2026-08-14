@@ -191,15 +191,6 @@ body.core-ai-kiosk-active {
 			letter-spacing: -0.015em;
 			text-transform: none;
 		}
-
-		small {
-			color: var(--core-ai-text-muted);
-			font-family: var(--core-ai-mono);
-			font-size: 12px;
-			font-weight: 400;
-			letter-spacing: 0.06em;
-			text-transform: none;
-		}
 	}
 
 	&__brand-separator {
@@ -213,34 +204,6 @@ body.core-ai-kiosk-active {
 		width: 30px;
 		height: 30px;
 		border-radius: 6px;
-	}
-
-	&__hint {
-		position: absolute;
-		top: 10px;
-		left: 540px;
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		width: 460px;
-		height: 40px;
-		margin: 0;
-		padding: 0 14px;
-		color: var(--core-ai-ink-soft);
-		font-size: 15px;
-		background: var(--core-ai-surface);
-		border: 1px solid var(--core-ai-line);
-		border-radius: var(--core-ai-radius);
-
-		svg {
-			flex: none;
-			width: 17px;
-			height: 17px;
-			fill: none;
-			stroke: var(--core-ai-blue);
-			stroke-linecap: round;
-			stroke-width: 1.6;
-		}
 	}
 
 	&__offline {
@@ -282,18 +245,6 @@ body.core-ai-kiosk-active {
 		transition:
 			color 180ms ease,
 			border-color 180ms ease;
-	}
-
-	&__about-trigger {
-		min-height: 60px;
-		padding: 0 16px;
-		color: var(--core-ai-ink);
-		font-size: 14px;
-		font-weight: 620;
-		background: var(--core-ai-surface);
-		border: 1px solid var(--core-ai-line);
-		border-radius: var(--core-ai-radius);
-		cursor: pointer;
 	}
 
 	/* Canvas ----------------------------------------------------------- */
@@ -1371,7 +1322,7 @@ body.core-ai-kiosk-active {
 		position: absolute;
 		z-index: 30;
 		right: 24px;
-		bottom: 24px;
+		bottom: 48px;
 		left: 24px;
 		display: grid;
 		grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1412,6 +1363,44 @@ body.core-ai-kiosk-active {
 					color: rgba(255, 255, 255, 0.7);
 				}
 			}
+		}
+	}
+
+	/* Colophon --------------------------------------------------------- */
+
+	/**
+	 * The transparency disclosure is a footnote, not a control the exhibit
+	 * competes for attention with: quiet text under the story rail, sized so
+	 * a finger still clears the 24px minimum target.
+	 */
+	&__colophon {
+		position: absolute;
+		z-index: 30;
+		right: 24px;
+		bottom: 12px;
+		left: 24px;
+		display: flex;
+		justify-content: center;
+
+		/**
+		 * Nested so the footnote outranks the `font: inherit` reset every
+		 * button in the kiosk starts from. The explicit line-height keeps the
+		 * box 26px tall, which is what the bottom band is measured against.
+		 */
+		.core-ai-map__about-trigger {
+			min-height: 26px;
+			padding: 4px 10px;
+			color: var(--core-ai-text-muted);
+			font-size: 12px;
+			font-weight: 500;
+			line-height: 18px;
+			text-decoration: underline;
+			text-underline-offset: 3px;
+			background: none;
+			border: 0;
+			border-radius: 2px;
+			cursor: pointer;
+			transition: color 180ms ease;
 		}
 	}
 
@@ -1591,6 +1580,15 @@ body.core-ai-kiosk-active {
 			margin: 24px 0 0;
 			font-size: 17px;
 			line-height: 1.5;
+		}
+
+		/* The review stamp reads as provenance here, not as kiosk chrome. */
+		.core-ai-map__about-reviewed {
+			margin-top: 18px;
+			color: var(--core-ai-text-muted);
+			font-family: var(--core-ai-mono);
+			font-size: 13px;
+			letter-spacing: 0.06em;
 		}
 	}
 
@@ -2345,7 +2343,6 @@ body.core-ai-kiosk-active {
 
 .core-ai-map.is-attract {
 
-	.core-ai-map__hint,
 	.core-ai-map__reset,
 	.core-ai-map__zone--runtime,
 	.core-ai-map__story-copy,
@@ -2683,6 +2680,10 @@ body.core-ai-kiosk-active {
 	.core-ai-map__reset:hover {
 		color: var(--core-ai-blue);
 		border-color: var(--core-ai-blue);
+	}
+
+	.core-ai-map__about-trigger:hover {
+		color: var(--core-ai-blue);
 	}
 
 	.core-ai-map__rail button:hover:not(.is-active),

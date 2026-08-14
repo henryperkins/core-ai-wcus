@@ -24,10 +24,6 @@ return array(
 				'type' => 'string',
 				'default' => 'Reviewed 12 Aug 2026'
 			),
-			'hint' => array(
-				'type' => 'string',
-				'default' => 'Tap any block to see what it does'
-			),
 			'title' => array(
 				'type' => 'string',
 				'default' => 'How do WordPress and AI work together?'

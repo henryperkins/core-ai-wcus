@@ -311,11 +311,14 @@ async ( page ) => {
 				Math.min( first.bottom, second.bottom ) -
 					Math.max( first.top, second.top )
 			);
-		const reviewed = document
-			.querySelector( '.core-ai-map__brand small' )
+		const rail = document
+			.querySelector( '.core-ai-map__rail' )
 			.getBoundingClientRect();
-		const hint = document
-			.querySelector( '.core-ai-map__hint' )
+		const footnote = document
+			.querySelector( '.core-ai-map__about-trigger' )
+			.getBoundingClientRect();
+		const stage = document
+			.querySelector( '.core-ai-map__stage' )
 			.getBoundingClientRect();
 
 		const actors = [
@@ -340,7 +343,12 @@ async ( page ) => {
 		return {
 			actors,
 			actorOverlaps,
-			reviewedHintOverlap: overlapArea( reviewed, hint ),
+			footnote: {
+				railOverlap: overlapArea( rail, footnote ),
+				clearsRail: Math.round( footnote.top - rail.bottom ),
+				clearsStage: Math.round( stage.bottom - footnote.bottom ),
+				height: Math.round( footnote.height ),
+			},
 		};
 	} );
 	observations.neutral = neutral;
@@ -356,8 +364,14 @@ async ( page ) => {
 		`Neutral actors overlapped: ${ neutral.actorOverlaps.join( ', ' ) }`
 	);
 	assert(
-		neutral.reviewedHintOverlap === 0,
-		'Reviewed date overlapped the neutral-map hint.'
+		neutral.footnote.railOverlap === 0 &&
+			neutral.footnote.clearsRail > 0 &&
+			neutral.footnote.clearsStage >= 0,
+		'About footnote did not sit clear of the story rail inside the stage.'
+	);
+	assert(
+		neutral.footnote.height >= 24,
+		'About footnote fell below the 24px minimum touch target.'
 	);
 	const neutralGeometry = await measureCardGeometry();
 	observations.neutralGeometry = neutralGeometry;
