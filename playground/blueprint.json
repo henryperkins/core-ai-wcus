@@ -4,7 +4,7 @@
 	"blueprintMeta": {
 		"name": "Core AI Living Block Map",
 		"description": "A self-contained WordPress Playground kiosk showing the Core AI Living Block Map.",
-		"version": "3.1.2",
+		"version": "3.1.3",
 		"authors": [ "WordPress Contributors" ],
 		"license": "GPL-2.0-or-later"
 	},
@@ -24,7 +24,7 @@
 	},
 	"plugins": [
 		{
-			"source": "./core-ai-map-3.1.2.zip",
+			"source": "./core-ai-map-3.1.3.zip",
 			"targetDirectoryName": "core-ai-map",
 			"humanReadableName": "Core AI Living Block Map"
 		}

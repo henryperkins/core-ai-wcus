@@ -245,7 +245,7 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 	);
 	assert.equal(
 		await readFile(
-			join( outputDirectory, 'kiosk-blueprint', 'core-ai-map-3.1.2.zip' ),
+			join( outputDirectory, 'kiosk-blueprint', 'core-ai-map-3.1.3.zip' ),
 			'utf8'
 		),
 		'fixture-plugin-zip'
@@ -264,14 +264,14 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 		)
 	);
 	assert.deepEqual( deploymentManifest.pluginArtifact, {
-		path: 'kiosk-blueprint/core-ai-map-3.1.2.zip',
+		path: 'kiosk-blueprint/core-ai-map-3.1.3.zip',
 		bytes: Buffer.byteLength( 'fixture-plugin-zip' ),
 		sha256: createHash( 'sha256' )
 			.update( 'fixture-plugin-zip' )
 			.digest( 'hex' ),
 	} );
 	assert.equal( deploymentManifest.sourceCommit, 'source-commit-fixture' );
-	assert.equal( deploymentManifest.pluginVersion, '3.1.2' );
+	assert.equal( deploymentManifest.pluginVersion, '3.1.3' );
 	assert.equal( deploymentManifest.builtAt, '2026-08-13T12:34:56.000Z' );
 } );
 

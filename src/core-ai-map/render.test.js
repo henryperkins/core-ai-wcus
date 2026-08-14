@@ -22,7 +22,7 @@ const worker = fs.readFileSync(
 	'utf8'
 );
 
-describe( 'Living Block Map v3.1.2 server render', () => {
+describe( 'Living Block Map v3.1.3 server render', () => {
 	it( 'renders the provider plugin runtime layer and Connectors sidecar', () => {
 		expect( render ).toContain( 'core-ai-map__provider-plugin' );
 		expect( render ).toContain( 'AI provider plugin' );
@@ -121,12 +121,21 @@ describe( 'Living Block Map v3.1.2 server render', () => {
 		);
 	} );
 
-	it( 'renders a moving signal for every attract workflow', () => {
+	it( 'renders static preview markers with only the initial workflow visible', () => {
 		expect( render.match( /core-ai-map__preview-signal/g ) ).toHaveLength(
 			4
 		);
-		expect( render ).toContain(
+		expect( render ).toMatch( /data-core-ai-preview="0"\s*>/ );
+		for ( const preview of [ 1, 2, 3 ] ) {
+			expect( render ).toMatch(
+				new RegExp( `data-core-ai-preview="${ preview }"\\s+hidden` )
+			);
+		}
+		expect( render ).not.toContain(
 			'data-wp-class--is-live="state.isPreviewSignalLive"'
+		);
+		expect( render ).not.toContain(
+			'class="core-ai-map__preview-signal is-live"'
 		);
 	} );
 
@@ -199,7 +208,7 @@ describe( 'Living Block Map v3.1.2 server render', () => {
 
 	it( 'normalizes versioned cache keys and precaches built local fonts', () => {
 		expect( worker ).toContain(
-			'const CACHE_NAME = `${ CACHE_SCOPE_PREFIX }v3.1.2-review-1`;'
+			'const CACHE_NAME = `${ CACHE_SCOPE_PREFIX }v3.1.3-review-1`;'
 		);
 		expect( worker ).toContain( "searchParams.delete( 'ver' )" );
 		expect( worker ).toMatch(

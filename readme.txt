@@ -4,7 +4,7 @@ Tags: core-ai, kiosk, interactive
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 3.1.2
+Stable tag: 3.1.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ One dynamic, server-rendered WordPress block that explains the building blocks c
 
 == Description ==
 
-Core AI Living Block Map 3.1.2 provides one full-width `core-ai/core-ai-map` block. Server markup is enhanced with the WordPress Interactivity API.
+Core AI Living Block Map 3.1.3 provides one full-width `core-ai/core-ai-map` block. Server markup is enhanced with the WordPress Interactivity API.
 
 The attract workflow uses assemble, path, signal, caption, and release phases. After engagement, motion settles; reduced-motion users retain the same story, path, state, and caption information.
 
@@ -93,6 +93,13 @@ Run these commands when building from source:
 `npm run plugin-zip`
 
 == Changelog ==
+
+= 3.1.3 =
+
+* Cleared neutral-map card collisions and provider-card copy overflow.
+* Replaced the startup promise with honest cold-start loader copy and exhibit-owned social metadata.
+* Removed SVG Interactivity directives that could emit renderer notices.
+* Added plugin ZIP provenance and verification-only CI coverage for release artifacts.
 
 = 3.1.2 =
 

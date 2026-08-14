@@ -25,10 +25,10 @@ test( 'defines a self-contained v2 Playground kiosk Blueprint', () => {
 	);
 	assert.equal( blueprint.wordpressVersion, '7.0' );
 	assert.equal( blueprint.phpVersion, '8.3' );
-	assert.equal( blueprint.blueprintMeta.version, '3.1.2' );
+	assert.equal( blueprint.blueprintMeta.version, '3.1.3' );
 	assert.deepEqual( blueprint.plugins, [
 		{
-			source: './core-ai-map-3.1.2.zip',
+			source: './core-ai-map-3.1.3.zip',
 			targetDirectoryName: 'core-ai-map',
 			humanReadableName: 'Core AI Living Block Map',
 		},

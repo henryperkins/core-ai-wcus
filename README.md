@@ -1,10 +1,18 @@
 # Core AI Living Block Map
 
-Version and design: **3.1.2**. Core AI Living Block Map is one dynamic,
+Version and design: **3.1.3**. Core AI Living Block Map is one dynamic,
 server-rendered `core-ai/core-ai-map` block for explaining how WordPress and AI
 building blocks fit together on a kiosk. Its server markup is enhanced by the
 WordPress Interactivity API. The repository also contains a reproducible,
 self-hosted WordPress Playground artifact for static-hosted demonstrations.
+
+## 3.1.3 release notes
+
+This release clears the neutral-map card collision and provider-copy overflow,
+uses an honest cold-start loader message, and removes SVG Interactivity
+directives that could emit renderer notices. Playground artifacts now carry
+source and ZIP provenance for verification-only CI, and the static shell has
+exhibit-owned social metadata.
 
 ## Install and create the kiosk page
 
@@ -72,7 +80,7 @@ The build copies only the assets needed by the pinned runtime plus WordPress
 and 25 MiB-per-asset limits, removes upstream Google Fonts and analytics, and
 uses a local Blueprint and plugin ZIP. `npm run plugin-zip` creates the local
 `core-ai-map.zip`; the Pages build copies those exact bytes to the release URL
-`/kiosk-blueprint/core-ai-map-3.1.2.zip`. It also emits a deployment manifest
+`/kiosk-blueprint/core-ai-map-3.1.3.zip`. It also emits a deployment manifest
 with that path, its byte count, and its SHA-256, plus a Pages rewrite that keeps
 the Playground runtime's literal `/remote.html` endpoint from being redirected
 to Cloudflare's extensionless route. The build owns the accessible outer
@@ -133,7 +141,7 @@ $dist = (Resolve-Path -LiteralPath 'dist-playground').Path
 $manifestPath = Join-Path $dist 'deployment-manifest.json'
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $artifactRelative = [string] $manifest.pluginArtifact.path
-$expectedArtifact = 'kiosk-blueprint/core-ai-map-3.1.2.zip'
+$expectedArtifact = 'kiosk-blueprint/core-ai-map-3.1.3.zip'
 
 if ($artifactRelative -ne $expectedArtifact) {
     throw "Expected $expectedArtifact; manifest has $artifactRelative."
@@ -202,13 +210,13 @@ foreach ($hostName in $hosts) {
 
     $remoteBlueprint = Invoke-RestMethod `
         -Uri "$hostName/kiosk-blueprint/blueprint.json?probe=$probe"
-    if ($remoteBlueprint.plugins.Count -ne 1 -or $remoteBlueprint.plugins[0].source -ne './core-ai-map-3.1.2.zip') {
+    if ($remoteBlueprint.plugins.Count -ne 1 -or $remoteBlueprint.plugins[0].source -ne './core-ai-map-3.1.3.zip') {
         throw "Blueprint plugin source mismatch on $hostName."
     }
 
     $originName = ([Uri] $hostName).Host
     $downloadPath = [IO.Path]::GetFullPath(
-        (Join-Path ([IO.Path]::GetTempPath()) "core-ai-map-${originName}-3.1.2-${PID}.zip")
+        (Join-Path ([IO.Path]::GetTempPath()) "core-ai-map-${originName}-3.1.3-${PID}.zip")
     )
     if (Test-Path -LiteralPath $downloadPath) {
         throw "Refusing to overwrite existing verification file: $downloadPath"
