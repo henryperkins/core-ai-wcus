@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
+import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
+
+import { createStaticSourceFixture } from './create-static-source-fixture.mjs';
 
 import {
 	buildCloudflarePlayground,
@@ -19,68 +23,132 @@ const projectDirectory = resolve(
 );
 const approvedLoadingMessage =
 	'Building a real WordPress site in your browser. A cold start can take a minute or more.';
+const execFileAsync = promisify( execFile );
 
-const createMinimalPlaygroundSource = async ( sourceDirectory ) => {
-	await mkdir( join( sourceDirectory, 'assets' ), { recursive: true } );
-	await mkdir( join( sourceDirectory, 'wp-7.0' ), { recursive: true } );
-	await writeFile(
-		join( sourceDirectory, 'index.html' ),
-		`<!doctype html><html><head>
-			<meta name="commit-id" content="playground-test-commit" />
-			<meta name="description" content="Try WordPress in your browser." />
-			<meta property="og:title" content="WordPress Playground" />
-			<meta property="og:description" content="Try WordPress in your browser." />
-			<meta name="twitter:card" content="summary_large_image" />
-			<meta name="twitter:title" content="WordPress Playground" />
-			<meta name="twitter:description" content="Try WordPress in your browser." />
-			<meta name="twitter:image" content="https://playground.wordpress.net/ogimage.png" />
-			<title>WordPress Playground</title>
-			<script type="module" src="/assets/index-fixture.js"></script>
-		</head><body><main id="root" aria-label="WordPress Playground"></main></body></html>`
-	);
-	await writeFile(
-		join( sourceDirectory, 'assets-required-for-offline-mode.json' ),
-		JSON.stringify( [
-			'/assets/index-fixture.js',
-			'/assets/main-fixture.js',
-			'/assets/wordpress-fixture.js',
-		] )
-	);
-	await writeFile(
-		join( sourceDirectory, 'assets', 'index-fixture.js' ),
-		`const dependencies = [ "assets/main-fixture.js" ]; import( "./main-fixture.js" );`
-	);
-	await writeFile(
-		join( sourceDirectory, 'assets', 'main-fixture.js' ),
-		`const loader = { caption: i?.caption??"Preparing WordPress" };`
-	);
-	await writeFile(
-		join( sourceDirectory, 'remote.html' ),
-		`<!doctype html><html><head>
-			<script type="module" crossorigin src="/assets/wordpress-fixture.js"></script>
-		</head><body><iframe id="wp"></iframe></body></html>`
-	);
-	await writeFile(
-		join( sourceDirectory, 'assets', 'wordpress-fixture.js' ),
-		`const caption = 'Preparing WordPress';`
-	);
+const expectedStaticSourceFiles = [
+	'assets-required-for-offline-mode.json',
+	'assets/index-fixture.js',
+	'assets/main-fixture.js',
+	'assets/wordpress-fixture.js',
+	'apple-touch-icon.png',
+	'blueprint-schema.json',
+	'favicon.ico',
+	'index.html',
+	'logo-192.png',
+	'logo-256.png',
+	'logo-384.png',
+	'logo-512.png',
+	'manifest.json',
+	'maskable-icon-512.png',
+	'ogimage.png',
+	'remote.html',
+	'sw.js',
+].sort();
 
-	for ( const fileName of [
-		'sw.js',
-		'blueprint-schema.json',
-		'favicon.ico',
-		'manifest.json',
-		'apple-touch-icon.png',
-		'ogimage.png',
-		'logo-192.png',
-		'logo-256.png',
-		'logo-384.png',
-		'logo-512.png',
-		'maskable-icon-512.png',
-	] ) {
-		await writeFile( join( sourceDirectory, fileName ), fileName );
+const listFixtureFiles = async ( directory, root = directory ) => {
+	const { readdir } = await import( 'node:fs/promises' );
+	const entries = await readdir( directory, { withFileTypes: true } );
+	const files = [];
+
+	for ( const entry of entries ) {
+		const path = join( directory, entry.name );
+		if ( entry.isDirectory() ) {
+			files.push( ...( await listFixtureFiles( path, root ) ) );
+		} else {
+			files.push( path.slice( root.length + 1 ).replaceAll( '\\', '/' ) );
+		}
 	}
+
+	return files.sort();
 };
+
+test( 'static Playground source fixture preserves the test runtime tree through its module and CLI', async ( t ) => {
+	const temporaryDirectory = await mkdtemp(
+		join( projectDirectory, '.tmp-static-playground-source-' )
+	);
+	t.after( () => rm( temporaryDirectory, { recursive: true, force: true } ) );
+	const moduleDirectory = join( temporaryDirectory, 'module-source' );
+	const cliDirectory = join( temporaryDirectory, 'cli-source' );
+	await createStaticSourceFixture( moduleDirectory );
+	assert.deepEqual(
+		await listFixtureFiles( moduleDirectory ),
+		expectedStaticSourceFiles
+	);
+	assert.ok(
+		( await stat( join( moduleDirectory, 'wp-7.0' ) ) ).isDirectory()
+	);
+	assert.match(
+		await readFile( join( moduleDirectory, 'index.html' ), 'utf8' ),
+		/<meta name="commit-id" content="playground-test-commit" \/>/
+	);
+
+	const { stdout } = await execFileAsync(
+		process.execPath,
+		[ 'tests/playground/create-static-source-fixture.mjs', cliDirectory ],
+		{ cwd: projectDirectory }
+	);
+	assert.match( stdout, /Created static Playground source fixture/ );
+	assert.deepEqual(
+		await listFixtureFiles( cliDirectory ),
+		expectedStaticSourceFiles
+	);
+	assert.ok( ( await stat( join( cliDirectory, 'wp-7.0' ) ) ).isDirectory() );
+} );
+
+test( 'verification workflow runs the complete non-deploying release-build contract', async () => {
+	const workflow = await readFile(
+		join( projectDirectory, '.github', 'workflows', 'verify.yml' ),
+		'utf8'
+	);
+
+	assert.match( workflow, /^on:\s*[\s\S]*?\bpull_request:/m );
+	assert.match( workflow, /^on:\s*[\s\S]*?\bworkflow_dispatch:/m );
+	assert.match( workflow, /push:\s*\n\s+branches:\s*\[\s*main\s*\]/ );
+	assert.match( workflow, /permissions:\s*\n\s+contents:\s*read/ );
+	assert.match(
+		workflow,
+		/uses:\s*actions\/checkout@v6[\s\S]*?fetch-depth:\s*0/
+	);
+	assert.match(
+		workflow,
+		/uses:\s*actions\/setup-node@v6[\s\S]*?node-version:\s*['"]?22['"]?/
+	);
+	assert.match(
+		workflow,
+		/uses:\s*shivammathur\/setup-php@v2[\s\S]*?php-version:\s*['"]?8\.3['"]?/
+	);
+
+	const gates = [
+		'npm ci',
+		'npm run lint:js -- --no-fix',
+		'npm run lint:css',
+		'npm run test:unit -- --runInBand',
+		'npm run test:playground',
+		'npm run build',
+		'npm run plugin-zip',
+		'npm run create:playground-source-fixture',
+		'npm run build:playground',
+		'npm run verify:playground-artifact',
+	];
+	let previousGate = -1;
+	for ( const gate of gates ) {
+		const index = workflow.indexOf( gate );
+		assert.ok(
+			index > previousGate,
+			`workflow must run ${ gate } in order`
+		);
+		previousGate = index;
+	}
+
+	assert.match(
+		workflow,
+		/--source-commit\s+["']?\$\{\{\s*github\.sha\s*\}\}/
+	);
+	assert.doesNotMatch(
+		workflow,
+		/\b(?:deploy|publish|pages|credential|environment)\b|contents:\s*write/i
+	);
+} );
 
 test( 'patches the official Playground shell into a local kiosk launcher', () => {
 	const result = patchKioskIndex( `<!doctype html>
@@ -170,7 +238,7 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 	const sourceDirectory = join( temporaryDirectory, 'source' );
 	const outputDirectory = join( temporaryDirectory, 'output' );
 	const pluginZipPath = join( temporaryDirectory, 'fixture-plugin.zip' );
-	await createMinimalPlaygroundSource( sourceDirectory );
+	await createStaticSourceFixture( sourceDirectory );
 	await writeFile( pluginZipPath, 'fixture-plugin-zip' );
 
 	await buildCloudflarePlayground( {

@@ -98,6 +98,11 @@ project because the repository root is not a deployable Playground artifact.
 The `wcus.hperkins.com` CNAME points to the Pages hostname in DNS-only mode;
 enabling the orange-cloud proxy prevents Pages from routing this hostname.
 
+GitHub Actions verifies the release build on pull requests, `main`, and manual
+dispatch using a deterministic local Playground source fixture. It does not
+publish an artifact or deploy Pages; manual publication from a verified
+`dist-playground/` remains the production boundary.
+
 ### Verify the accessible loader locally
 
 `npm run test:playground` proves the generated outer loader, inert/root
