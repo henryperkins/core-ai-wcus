@@ -142,7 +142,7 @@ test( 'verification workflow runs the complete non-deploying release-build contr
 
 	assert.match(
 		workflow,
-		/--source-commit\s+["']?\$\{\{\s*github\.sha\s*\}\}/
+		/npm run verify:playground-artifact\s+--\s+--directory\s+dist-playground\s+--source-commit\s+["']?\$\{\{\s*github\.sha\s*\}\}/
 	);
 	assert.doesNotMatch(
 		workflow,
