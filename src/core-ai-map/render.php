@@ -153,7 +153,32 @@ $story_layout = array(
 
 $block_ids = array( 'plugin', 'client', 'connectors', 'abilities', 'mcp', 'bench' );
 $actor_ids = array( 'assistant', 'skills', 'agent', 'provider', 'task' );
-$panel_ids = array( 'abilities', 'client', 'connectors', 'plugin', 'mcp', 'bench', 'skills' );
+/*
+ * Every card a visitor can reach has a panel. The five ids after `skills` are
+ * the actors and the transient provider layer: they carry a badge, a lede and
+ * their per-story roles, but none of the reference apparatus (chain, notes, QR)
+ * that the WordPress projects carry.
+ */
+$panel_ids = array(
+	'abilities',
+	'client',
+	'connectors',
+	'plugin',
+	'mcp',
+	'bench',
+	'skills',
+	'assistant',
+	'agent',
+	'provider',
+	'task',
+	'provider-plugin',
+);
+
+/**
+ * Panels that describe an actor or the transient provider layer rather than a
+ * WordPress project. They render the contextual sections and stop there.
+ */
+$context_only_panels = array( 'assistant', 'agent', 'provider', 'task', 'provider-plugin' );
 
 /*
  * The unattended screen assembles one compact workflow at a time. These paths
@@ -560,6 +585,39 @@ foreach ( array_keys( $stories ) as $story_id ) {
 
 $story_layout = array_intersect_key( $story_layout, $stories );
 
+/*
+ * Who takes part in each flow, and the numbered run a visitor is asked to
+ * follow. Members, sidecars and the transient provider layer are all
+ * participants: each one is highlighted, tappable, and carries a role. Parked
+ * cards are none of those things while a flow is selected.
+ */
+$story_participants = array();
+$story_steps        = array();
+
+foreach ( $story_layout as $story_id => $layout ) {
+	$participants = array_keys( $layout['members'] ?? array() );
+	$participants = array_merge( $participants, $layout['sidecars'] ?? array() );
+
+	$steps = array_filter(
+		$layout['members'] ?? array(),
+		static function ( $step ) {
+			return (int) $step > 0;
+		}
+	);
+
+	if ( isset( $layout['providerPlugin'] ) ) {
+		$participants[]                 = 'provider-plugin';
+		$steps['provider-plugin'] = (int) ( $layout['providerPlugin']['step'] ?? 0 );
+	}
+
+	$story_participants[ $story_id ] = array_values( array_unique( $participants ) );
+
+	$numbers = array_values( array_unique( array_filter( array_map( 'intval', $steps ) ) ) );
+	sort( $numbers );
+
+	$story_steps[ $story_id ] = implode( ' → ', array_map( 'strval', $numbers ) );
+}
+
 $suggestions = array();
 
 foreach ( $attributes['suggestions'] ?? array() as $suggestion ) {
@@ -575,6 +633,37 @@ foreach ( $attributes['suggestions'] ?? array() as $suggestion ) {
 
 $eyebrow            = $attributes['eyebrow'] ?? __( 'WordPress Core AI', 'core-ai-map' );
 $reviewed_date      = $attributes['reviewedDate'] ?? __( 'Reviewed 12 Aug 2026', 'core-ai-map' );
+
+$label_defaults = array(
+	'railLabel'         => __( 'Choose another flow', 'core-ai-map' ),
+	'browseLabel'       => __( 'Browse all components', 'core-ai-map' ),
+	'browseDescription' => __( 'Every component on one canvas, with no flow selected.', 'core-ai-map' ),
+	'takeawayHeading'   => __( 'What this flow shows', 'core-ai-map' ),
+	'roleHeading'       => __( 'Its role in this flow', 'core-ai-map' ),
+	'lessonHeading'     => __( 'What this tells you', 'core-ai-map' ),
+	'definitionHeading' => __( 'What this component is', 'core-ai-map' ),
+	'technicalHeading'  => __( 'Technical detail', 'core-ai-map' ),
+	'tapCue'            => __( 'Tap for its role', 'core-ai-map' ),
+	'receivesLabel'     => __( 'Receives', 'core-ai-map' ),
+	'doesLabel'         => __( 'Does', 'core-ai-map' ),
+	'returnsLabel'      => __( 'Passes on', 'core-ai-map' ),
+);
+
+$guidance_defaults = array(
+	'attract' => __( 'Choose a flow to begin.', 'core-ai-map' ),
+	/* translators: %1$s: the numbered run of steps in the selected flow, such as "1 → 2 → 3". */
+	'flow'    => __( 'Follow %1$s. Tap a highlighted component to see what it contributes to this flow.', 'core-ai-map' ),
+	/* translators: %1$s: the title of the selected flow. */
+	'inspect' => __( 'You are viewing this component’s role in “%1$s.”', 'core-ai-map' ),
+	'browse'  => __( 'Tap any component to learn what it is and where it belongs.', 'core-ai-map' ),
+	/* translators: 1: component name. 2: the title of the selected flow. */
+	'cardAction'       => __( '%1$s — view its role in “%2$s.”', 'core-ai-map' ),
+	/* translators: %1$s: component name. */
+	'cardActionBrowse' => __( '%1$s — open its details.', 'core-ai-map' ),
+);
+
+$labels   = array_merge( $label_defaults, is_array( $attributes['labels'] ?? null ) ? array_filter( $attributes['labels'], 'is_string' ) : array() );
+$guidance = array_merge( $guidance_defaults, is_array( $attributes['guidance'] ?? null ) ? array_filter( $attributes['guidance'], 'is_string' ) : array() );
 $inactivity_timeout = isset( $attributes['inactivityTimeout'] ) ? absint( $attributes['inactivityTimeout'] ) : 60;
 $inactivity_timeout = max( 30, min( 180, $inactivity_timeout ) );
 $offline_enabled    = ! empty( $attributes['offlineEnabled'] );
@@ -705,9 +794,49 @@ if ( function_exists( 'wp_script_modules' ) && method_exists( wp_script_modules(
 
 $asset_urls = array_values( array_unique( array_filter( $asset_urls ) ) );
 
+/*
+ * Display names for every tappable card, including the transient provider
+ * layer, so the accessible name can carry the action as well as the name.
+ */
+$card_titles = array();
+
+foreach ( $blocks as $block_id => $card ) {
+	$card_titles[ $block_id ] = (string) ( $card['name'] ?? '' );
+}
+
+foreach ( $actors as $actor_id => $actor ) {
+	$card_titles[ $actor_id ] = (string) ( $actor['name'] ?? '' );
+}
+
+$card_titles['provider-plugin'] = (string) ( $panels['provider-plugin']['title'] ?? __( 'AI provider plugin', 'core-ai-map' ) );
+
+/**
+ * The flow the primary call to action opens. The exhibit is flow-first: a
+ * visitor lands inside an assembled example rather than on a neutral canvas.
+ */
+$opening_story = (string) ( array_key_first( $stories ) ?? '' );
+
 $context = array(
 	'screen'         => 'attract',
 	'story'          => '',
+	'openingStory'   => $opening_story,
+	'storyTitles'    => array_map(
+		static function ( $story ) {
+			return (string) ( $story['title'] ?? '' );
+		},
+		$stories
+	),
+	'storyTakeaways' => array_map(
+		static function ( $story ) {
+			return (string) ( $story['takeaway'] ?? '' );
+		},
+		$stories
+	),
+	'storySteps'     => $story_steps,
+	'participants'   => $story_participants,
+	'cardTitles'     => $card_titles,
+	'guidance'       => $guidance,
+	'labels'         => $labels,
 	'inspect'        => '',
 	'previewIndex'   => 0,
 	'previewPhase'   => 'assembling',
@@ -722,7 +851,7 @@ $context = array(
 	'idleStoryIndex' => 0,
 	'isOffline'      => false,
 	'suggestion'     => 0,
-	'announcement'   => __( 'Core AI Living Block Map ready. Tap to add the blocks to the canvas.', 'core-ai-map' ),
+	'announcement'   => __( 'Core AI Living Block Map ready. Choose a flow to begin, or open the first flow.', 'core-ai-map' ),
 	'suggestions'    => $suggestions,
 	'phases'         => array(
 		__( 'Needs review', 'core-ai-map' ),
@@ -966,10 +1095,27 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				<strong><?php esc_html_e( 'Living Block Map', 'core-ai-map' ); ?></strong>
 			</div>
 
+			<?php
+			/*
+			 * One instruction, and only ever one. It names what to do in the
+			 * state the visitor is actually in, so the exhibit never describes
+			 * every possible interaction at once. The panel carries its own
+			 * guidance, so this line stands down while a panel is open.
+			 */
+			?>
+			<p
+				class="core-ai-map__guidance"
+				data-wp-text="state.guidance"
+				data-wp-bind--hidden="state.isGuidanceHidden"
+			><?php echo esc_html( $guidance['attract'] ); ?></p>
+
 			<div class="core-ai-map__topbar-actions">
 				<p class="core-ai-map__offline" data-wp-bind--hidden="state.isOnline" hidden>
 					<span aria-hidden="true"></span><?php esc_html_e( 'Offline mode', 'core-ai-map' ); ?>
 				</p>
+				<button class="core-ai-map__browse" type="button" data-wp-bind--hidden="state.isBrowseControlHidden" data-wp-on--click="actions.browseAll" hidden>
+					<?php echo esc_html( $labels['browseLabel'] ); ?>
+				</button>
 				<button class="core-ai-map__reset" type="button" data-wp-bind--hidden="state.isResetHidden" data-wp-on--click="actions.reset" hidden>
 					<?php esc_html_e( 'Start over', 'core-ai-map' ); ?>
 				</button>
@@ -1145,16 +1291,36 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				<span class="core-ai-map__token core-ai-map__token--ability">ability</span>
 			</div>
 
+			<?php
+			/*
+			 * The transient provider layer is a numbered step in "WordPress
+			 * uses AI", so it opens a panel like every other numbered step.
+			 * The wrapper keeps its placement and visibility; the button
+			 * inside it carries the interaction.
+			 */
+			?>
 			<div
 				class="core-ai-map__provider-plugin"
 				style="transform: translate(-108px, -14px) scale(0.8);"
+				<?php echo wp_interactivity_data_wp_context( array( 'cardId' => 'provider-plugin' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 				data-wp-bind--hidden="state.isProviderPluginHidden"
 				data-wp-style--transform="state.providerPluginTransform"
 			>
-				<span class="core-ai-map__step" aria-hidden="true">3</span>
-				<span class="core-ai-map__provider-plugin-badge"><?php esc_html_e( 'WordPress plugin', 'core-ai-map' ); ?></span>
-				<strong><?php esc_html_e( 'AI provider plugin', 'core-ai-map' ); ?></strong>
-				<small><?php esc_html_e( 'Provider-specific integration', 'core-ai-map' ); ?></small>
+				<button
+					class="core-ai-map__provider-plugin-body"
+					type="button"
+					aria-controls="<?php echo esc_attr( $instance_id . '-panel-provider-plugin' ); ?>"
+					aria-expanded="false"
+					data-wp-bind--aria-expanded="state.isCardInspected"
+					data-wp-bind--aria-label="state.cardActionLabel"
+					data-wp-on--click="actions.inspectCard"
+				>
+					<span class="core-ai-map__step" aria-hidden="true">3</span>
+					<span class="core-ai-map__provider-plugin-badge"><?php esc_html_e( 'WordPress plugin', 'core-ai-map' ); ?></span>
+					<strong><?php esc_html_e( 'AI provider plugin', 'core-ai-map' ); ?></strong>
+					<small><?php esc_html_e( 'Provider-specific integration', 'core-ai-map' ); ?></small>
+					<span class="core-ai-map__tap-cue" data-wp-bind--hidden="state.isTapCueHidden" aria-hidden="true" hidden><?php echo esc_html( $labels['tapCue'] ); ?></span>
+				</button>
 			</div>
 
 			<div
@@ -1191,26 +1357,33 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						<?php if ( $is_skills ) : ?>
 							<span class="core-ai-map__actor-ghost core-ai-map__actor-ghost--far" aria-hidden="true"></span>
 							<span class="core-ai-map__actor-ghost core-ai-map__actor-ghost--near" aria-hidden="true"></span>
-							<button
-								class="core-ai-map__actor-body"
-								type="button"
-								aria-controls="<?php echo esc_attr( $instance_id . '-panel-skills' ); ?>"
-								aria-expanded="false"
-								data-wp-bind--aria-expanded="state.isCardInspected"
-								data-wp-on--click="actions.inspectCard"
-							>
-						<?php else : ?>
-							<div class="core-ai-map__actor-body">
 						<?php endif; ?>
-								<span class="core-ai-map__step" data-wp-text="state.cardStep" aria-hidden="true"><?php echo esc_html( (int) ( $initial_members[ $actor_id ] ?? 0 ) > 0 ? (string) $initial_members[ $actor_id ] : '' ); ?></span>
-								<span class="core-ai-map__actor-badge"><?php echo esc_html( $actor['badge'] ?? '' ); ?></span>
-								<strong><?php echo esc_html( $actor['name'] ?? '' ); ?></strong>
-								<small><?php echo esc_html( $actor['tagline'] ?? '' ); ?></small>
-						<?php if ( $is_skills ) : ?>
-							</button>
-						<?php else : ?>
-							</div>
-						<?php endif; ?>
+						<?php
+						/*
+						 * Every actor is a control now. A card that looks like
+						 * the card beside it has to behave like it, so the
+						 * actors outside WordPress open the same kind of
+						 * contextual panel the projects do. A card that is not
+						 * part of the selected flow is disabled rather than
+						 * silently inert.
+						 */
+						?>
+						<button
+							class="core-ai-map__actor-body"
+							type="button"
+							aria-controls="<?php echo esc_attr( $instance_id . '-panel-' . $actor_id ); ?>"
+							aria-expanded="false"
+							data-wp-bind--aria-expanded="state.isCardInspected"
+							data-wp-bind--aria-label="state.cardActionLabel"
+							data-wp-bind--disabled="state.isCardNotTappable"
+							data-wp-on--click="actions.inspectCard"
+						>
+							<span class="core-ai-map__step" data-wp-text="state.cardStep" aria-hidden="true"><?php echo esc_html( (int) ( $initial_members[ $actor_id ] ?? 0 ) > 0 ? (string) $initial_members[ $actor_id ] : '' ); ?></span>
+							<span class="core-ai-map__actor-badge"><?php echo esc_html( $actor['badge'] ?? '' ); ?></span>
+							<strong><?php echo esc_html( $actor['name'] ?? '' ); ?></strong>
+							<small><?php echo esc_html( $actor['tagline'] ?? '' ); ?></small>
+							<span class="core-ai-map__tap-cue" data-wp-bind--hidden="state.isTapCueHidden" aria-hidden="true" hidden><?php echo esc_html( $labels['tapCue'] ); ?></span>
+						</button>
 					</div>
 				</div>
 			<?php endforeach; ?>
@@ -1244,6 +1417,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							aria-controls="<?php echo esc_attr( $detail_id ); ?>"
 							aria-expanded="false"
 							data-wp-bind--aria-expanded="state.isCardInspected"
+							data-wp-bind--aria-label="state.cardActionLabel"
+							data-wp-bind--disabled="state.isCardNotTappable"
 							data-wp-on--click="actions.inspectCard"
 						>
 							<span class="core-ai-map__step" data-wp-text="state.cardStep" aria-hidden="true"><?php echo esc_html( (int) ( $initial_members[ $block_id ] ?? 0 ) > 0 ? (string) $initial_members[ $block_id ] : '' ); ?></span>
@@ -1255,6 +1430,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								<strong><?php echo esc_html( $card['name'] ?? '' ); ?></strong>
 								<small><?php echo esc_html( $card['tagline'] ?? '' ); ?></small>
 							</span>
+							<span class="core-ai-map__tap-cue" data-wp-bind--hidden="state.isTapCueHidden" aria-hidden="true" hidden><?php echo esc_html( $labels['tapCue'] ); ?></span>
 						</button>
 						<?php if ( 'connectors' === $block_id ) : ?>
 							<span class="core-ai-map__sidecar-label"><?php esc_html_e( 'Setup · discovery · credentials', 'core-ai-map' ); ?></span>
@@ -1275,16 +1451,30 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<?php endforeach; ?>
 		</div>
 
-		<div class="core-ai-map__story-copy" data-wp-bind--hidden="state.isStoryCopyHidden" hidden>
+		<?php
+		/*
+		 * The band under the map states the lesson in words. A flow shows its
+		 * takeaway; the component explorer says what it is instead. The
+		 * statement sits beside the diagram, never inside a dialog, so a
+		 * visitor can look between the sentence and the path it describes.
+		 */
+		?>
+		<div class="core-ai-map__story-copy" data-wp-bind--hidden="state.isStoryBandHidden" hidden>
+			<div class="core-ai-map__browse-note" data-wp-bind--hidden="state.isBrowseNoteHidden" hidden>
+				<p>
+					<strong><?php echo esc_html( $labels['browseLabel'] ); ?></strong>
+					<span><?php echo esc_html( $labels['browseDescription'] ); ?></span>
+				</p>
+			</div>
 			<?php foreach ( $stories as $story_id => $story ) : ?>
 				<div
 					<?php echo wp_interactivity_data_wp_context( array( 'storyId' => $story_id ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 					data-wp-bind--hidden="state.isStoryNotSelected"
 					hidden
 				>
-					<p>
-						<strong><?php echo esc_html( $story['title'] ?? '' ); ?></strong>
-						<span><?php echo esc_html( $story['copy'] ?? '' ); ?></span>
+					<p class="core-ai-map__takeaway">
+						<strong><?php echo esc_html( $labels['takeawayHeading'] ); ?></strong>
+						<span><?php echo esc_html( $story['takeaway'] ?? '' ); ?></span>
 					</p>
 					<?php if ( 'tests' === $story_id ) : ?>
 						<button class="core-ai-map__run-loop-link" type="button" data-wp-on--click="actions.openBench">
@@ -1298,7 +1488,16 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<?php endforeach; ?>
 		</div>
 
-		<nav class="core-ai-map__rail" aria-label="<?php esc_attr_e( 'Follow a story', 'core-ai-map' ); ?>" data-wp-bind--hidden="state.isRailHidden" hidden>
+		<?php
+		/*
+		 * The flow controls are the starting point, not another row of content
+		 * cards, so they carry a visible label rather than only an accessible
+		 * one. The label leads the row: naming the choice costs no vertical
+		 * space in a bottom band that is already fully allocated.
+		 */
+		?>
+		<nav class="core-ai-map__rail" aria-labelledby="<?php echo esc_attr( $instance_id . '-rail-label' ); ?>" data-wp-bind--hidden="state.isRailHidden" hidden>
+			<p class="core-ai-map__rail-label" id="<?php echo esc_attr( $instance_id . '-rail-label' ); ?>"><?php echo esc_html( $labels['railLabel'] ); ?></p>
 			<?php $step = 0; ?>
 			<?php foreach ( $stories as $story_id => $story ) : ?>
 				<?php ++$step; ?>
@@ -1392,19 +1591,83 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		>
 			<button class="core-ai-map__details-close" type="button" data-wp-on--click="actions.closeInspect">
 				<span aria-hidden="true">&larr;</span>
-				<?php esc_html_e( 'Back to the map', 'core-ai-map' ); ?>
+				<span data-wp-text="state.detailsBackLabel"><?php esc_html_e( 'Back to the map', 'core-ai-map' ); ?></span>
 			</button>
 
+			<?php
+			/*
+			 * The panel says which flow the visitor came from, so opening a
+			 * component never costs them the thread they were following.
+			 */
+			?>
+			<p
+				class="core-ai-map__details-guidance"
+				data-wp-text="state.inspectGuidance"
+				data-wp-bind--hidden="state.isFlowContextHidden"
+				hidden
+			></p>
+
 			<?php foreach ( $panels as $panel_id => $panel ) : ?>
+				<?php
+				$is_context_only = in_array( $panel_id, $context_only_panels, true );
+				$panel_roles     = is_array( $panel['roles'] ?? null ) ? $panel['roles'] : array();
+				?>
 				<article
 					id="<?php echo esc_attr( $instance_id . '-panel-' . $panel_id ); ?>"
 					<?php echo wp_interactivity_data_wp_context( array( 'cardId' => $panel_id ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 					data-wp-bind--hidden="state.isCardNotInspected"
 					hidden
 				>
+					<?php
+					/*
+					 * Why the visitor tapped comes first. Each flow this
+					 * component takes part in carries its own breadcrumb, role
+					 * and lesson; only the selected flow's block is shown. The
+					 * reusable definition follows underneath, so the panel
+					 * answers "what did this just do?" before "what is it?".
+					 */
+					?>
+					<?php foreach ( array_intersect_key( $panel_roles, $stories ) as $role_story_id => $role ) : ?>
+						<div
+							class="core-ai-map__details-context"
+							<?php echo wp_interactivity_data_wp_context( array( 'storyId' => $role_story_id ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+							data-wp-bind--hidden="state.isStoryNotSelected"
+							hidden
+						>
+							<p class="core-ai-map__breadcrumb">
+								<span><?php echo esc_html( $stories[ $role_story_id ]['title'] ?? '' ); ?></span>
+								<span class="core-ai-map__breadcrumb-arrow" aria-hidden="true">&rarr;</span>
+								<span><?php echo esc_html( $panel['title'] ?? '' ); ?></span>
+							</p>
+							<p class="core-ai-map__details-heading"><?php echo esc_html( $labels['roleHeading'] ); ?></p>
+							<dl class="core-ai-map__role">
+								<div>
+									<dt><?php echo esc_html( $labels['receivesLabel'] ); ?></dt>
+									<dd><?php echo esc_html( $role['receives'] ?? '' ); ?></dd>
+								</div>
+								<div>
+									<dt><?php echo esc_html( $labels['doesLabel'] ); ?></dt>
+									<dd><?php echo esc_html( $role['does'] ?? '' ); ?></dd>
+								</div>
+								<div>
+									<dt><?php echo esc_html( $labels['returnsLabel'] ); ?></dt>
+									<dd><?php echo esc_html( $role['returns'] ?? '' ); ?></dd>
+								</div>
+							</dl>
+							<p class="core-ai-map__details-heading"><?php echo esc_html( $labels['lessonHeading'] ); ?></p>
+							<p class="core-ai-map__details-lesson"><?php echo esc_html( $role['lesson'] ?? '' ); ?></p>
+						</div>
+					<?php endforeach; ?>
+
 					<p class="core-ai-map__details-badge"><?php echo esc_html( $panel['badge'] ?? '' ); ?></p>
 					<h2><?php echo esc_html( $panel['title'] ?? '' ); ?></h2>
+					<?php if ( $panel_roles ) : ?>
+						<p class="core-ai-map__details-heading" data-wp-bind--hidden="state.isFlowContextHidden" hidden><?php echo esc_html( $labels['definitionHeading'] ); ?></p>
+					<?php endif; ?>
 					<p class="core-ai-map__details-lede"><?php echo esc_html( $panel['lede'] ?? '' ); ?></p>
+					<?php if ( ! $is_context_only ) : ?>
+						<p class="core-ai-map__details-section"><?php echo esc_html( $labels['technicalHeading'] ); ?></p>
+					<?php endif; ?>
 
 					<?php if ( 'bench' === $panel_id ) : ?>
 						<button class="core-ai-map__run-loop-link" type="button" data-wp-on--click="actions.openBench">

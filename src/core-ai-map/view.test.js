@@ -95,13 +95,23 @@ describe( 'Core AI Living Block Map', () => {
 				data-inactivity-timeout="90000"
 				data-offline-enabled="false"
 			>
-				<button class="core-ai-map__prompt" type="button">Add the blocks</button>
+				<button class="core-ai-map__prompt" type="button">Explore the first flow</button>
 				<button class="core-ai-map__about-trigger" type="button">
 					About this exhibit
 				</button>
+				<button class="core-ai-map__browse" type="button">
+					Browse all components
+				</button>
 				<button class="core-ai-map__reset" type="button">Start over</button>
-				<div class="core-ai-map__block">
-					<button class="core-ai-map__block-body" type="button">AI Client</button>
+				<div class="core-ai-map__block core-ai-map__block--plugin">
+					<button class="core-ai-map__block-body" type="button">
+						<span class="core-ai-map__step">1</span>AI Plugin
+					</button>
+				</div>
+				<div class="core-ai-map__block core-ai-map__block--client">
+					<button class="core-ai-map__block-body" type="button">
+						<span class="core-ai-map__step">2</span>AI Client
+					</button>
 				</div>
 				<aside class="core-ai-map__details">
 					<button class="core-ai-map__details-close" type="button">
@@ -136,6 +146,44 @@ describe( 'Core AI Living Block Map', () => {
 				'uses-ai': 'A plugin asks the AI Client for a capability.',
 				'uses-wp':
 					'An authorized assistant calls in through WordPress.',
+			},
+			openingStory: 'uses-ai',
+			storyTitles: {
+				'uses-ai': 'WordPress uses AI',
+				'uses-wp': 'AI uses WordPress',
+			},
+			storyTakeaways: {
+				'uses-ai':
+					'A WordPress feature uses one common client to request an AI result.',
+				'uses-wp': 'An outside assistant does not bypass WordPress.',
+			},
+			storySteps: {
+				'uses-ai': '1 → 2 → 3',
+				'uses-wp': '1 → 2 → 3',
+			},
+			participants: {
+				'uses-ai': [
+					'plugin',
+					'client',
+					'provider',
+					'connectors',
+					'provider-plugin',
+				],
+				'uses-wp': [ 'assistant', 'mcp', 'abilities' ],
+			},
+			cardTitles: {
+				plugin: 'AI Plugin',
+				client: 'AI Client',
+				bench: 'WP-Bench',
+				assistant: 'AI assistant',
+			},
+			guidance: {
+				attract: 'Choose a flow to begin.',
+				flow: 'Follow %1$s. Tap a highlighted component to see what it contributes to this flow.',
+				inspect: 'You are viewing this component’s role in “%1$s.”',
+				browse: 'Tap any component to learn what it is and where it belongs.',
+				cardAction: '%1$s — view its role in “%2$s.”',
+				cardActionBrowse: '%1$s — open its details.',
 			},
 			benchTitles: { evidence: 'Pass or fail. Never a percentage' },
 			neutral: {
@@ -325,16 +373,90 @@ describe( 'Core AI Living Block Map', () => {
 		document.body.className = '';
 	} );
 
-	it( 'opens the neutral map and moves focus to the first block', () => {
+	it( 'opens directly into the first flow and focuses step one', () => {
 		currentElement = root.querySelector( '.core-ai-map__prompt' );
 
 		mapStore.actions.start();
+		jest.advanceTimersByTime( 80 );
+
+		expect( context.screen ).toBe( 'map' );
+		expect( context.story ).toBe( 'uses-ai' );
+		expect( context.announcement ).toContain( 'WordPress uses AI' );
+		expect( context.announcement ).toContain(
+			'A WordPress feature uses one common client to request an AI result.'
+		);
+		expect( document.activeElement ).toBe(
+			root.querySelector(
+				'.core-ai-map__block--plugin .core-ai-map__block-body'
+			)
+		);
+	} );
+
+	it( 'opens the component explorer from the browse control', () => {
+		context.screen = 'map';
+		context.story = 'uses-ai';
+		currentElement = root.querySelector( '.core-ai-map__browse' );
+
+		mapStore.actions.browseAll();
 		jest.advanceTimersByTime( 40 );
 
 		expect( context.screen ).toBe( 'map' );
 		expect( context.story ).toBe( '' );
-		expect( document.activeElement ).toBe(
-			root.querySelector( '.core-ai-map__block-body' )
+		expect( context.announcement ).toContain( 'no flow selected' );
+	} );
+
+	it( 'names the state the visitor is in, one instruction at a time', () => {
+		expect( mapStore.state.guidance ).toBe( 'Choose a flow to begin.' );
+		expect( mapStore.state.isGuidanceHidden ).toBe( false );
+
+		context.screen = 'map';
+		context.story = 'uses-ai';
+		expect( mapStore.state.guidance ).toBe(
+			'Follow 1 → 2 → 3. Tap a highlighted component to see what it contributes to this flow.'
+		);
+
+		context.story = '';
+		expect( mapStore.state.guidance ).toBe(
+			'Tap any component to learn what it is and where it belongs.'
+		);
+
+		context.story = 'uses-ai';
+		context.screen = 'inspect';
+		expect( mapStore.state.isGuidanceHidden ).toBe( true );
+		expect( mapStore.state.inspectGuidance ).toBe(
+			'You are viewing this component’s role in “WordPress uses AI.”'
+		);
+	} );
+
+	it( 'lets a flow highlight only the cards that take part in it', () => {
+		context.screen = 'map';
+		context.story = 'uses-ai';
+
+		context.cardId = 'client';
+		expect( mapStore.state.isCardNotTappable ).toBe( false );
+		expect( mapStore.state.isTapCueHidden ).toBe( false );
+		expect( mapStore.state.cardActionLabel ).toBe(
+			'AI Client — view its role in “WordPress uses AI.”'
+		);
+
+		context.cardId = 'bench';
+		expect( mapStore.state.isCardNotTappable ).toBe( true );
+		expect( mapStore.state.isTapCueHidden ).toBe( true );
+	} );
+
+	it( 'makes every component tappable and uncued in the explorer', () => {
+		context.screen = 'map';
+		context.story = '';
+
+		for ( const cardId of [ 'client', 'bench', 'assistant' ] ) {
+			context.cardId = cardId;
+			expect( mapStore.state.isCardNotTappable ).toBe( false );
+			expect( mapStore.state.isTapCueHidden ).toBe( true );
+		}
+
+		context.cardId = 'bench';
+		expect( mapStore.state.cardActionLabel ).toBe(
+			'WP-Bench — open its details.'
 		);
 	} );
 
@@ -646,7 +768,7 @@ describe( 'Core AI Living Block Map', () => {
 		cleanupKiosk();
 	} );
 
-	it( 'toggles a story off when its rail button is pressed again', () => {
+	it( 'replays rather than clears the flow already showing', () => {
 		const railButton = document.createElement( 'button' );
 		railButton.textContent = 'WordPress uses AI';
 		currentElement = railButton;
@@ -658,11 +780,41 @@ describe( 'Core AI Living Block Map', () => {
 		mapStore.actions.selectStory();
 		expect( context.story ).toBe( 'uses-ai' );
 		expect( context.announcement ).toContain(
-			'A plugin asks the AI Client for a capability.'
+			'A WordPress feature uses one common client to request an AI result.'
 		);
 
+		// The rail switches between flows; leaving them is the explorer's job.
 		mapStore.actions.selectStory();
-		expect( context.story ).toBe( '' );
+		expect( context.story ).toBe( 'uses-ai' );
+		expect( context.announcement ).toContain( 'replayed' );
+	} );
+
+	it( 'keeps the flow and restores focus when a panel closes', () => {
+		const card = root.querySelector(
+			'.core-ai-map__block--client .core-ai-map__block-body'
+		);
+		currentElement = card;
+		context.screen = 'map';
+		context.story = 'uses-ai';
+		context.cardId = 'client';
+
+		mapStore.actions.inspectCard();
+		expect( context.screen ).toBe( 'inspect' );
+		expect( context.inspect ).toBe( 'client' );
+		expect( context.story ).toBe( 'uses-ai' );
+		expect( mapStore.state.isFlowContextHidden ).toBe( false );
+		expect( mapStore.state.detailsBackLabel ).toBe(
+			'Back to WordPress uses AI'
+		);
+
+		currentElement = root.querySelector( '.core-ai-map__details-close' );
+		mapStore.actions.closeInspect();
+		jest.advanceTimersByTime( 40 );
+
+		expect( context.screen ).toBe( 'map' );
+		expect( context.story ).toBe( 'uses-ai' );
+		expect( context.announcement ).toContain( 'Back in WordPress uses AI' );
+		expect( document.activeElement ).toBe( card );
 	} );
 
 	it( 'returns to the attract screen and focuses its prompt', () => {

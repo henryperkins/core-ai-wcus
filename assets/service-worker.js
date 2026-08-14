@@ -4,7 +4,7 @@ const CACHE_PREFIX = 'core-ai-living-map-';
 const SCOPE_PATH = new URL( self.registration.scope ).pathname;
 const SCOPE_KEY = encodeURIComponent( SCOPE_PATH );
 const CACHE_SCOPE_PREFIX = `${ CACHE_PREFIX }${ SCOPE_KEY || 'kiosk' }-`;
-const CACHE_NAME = `${ CACHE_SCOPE_PREFIX }v3.1.3-review-1`;
+const CACHE_NAME = `${ CACHE_SCOPE_PREFIX }v3.2.0-review-1`;
 const CACHE_READY_KEY = new Request(
 	new URL( '__core-ai-map-cache-ready__', self.registration.scope ).href
 );
