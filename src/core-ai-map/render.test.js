@@ -22,7 +22,7 @@ const worker = fs.readFileSync(
 	'utf8'
 );
 
-describe( 'Living Block Map v3.1.3 server render', () => {
+describe( 'Living Block Map v3.2.0 server render', () => {
 	it( 'renders the provider plugin runtime layer and Connectors sidecar', () => {
 		expect( render ).toContain( 'core-ai-map__provider-plugin' );
 		expect( render ).toContain( 'AI provider plugin' );
@@ -183,7 +183,18 @@ describe( 'Living Block Map v3.1.3 server render', () => {
 			/&__topbar\s*\{[\s\S]*?pointer-events:\s*none/
 		);
 		expect( styles ).toMatch(
-			/&__reset\s*\{[\s\S]*?pointer-events:\s*auto/
+			/&__reset,\s*\n\s*&__browse\s*\{[\s\S]*?pointer-events:\s*auto/
+		);
+	} );
+
+	it( 'keeps the band under the map legible in both map modes', () => {
+		// The band carries a flow's takeaway or the explorer's description, so
+		// it is gated on the map screen rather than on having a story.
+		expect( styles ).toMatch(
+			/\.core-ai-map:not\(\.is-map\) \.core-ai-map__story-copy \{\s*opacity: 0;/
+		);
+		expect( styles ).not.toMatch(
+			/\.core-ai-map:not\(\.has-story\) \.core-ai-map__story-copy/
 		);
 	} );
 
@@ -208,7 +219,7 @@ describe( 'Living Block Map v3.1.3 server render', () => {
 
 	it( 'normalizes versioned cache keys and precaches built local fonts', () => {
 		expect( worker ).toContain(
-			'const CACHE_NAME = `${ CACHE_SCOPE_PREFIX }v3.1.3-review-1`;'
+			'const CACHE_NAME = `${ CACHE_SCOPE_PREFIX }v3.2.0-review-1`;'
 		);
 		expect( worker ).toContain( "searchParams.delete( 'ver' )" );
 		expect( worker ).toMatch(

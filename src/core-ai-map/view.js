@@ -99,6 +99,34 @@ const hasLayoutMember = ( layout, id ) =>
 const isLayoutSidecar = ( layout, id ) =>
 	Boolean( layout?.sidecars?.includes( id ) );
 
+/**
+ * Whether a card takes part in the selected flow.
+ *
+ * Participation is the single rule the interface is built on: a participating
+ * card is highlighted, tappable, cued, and carries a role. Everything else is
+ * parked, quiet, and inert until the visitor picks a different flow.
+ *
+ * @param {Object} context Element context.
+ * @param {string} id      Card id.
+ * @return {boolean} True when the card takes part in the selected flow.
+ */
+const isParticipant = ( context, id ) =>
+	Boolean( context.participants?.[ context.story ]?.includes( id ) );
+
+/**
+ * Fills the numbered placeholders in an authored template.
+ *
+ * @param {string}    template Template carrying %1$s style placeholders.
+ * @param {...string} values   Replacement values, in order.
+ * @return {string} The completed string.
+ */
+const format = ( template, ...values ) =>
+	values.reduce(
+		( carry, value, index ) =>
+			carry.replaceAll( `%${ index + 1 }$s`, value ),
+		String( template || '' )
+	);
+
 const previewList = ( context ) => {
 	if ( Array.isArray( context.previews ) && context.previews.length ) {
 		return context.previews;
@@ -275,6 +303,34 @@ const focusWithin = ( root, selector, delay = 40 ) => {
 			delay
 		);
 	}
+};
+
+/**
+ * Focuses step one of the assembled flow.
+ *
+ * A visitor is asked to follow the path in order, so a keyboard visitor starts
+ * where the path starts. The step numbers are written by the same render the
+ * flow selection triggers, so this reads the settled DOM rather than guessing
+ * which card leads a given flow.
+ *
+ * @param {Element} root  Kiosk root.
+ * @param {number}  delay Milliseconds to wait for the flow to render.
+ */
+const focusFirstStep = ( root, delay = 80 ) => {
+	if ( ! root ) {
+		return;
+	}
+
+	window.setTimeout( () => {
+		const leading = [ ...root.querySelectorAll( '.core-ai-map__step' ) ]
+			.find( ( node ) => node.textContent.trim() === '1' )
+			?.closest( 'button' );
+
+		(
+			leading ||
+			root.querySelector( '.core-ai-map__block-body:not([disabled])' )
+		)?.focus( { preventScroll: true } );
+	}, delay );
 };
 
 const clearTimers = ( timers, root ) => {
@@ -485,9 +541,65 @@ store( 'core-ai/map', {
 			const context = getContext();
 			return context.storyId !== context.story;
 		},
-		get isStoryCopyHidden() {
+		/*
+		 * The band under the map is always present on the map screen. A flow
+		 * fills it with that flow's takeaway; the component explorer fills it
+		 * with what the explorer is for.
+		 */
+		get isStoryBandHidden() {
+			return getContext().screen !== 'map';
+		},
+		get isBrowseNoteHidden() {
+			const context = getContext();
+			return (
+				context.screen !== 'map' || Boolean( activeLayout( context ) )
+			);
+		},
+		get isBrowseControlHidden() {
 			const context = getContext();
 			return context.screen !== 'map' || ! activeLayout( context );
+		},
+
+		/*
+		 * One instruction per state. The panel carries its own, so the header
+		 * line stands down while a panel or the run loop is open.
+		 */
+		get guidance() {
+			const context = getContext();
+			const strings = context.guidance || {};
+
+			if ( context.screen === 'attract' ) {
+				return strings.attract || '';
+			}
+
+			if ( ! activeLayout( context ) ) {
+				return strings.browse || '';
+			}
+
+			return format(
+				strings.flow,
+				context.storySteps?.[ context.story ] || ''
+			);
+		},
+		get isGuidanceHidden() {
+			return [ 'inspect', 'bench', 'about' ].includes(
+				getContext().screen
+			);
+		},
+		get inspectGuidance() {
+			const context = getContext();
+			return format(
+				context.guidance?.inspect,
+				context.storyTitles?.[ context.story ] || ''
+			);
+		},
+		get isFlowContextHidden() {
+			return ! activeLayout( getContext() );
+		},
+		get detailsBackLabel() {
+			const context = getContext();
+			const title = context.storyTitles?.[ context.story ];
+			return title ? `Back to ${ title }` : 'Back to the map';
 		},
 
 		get cardTransform() {
@@ -650,6 +762,46 @@ store( 'core-ai/map', {
 		get isCardNotInspected() {
 			const context = getContext();
 			return context.cardId !== context.inspect;
+		},
+
+		/*
+		 * Highlighted means tappable, and dimmed means it is not part of this
+		 * flow. Disabling the parked cards is what makes that promise true
+		 * rather than merely visual: a card that cannot answer is a card the
+		 * visitor cannot press.
+		 */
+		get isCardNotTappable() {
+			const context = getContext();
+			return (
+				Boolean( activeLayout( context ) ) &&
+				! isParticipant( context, context.cardId )
+			);
+		},
+		get isTapCueHidden() {
+			const context = getContext();
+			return ! (
+				context.screen === 'map' &&
+				Boolean( activeLayout( context ) ) &&
+				isParticipant( context, context.cardId )
+			);
+		},
+		get cardActionLabel() {
+			const context = getContext();
+			const strings = context.guidance || {};
+			const name = context.cardTitles?.[ context.cardId ] || '';
+
+			if (
+				activeLayout( context ) &&
+				isParticipant( context, context.cardId )
+			) {
+				return format(
+					strings.cardAction,
+					name,
+					context.storyTitles?.[ context.story ] || ''
+				);
+			}
+
+			return format( strings.cardActionBrowse, name );
 		},
 
 		get isStripLive() {
@@ -872,35 +1024,65 @@ store( 'core-ai/map', {
 	},
 
 	actions: {
+		/*
+		 * The exhibit is flow-first. The primary control opens an assembled,
+		 * meaningful example rather than a canvas of unexplained parts, so the
+		 * visitor learns how the pieces relate before they are asked to browse
+		 * them. The neutral map is still there, one control away.
+		 */
 		start() {
 			const context = getContext();
 			const root = getRoot( getElement().ref );
 			clearTimers( attractTimers, root );
 			context.screen = 'map';
+			context.story = context.openingStory || '';
+			context.inspect = '';
+			context.suggestion =
+				Math.floor( ( context.suggestion || 0 ) / 2 ) * 2;
+			runFlow( root, context );
+			context.announcement = `${
+				context.storyTitles?.[ context.story ] || ''
+			}. ${ context.storyTakeaways?.[ context.story ] || '' }`;
+			resetSchedulers.get( root )?.();
+			focusFirstStep( root );
+		},
+		browseAll() {
+			const context = getContext();
+			const root = getRoot( getElement().ref );
+			context.screen = 'map';
 			context.story = '';
 			context.inspect = '';
 			context.flowPhase = 'settled';
+			context.storyMotionPhase = 'settled';
+			context.benchPathsLive = false;
 			context.announcement =
-				'The blocks are on the canvas. Open a block, or follow a story.';
+				'Every component is on the canvas with no flow selected. Tap any component to learn what it is and where it belongs.';
 			resetSchedulers.get( root )?.();
-			focusWithin( root, '.core-ai-map__block-body' );
+			focusWithin( root, '.core-ai-map__block-body:not([disabled])' );
 		},
 		selectStory() {
 			const context = getContext();
 			const { ref } = getElement();
 			const root = getRoot( ref );
+			/*
+			 * Choosing a flow never clears one. The rail switches between
+			 * flows; leaving them behind is what the component explorer is
+			 * for. Pressing the flow already showing replays it, which is what
+			 * pressing it looks like it should do.
+			 */
 			const isCurrent = context.story === context.storyId;
 			context.screen = 'map';
 			context.inspect = '';
-			context.story = isCurrent ? '' : context.storyId;
+			context.story = context.storyId;
 			context.suggestion =
 				Math.floor( ( context.suggestion || 0 ) / 2 ) * 2;
 			runFlow( root, context );
-			context.announcement = isCurrent
-				? 'Story cleared. The blocks returned to the neutral map.'
-				: `${ ref.textContent.trim() }. ${
-						context.storyCopy?.[ context.storyId ] || ''
-				  }`;
+			context.announcement = `${
+				context.storyTitles?.[ context.storyId ] ||
+				ref.textContent.trim()
+			}${ isCurrent ? ' replayed' : '' }. ${
+				context.storyTakeaways?.[ context.storyId ] || ''
+			}`;
 			resetSchedulers.get( root )?.();
 		},
 		replayStory() {
@@ -959,9 +1141,17 @@ store( 'core-ai/map', {
 		closeInspect() {
 			const context = getContext();
 			const root = getRoot( getElement().ref );
+			/*
+			 * Closing a panel returns the visitor to the flow they were
+			 * learning, not to a cleared canvas, and focus goes back to the
+			 * card they opened.
+			 */
+			const title = context.storyTitles?.[ context.story ];
 			context.screen = 'map';
 			context.inspect = '';
-			context.announcement = 'Details closed. Back on the map.';
+			context.announcement = title
+				? `Details closed. Back in ${ title }.`
+				: 'Details closed. Back on the map.';
 			resetSchedulers.get( root )?.();
 			focusElement( root ? lastCardTriggers.get( root ) : undefined );
 		},

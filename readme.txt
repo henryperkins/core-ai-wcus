@@ -4,7 +4,7 @@ Tags: core-ai, kiosk, interactive
 Requires at least: 7.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 3.1.3
+Stable tag: 3.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ One dynamic, server-rendered WordPress block that explains the building blocks c
 
 == Description ==
 
-Core AI Living Block Map 3.1.3 provides one full-width `core-ai/core-ai-map` block. Server markup is enhanced with the WordPress Interactivity API.
+Core AI Living Block Map 3.2.0 provides one full-width `core-ai/core-ai-map` block. Server markup is enhanced with the WordPress Interactivity API.
 
 The attract workflow uses assemble, path, signal, caption, and release phases. After engagement, motion settles; reduced-motion users retain the same story, path, state, and caption information.
 
@@ -93,6 +93,13 @@ Run these commands when building from source:
 `npm run plugin-zip`
 
 == Changelog ==
+
+= 3.2.0 =
+
+* Made the exhibit flow-first: the welcome control opens "WordPress uses AI" directly, and the neutral canvas became the secondary "Browse all components" mode.
+* Gave every highlighted component the same interaction. The five outside actors and the transient provider-plugin layer now open contextual panels, so no numbered step is a dead tap.
+* Added one instruction per interface state, a "What this flow shows" takeaway beside each diagram, and per-flow role sections that open each panel with the flow it was reached from.
+* Kept the selected flow and restored focus to the opening card when a panel closes, and made non-participating cards inert rather than merely dimmed.
 
 = 3.1.3 =
 

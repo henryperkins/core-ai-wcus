@@ -291,23 +291,229 @@ async ( page ) => {
 	assertCardGeometry( attractGeometry, 'Attract composition' );
 
 	await page
-		.getByRole( 'button', { name: 'Add the blocks to the canvas' } )
+		.getByRole( 'button', { name: 'Explore the first flow' } )
 		.click();
-	await page.waitForTimeout( 80 );
+	await page.waitForTimeout( 120 );
 	assert(
-		await root.evaluate( ( element ) =>
-			element.classList.contains( 'is-map' )
+		await root.evaluate(
+			( element ) =>
+				element.classList.contains( 'is-map' ) &&
+				element.classList.contains( 'has-story' )
 		),
-		'Prompt did not open the neutral map.'
+		'Prompt did not open directly into the first flow.'
+	);
+
+	/*
+	 * The promised sequence is: choose a flow, follow the numbered path, tap a
+	 * highlighted component. Each of those three beats is checked here against
+	 * the flow the primary control opens.
+	 */
+	const flowFirst = await page.evaluate( () => {
+		const visible = ( element ) =>
+			Boolean( element ) &&
+			! element.hidden &&
+			element.getBoundingClientRect().height > 0;
+		const takeaway = [
+			...document.querySelectorAll( '.core-ai-map__takeaway' ),
+		].find( ( node ) => visible( node ) );
+		const cards = [
+			...document.querySelectorAll(
+				'.core-ai-map__actor-body, .core-ai-map__block-body, .core-ai-map__provider-plugin-body'
+			),
+		].filter( ( card ) => visible( card ) );
+
+		return {
+			guidance: document
+				.querySelector( '.core-ai-map__guidance' )
+				?.textContent.trim(),
+			takeaway: takeaway?.textContent.replace( /\s+/g, ' ' ).trim(),
+			focusedStep: document
+				.querySelector( '.core-ai-map' )
+				.ownerDocument.activeElement?.querySelector(
+					'.core-ai-map__step'
+				)
+				?.textContent.trim(),
+			// A highlighted card is tappable and cued; a dimmed one is neither.
+			cued: cards
+				.filter( ( card ) =>
+					visible( card.querySelector( '.core-ai-map__tap-cue' ) )
+				)
+				.map( ( card ) => card.getAttribute( 'aria-label' ) ),
+			dimmedWithCue: cards.filter(
+				( card ) =>
+					card.disabled &&
+					visible( card.querySelector( '.core-ai-map__tap-cue' ) )
+			).length,
+			enabledWithoutCue: cards.filter(
+				( card ) =>
+					! card.disabled &&
+					! visible( card.querySelector( '.core-ai-map__tap-cue' ) )
+			).length,
+			pointerOnDimmed: cards
+				.filter( ( card ) => card.disabled )
+				.map( ( card ) => getComputedStyle( card ).cursor ),
+		};
+	} );
+	observations.flowFirst = flowFirst;
+	assert(
+		flowFirst.guidance ===
+			'Follow 1 → 2 → 3. Tap a highlighted component to see what it contributes to this flow.',
+		`Flow guidance was wrong: ${ flowFirst.guidance }`
 	);
 	assert(
-		await page
-			.locator( '.core-ai-map__block-body' )
-			.first()
-			.evaluate(
-				( element ) => element === element.ownerDocument.activeElement
-			),
-		'Neutral map did not focus the first block.'
+		flowFirst.takeaway?.startsWith( 'What this flow shows' ) &&
+			flowFirst.takeaway.includes( 'one common client' ),
+		`Flow takeaway was missing or wrong: ${ flowFirst.takeaway }`
+	);
+	assert(
+		flowFirst.focusedStep === '1',
+		`Opening a flow did not focus step one; focused step ${ flowFirst.focusedStep }.`
+	);
+	assert(
+		flowFirst.cued.length === 5,
+		`Expected five cued participants, saw ${ flowFirst.cued.length }.`
+	);
+	assert(
+		flowFirst.cued.every( ( label ) =>
+			label?.includes( 'view its role in' )
+		),
+		'A participating card did not name its action in its accessible name.'
+	);
+	assert(
+		flowFirst.dimmedWithCue === 0 && flowFirst.enabledWithoutCue === 0,
+		'Tap cues did not match which cards take part in the flow.'
+	);
+	assert(
+		flowFirst.pointerOnDimmed.every( ( cursor ) => cursor !== 'pointer' ),
+		'A dimmed card still presented a tap affordance.'
+	);
+
+	// Opening a component must not cost the visitor the flow they were in.
+	const firstStep = page.locator(
+		'.core-ai-map__block--plugin .core-ai-map__block-body'
+	);
+	await firstStep.click();
+	await page.waitForTimeout( 140 );
+	const panelContext = await page.evaluate( () => {
+		const panel = document.querySelector(
+			'.core-ai-map__details article:not([hidden])'
+		);
+		const block = panel?.querySelector(
+			'.core-ai-map__details-context:not([hidden])'
+		);
+		return {
+			guidance: document
+				.querySelector( '.core-ai-map__details-guidance' )
+				?.textContent.trim(),
+			breadcrumb: block
+				?.querySelector( '.core-ai-map__breadcrumb' )
+				?.textContent.replace( /\s+/g, ' ' )
+				.trim(),
+			roles: block?.querySelectorAll( '.core-ai-map__role dd' ).length,
+			back: document
+				.querySelector( '.core-ai-map__details-close' )
+				?.textContent.replace( /\s+/g, ' ' )
+				.trim(),
+		};
+	} );
+	observations.panelContext = panelContext;
+	assert(
+		panelContext.guidance ===
+			'You are viewing this component’s role in “WordPress uses AI.”',
+		`Panel did not identify the active flow: ${ panelContext.guidance }`
+	);
+	assert(
+		panelContext.breadcrumb === 'WordPress uses AI → AI Plugin',
+		`Panel breadcrumb was wrong: ${ panelContext.breadcrumb }`
+	);
+	assert(
+		panelContext.roles === 3,
+		'Panel did not state what the component receives, does, and passes on.'
+	);
+	assert(
+		panelContext.back?.includes( 'Back to WordPress uses AI' ),
+		`Panel back control lost the flow: ${ panelContext.back }`
+	);
+
+	await page.locator( '.core-ai-map__details-close' ).click();
+	await page.waitForTimeout( 140 );
+	const afterClose = await page.evaluate( () => ( {
+		hasStory: document
+			.querySelector( '.core-ai-map' )
+			.classList.contains( 'has-story' ),
+		focusRestored: Boolean(
+			document
+				.querySelector( '.core-ai-map' )
+				.ownerDocument.activeElement?.closest(
+					'.core-ai-map__block--plugin'
+				)
+		),
+	} ) );
+	observations.afterClose = afterClose;
+	assert(
+		afterClose.hasStory,
+		'Closing the panel cleared the flow the visitor was learning.'
+	);
+	assert(
+		afterClose.focusRestored,
+		'Closing the panel did not return focus to the card that opened it.'
+	);
+
+	/*
+	 * The neutral canvas is now the secondary component explorer, reached on
+	 * purpose rather than landed on by default.
+	 */
+	await page
+		.getByRole( 'button', { name: 'Browse all components' } )
+		.click();
+	await page.waitForTimeout( 120 );
+	assert(
+		await root.evaluate(
+			( element ) =>
+				element.classList.contains( 'is-map' ) &&
+				! element.classList.contains( 'has-story' )
+		),
+		'Browse all components did not open the neutral map.'
+	);
+	assert(
+		await page.evaluate(
+			() =>
+				document
+					.querySelector( '.core-ai-map__guidance' )
+					?.textContent.trim() ===
+				'Tap any component to learn what it is and where it belongs.'
+		),
+		'Component explorer did not carry its own instruction.'
+	);
+	assert(
+		await page.evaluate( () => {
+			const note = document.querySelector(
+				'.core-ai-map__browse-note'
+			);
+			const band = document.querySelector(
+				'.core-ai-map__story-copy'
+			);
+			return (
+				! note.hidden &&
+				getComputedStyle( band ).opacity === '1' &&
+				note.textContent.includes( 'no flow selected' )
+			);
+		} ),
+		'The band under the map went blank in the component explorer.'
+	);
+	assert(
+		await page.evaluate(
+			() =>
+				[
+					...document.querySelectorAll(
+						'.core-ai-map__actor-body, .core-ai-map__block-body'
+					),
+				].every( ( card ) => ! card.disabled ) &&
+				! [
+					...document.querySelectorAll( '.core-ai-map__tap-cue' ),
+				].some( ( cue ) => ! cue.hidden )
+		),
+		'Component explorer did not make every component tappable and uncued.'
 	);
 	const neutral = await page.evaluate( () => {
 		const overlapArea = ( first, second ) =>
@@ -792,7 +998,7 @@ async ( page ) => {
 	await page.emulateMedia( { reducedMotion: 'reduce' } );
 	await page.reload( { waitUntil: 'networkidle' } );
 	await page
-		.getByRole( 'button', { name: 'Add the blocks to the canvas' } )
+		.getByRole( 'button', { name: 'Explore the first flow' } )
 		.click();
 	await page.locator( '.core-ai-map__rail button' ).nth( 1 ).click();
 	await page.waitForTimeout( 80 );
@@ -822,9 +1028,31 @@ async ( page ) => {
 			abilityOpacity: getComputedStyle(
 				document.querySelector( '.core-ai-map__token--ability' )
 			).opacity,
+			// The lesson cannot depend on having watched the movement.
+			takeaway: [
+				...document.querySelectorAll( '.core-ai-map__takeaway' ),
+			]
+				.find(
+					( node ) =>
+						! node.hidden &&
+						node.getBoundingClientRect().height > 0
+				)
+				?.textContent.replace( /\s+/g, ' ' )
+				.trim(),
+			guidance: document
+				.querySelector( '.core-ai-map__guidance' )
+				?.textContent.trim(),
 		};
 	} );
 	observations.reduced = reduced;
+	assert(
+		reduced.takeaway?.includes( 'does not bypass WordPress' ),
+		`Reduced motion did not state the flow's takeaway: ${ reduced.takeaway }`
+	);
+	assert(
+		reduced.guidance?.startsWith( 'Follow 1 → 2 → 3' ),
+		'Reduced motion did not carry the flow instruction.'
+	);
 	assert(
 		reduced.maxTransitionMs <= 0.011,
 		'Reduced-motion transitions exceeded 0.01ms.'
@@ -842,7 +1070,7 @@ async ( page ) => {
 	await page.setViewportSize( { width: 1024, height: 768 } );
 	await page.reload( { waitUntil: 'networkidle' } );
 	await page
-		.getByRole( 'button', { name: 'Add the blocks to the canvas' } )
+		.getByRole( 'button', { name: 'Explore the first flow' } )
 		.click();
 	const compatibility = await page.evaluate( () => {
 		const map = document.querySelector( '.core-ai-map' );

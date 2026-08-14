@@ -293,6 +293,10 @@ export default function Edit( { attributes, setAttributes } ) {
 							/>
 							<TextareaControl
 								label={ __( 'Caption', 'core-ai-map' ) }
+								help={ __(
+									'Shown on the welcome screen while this flow previews.',
+									'core-ai-map'
+								) }
 								value={ story.copy }
 								onChange={ ( value ) =>
 									setAttributes( {
@@ -300,6 +304,27 @@ export default function Edit( { attributes, setAttributes } ) {
 											stories,
 											index,
 											'copy',
+											value
+										),
+									} )
+								}
+							/>
+							<TextareaControl
+								label={ __(
+									'What this flow shows',
+									'core-ai-map'
+								) }
+								help={ __(
+									'The lesson stated in words beside the diagram, so it does not depend on watching the movement.',
+									'core-ai-map'
+								) }
+								value={ story.takeaway }
+								onChange={ ( value ) =>
+									setAttributes( {
+										stories: updateItem(
+											stories,
+											index,
+											'takeaway',
 											value
 										),
 									} )

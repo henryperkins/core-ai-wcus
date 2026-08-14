@@ -2,7 +2,7 @@
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "apiVersion": 3,
   "name": "core-ai/core-ai-map",
-  "version": "3.1.3",
+  "version": "3.2.0",
   "title": "Core AI Living Block Map",
   "category": "design",
   "icon": "wordpress",
@@ -27,11 +27,39 @@
     },
     "intro": {
       "type": "string",
-      "default": "See where the building blocks live and how they work together."
+      "default": "Choose a flow, follow the numbered path, then tap a highlighted component to understand its role."
     },
     "prompt": {
       "type": "string",
-      "default": "Add the blocks to the canvas"
+      "default": "Explore the first flow"
+    },
+    "labels": {
+      "type": "object",
+      "default": {
+        "railLabel": "Choose another flow",
+        "browseLabel": "Browse all components",
+        "browseDescription": "Every component on one canvas, with no flow selected.",
+        "takeawayHeading": "What this flow shows",
+        "roleHeading": "Its role in this flow",
+        "lessonHeading": "What this tells you",
+        "definitionHeading": "What this component is",
+        "technicalHeading": "Technical detail",
+        "tapCue": "Tap for its role",
+        "receivesLabel": "Receives",
+        "doesLabel": "Does",
+        "returnsLabel": "Passes on"
+      }
+    },
+    "guidance": {
+      "type": "object",
+      "default": {
+        "attract": "Choose a flow to begin.",
+        "flow": "Follow %1$s. Tap a highlighted component to see what it contributes to this flow.",
+        "inspect": "You are viewing this component’s role in “%1$s.”",
+        "browse": "Tap any component to learn what it is and where it belongs.",
+        "cardAction": "%1$s — view its role in “%2$s.”",
+        "cardActionBrowse": "%1$s — open its details."
+      }
     },
     "inactivityTimeout": {
       "type": "number",
@@ -152,22 +180,26 @@
         {
           "id": "uses-ai",
           "title": "WordPress uses AI",
-          "copy": "A plugin asks the AI Client for a capability. The Client routes through a configured provider plugin to an external AI service; Connectors supplies discovery, configuration, and credentials beside the request path."
+          "copy": "A plugin asks the AI Client for a capability. The Client routes through a configured provider plugin to an external AI service; Connectors supplies discovery, configuration, and credentials beside the request path.",
+          "takeaway": "A WordPress feature uses one common client to request an AI result. Provider setup supports the path, while the external AI service remains outside WordPress."
         },
         {
           "id": "uses-wp",
           "title": "AI uses WordPress",
-          "copy": "An authorized assistant calls in through the MCP Adapter, which translates the call into a WordPress ability. Permission still belongs to WordPress."
+          "copy": "An authorized assistant calls in through the MCP Adapter, which translates the call into a WordPress ability. Permission still belongs to WordPress.",
+          "takeaway": "An outside assistant does not bypass WordPress. The MCP Adapter translates the request, and the selected ability still applies WordPress permissions."
         },
         {
           "id": "learns",
           "title": "An agent learns WordPress",
-          "copy": "Agent Skills attaches current WordPress guidance to a coding agent, which then starts the task. All of this happens outside the site — nothing inside WordPress runs."
+          "copy": "Agent Skills attaches current WordPress guidance to a coding agent, which then starts the task. All of this happens outside the site — nothing inside WordPress runs.",
+          "takeaway": "Agent Skills changes the guidance available to a coding agent. It does not run anything on the WordPress site."
         },
         {
           "id": "tests",
           "title": "WordPress tests the result",
-          "copy": "WP-Bench runs what the agent produced inside a sandboxed WordPress, and WordPress itself decides whether it passed. Evidence, not vibes."
+          "copy": "WP-Bench runs what the agent produced inside a sandboxed WordPress, and WordPress itself decides whether it passed. Evidence, not vibes.",
+          "takeaway": "Generated code runs in a disposable WordPress environment and is judged by WordPress tests, not by another AI model."
         }
       ]
     },
@@ -179,6 +211,14 @@
           "badge": "Core API · 6.9",
           "title": "Abilities API",
           "lede": "Abilities are the list of things this site can do. Each one declares its inputs, its outputs, who is allowed to run it, and what happens when it runs.",
+          "roles": {
+            "uses-wp": {
+              "receives": "The translated call, naming the action the assistant wants WordPress to perform.",
+              "does": "Checks whether the current user is allowed to perform it, then runs the registered callback.",
+              "returns": "A typed result, or a refusal.",
+              "lesson": "Connecting an assistant does not give it unlimited access. WordPress still decides what may run."
+            }
+          },
           "connectHeading": "How it connects",
           "connectLayout": "chain",
           "connect": [
@@ -211,6 +251,14 @@
           "badge": "Core API · 7.0",
           "title": "AI Client",
           "lede": "A plugin asks for a capability and the kind of result it needs. The AI Client routes through an installed provider plugin to a compatible external service; Connectors supplies that plugin’s configuration and credentials.",
+          "roles": {
+            "uses-ai": {
+              "receives": "A capability request from a WordPress feature.",
+              "does": "Finds a compatible configured provider plugin and routes the request to it.",
+              "returns": "The provider’s response in a consistent WordPress format.",
+              "lesson": "WordPress features can request AI capabilities without integrating every external provider separately."
+            }
+          },
           "connectHeading": "How it connects",
           "connectLayout": "chain",
           "connect": [
@@ -240,6 +288,14 @@
           "badge": "Core API · 7.0",
           "title": "Connectors",
           "lede": "Where a site owner discovers and configures provider plugins, stores credentials, and sees connection status. It supports the request path; it is not the request executor.",
+          "roles": {
+            "uses-ai": {
+              "receives": "Nothing in the request path — it sits beside it.",
+              "does": "Discovers provider plugins and holds the site owner’s configuration, credentials, and connection status.",
+              "returns": "The configuration the AI Client reads when it chooses a route.",
+              "lesson": "Setup is a separate concern from the request. Connectors supports the path; it never executes it."
+            }
+          },
           "connectHeading": "Connection states",
           "connectLayout": "grid",
           "connect": [
@@ -277,6 +333,14 @@
           "badge": "Experimental reference plugin",
           "title": "AI Plugin",
           "lede": "Where the foundations become things people can use: alt text, summaries, titles, editorial notes, image generation. Nothing is on by default: you enable one experiment at a time.",
+          "roles": {
+            "uses-ai": {
+              "receives": "A person’s request in the editor — alt text, a summary, a title.",
+              "does": "Turns it into a capability request and hands that to the AI Client.",
+              "returns": "A suggestion the person reviews before anything is applied.",
+              "lesson": "The feature decides what to ask for. A person still decides what to keep."
+            }
+          },
           "connectHeading": "How it connects",
           "connectLayout": "chain",
           "connect": [
@@ -309,6 +373,14 @@
           "badge": "WordPress plugin · not in Core",
           "title": "MCP Adapter",
           "lede": "Translation at the edge of the site. It exposes the abilities their authors marked public to authorized outside assistants as MCP tools, resources, and prompts — and translates their calls back into WordPress work.",
+          "roles": {
+            "uses-wp": {
+              "receives": "An MCP tool call from an authorized outside assistant.",
+              "does": "Translates the call into a WordPress ability and hands it to WordPress to run.",
+              "returns": "The ability’s typed result, translated back into MCP.",
+              "lesson": "The adapter is a translator at the edge of the site. It does not create the action, and it does not grant the permission."
+            }
+          },
           "connectHeading": "How it connects",
           "connectLayout": "chain",
           "connect": [
@@ -341,6 +413,14 @@
           "badge": "Early benchmark",
           "title": "WP-Bench",
           "lede": "A test bench, not part of any live request. It measures whether the code an agent writes for WordPress actually runs.",
+          "roles": {
+            "tests": {
+              "receives": "The code the agent produced.",
+              "does": "Runs it inside a real WordPress created for this one test, then throws that install away.",
+              "returns": "Pass or fail, decided by WordPress assertions rather than by another model.",
+              "lesson": "Generated code is judged by WordPress tests, not by another AI model."
+            }
+          },
           "connectHeading": "How it connects",
           "connectLayout": "chain",
           "connect": [
@@ -373,6 +453,14 @@
           "badge": "Contributor guidance",
           "title": "Agent Skills",
           "lede": "Portable instruction bundles — guidance, checklists, references — that help a coding assistant follow current WordPress practice. Nothing here runs on a live site.",
+          "roles": {
+            "learns": {
+              "receives": "A selection of WordPress guidance — checklists, references, procedures.",
+              "does": "Supplies those instructions to the coding agent before it writes the requested code.",
+              "returns": "An agent that follows current WordPress practice.",
+              "lesson": "The guidance affects the agent’s work outside the site; it does not execute on a live WordPress installation."
+            }
+          },
           "connectHeading": "How it connects",
           "connectLayout": "chain",
           "connect": [
@@ -396,6 +484,82 @@
           "href": "https://github.com/WordPress/agent-skills",
           "linkLabel": "github.com/WordPress/agent-skills",
           "qr": "qr/skills.svg"
+        },
+        {
+          "id": "assistant",
+          "badge": "Not WordPress",
+          "title": "AI assistant",
+          "lede": "A program outside WordPress — a chat assistant, an editor, an agent — that speaks MCP. It holds no WordPress privileges of its own, and every request it makes is checked by WordPress before anything runs.",
+          "roles": {
+            "uses-wp": {
+              "receives": "A person’s instruction, outside WordPress.",
+              "does": "Decides a WordPress action is needed and issues an MCP tool call.",
+              "returns": "Whatever WordPress allows back — nothing more.",
+              "lesson": "The assistant is a client, not an authority. It asks; it does not decide."
+            }
+          }
+        },
+        {
+          "id": "agent",
+          "badge": "Not WordPress",
+          "title": "Coding agent",
+          "lede": "A coding assistant that writes plugin and theme code. It works outside the site — on a developer’s machine or in a hosted environment — and never runs against a live install.",
+          "roles": {
+            "learns": {
+              "receives": "The attached guidance, plus the task it was asked to do.",
+              "does": "Writes plugin or theme code, outside the site.",
+              "returns": "Code a person still has to review and install.",
+              "lesson": "Nothing here touches a running site. The agent produces text, not changes."
+            },
+            "tests": {
+              "receives": "One task and its requirements, as a single message.",
+              "does": "Writes PHP. It gets no conversation, no retry, and no sight of the assertions.",
+              "returns": "Whatever it wrote, parsed out of the reply and passed on unrepaired.",
+              "lesson": "Every model gets exactly the same task, so a difference in the result is a difference in the model."
+            }
+          }
+        },
+        {
+          "id": "provider",
+          "badge": "Not WordPress",
+          "title": "External AI service",
+          "lede": "The model provider a site owner configured: an API run by someone else, on someone else’s infrastructure. WordPress sends it a request and receives a result.",
+          "roles": {
+            "uses-ai": {
+              "receives": "The request, once it has crossed out of WordPress.",
+              "does": "Runs the model on infrastructure WordPress does not control.",
+              "returns": "A result the provider plugin hands back to the AI Client.",
+              "lesson": "The model is never inside WordPress. Everything WordPress guarantees stops at this boundary."
+            }
+          }
+        },
+        {
+          "id": "task",
+          "badge": "Not WordPress",
+          "title": "A WordPress task",
+          "lede": "The actual work someone wants done: a plugin, a theme, a fix. On this map it stands for the job itself, not for any code running on a site.",
+          "roles": {
+            "learns": {
+              "receives": "The agent’s attention, once the guidance is attached.",
+              "does": "Stands for the real work — a plugin, a theme, a fix.",
+              "returns": "Finished code, still outside WordPress.",
+              "lesson": "The site is not involved until a person installs what the agent wrote."
+            }
+          }
+        },
+        {
+          "id": "provider-plugin",
+          "badge": "WordPress plugin",
+          "title": "AI provider plugin",
+          "lede": "A provider-specific integration installed as a WordPress plugin. It speaks one external service’s protocol using the credentials the site owner stored through Connectors.",
+          "roles": {
+            "uses-ai": {
+              "receives": "The routed request from the AI Client.",
+              "does": "Speaks one external service’s protocol, using the stored credentials.",
+              "returns": "That service’s reply, handed back to the AI Client.",
+              "lesson": "The provider-specific part is a plugin. Swapping providers does not change the feature that asked."
+            }
+          }
         }
       ]
     }

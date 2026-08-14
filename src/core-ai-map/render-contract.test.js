@@ -51,7 +51,7 @@ const renderLegacyMarkup = ( profile = 'legacy' ) => {
 	const legacyMetadata = JSON.parse(
 		readFileSync( join( __dirname, 'fixtures', 'block-v0.2.json' ), 'utf8' )
 	);
-	const sourceMetadata = profile === 'prebooth' ? metadata : legacyMetadata;
+	const sourceMetadata = profile === 'legacy' ? legacyMetadata : metadata;
 	const attributes = JSON.parse(
 		JSON.stringify(
 			Object.fromEntries(
@@ -476,5 +476,163 @@ describe( 'Core AI map render contract', () => {
 		expect(
 			container.querySelector( '.core-ai-map__brand small' )
 		).toBeNull();
+	} );
+
+	it( 'gives every participant in every flow a role to explain', () => {
+		const context = renderDefaultContext();
+		const metadata = JSON.parse( readFileSync( metadataPath, 'utf8' ) );
+		const roles = Object.fromEntries(
+			metadata.attributes.panels.default.map( ( panel ) => [
+				panel.id,
+				panel.roles || {},
+			] )
+		);
+
+		const missing = [];
+		for ( const [ storyId, participants ] of Object.entries(
+			context.participants
+		) ) {
+			for ( const cardId of participants ) {
+				if ( ! roles[ cardId ]?.[ storyId ] ) {
+					missing.push( `${ storyId }/${ cardId }` );
+				}
+			}
+		}
+
+		expect( missing ).toEqual( [] );
+
+		// Every role states what it receives, does, passes on, and teaches.
+		for ( const panelRoles of Object.values( roles ) ) {
+			for ( const role of Object.values( panelRoles ) ) {
+				for ( const key of [
+					'receives',
+					'does',
+					'returns',
+					'lesson',
+				] ) {
+					expect( typeof role[ key ] ).toBe( 'string' );
+					expect( role[ key ].length ).toBeGreaterThan( 0 );
+				}
+			}
+		}
+	} );
+
+	it( 'gives every flow a takeaway and a numbered run to follow', () => {
+		const context = renderDefaultContext();
+
+		expect( context.openingStory ).toBe( 'uses-ai' );
+		expect( Object.keys( context.storyTakeaways ) ).toEqual( [
+			'uses-ai',
+			'uses-wp',
+			'learns',
+			'tests',
+		] );
+		for ( const takeaway of Object.values( context.storyTakeaways ) ) {
+			expect( takeaway.length ).toBeGreaterThan( 0 );
+		}
+
+		expect( context.storySteps ).toEqual( {
+			'uses-ai': '1 → 2 → 3',
+			'uses-wp': '1 → 2 → 3',
+			learns: '1 → 2 → 3',
+			tests: '1 → 2',
+		} );
+	} );
+
+	it( 'presents every card through the same interaction pattern', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup( 'current' );
+
+		// No card is a passive div wearing a card's clothes.
+		expect(
+			container.querySelectorAll( 'div.core-ai-map__actor-body' )
+		).toHaveLength( 0 );
+
+		const controls = [
+			...container.querySelectorAll(
+				'.core-ai-map__actor-body, .core-ai-map__block-body, .core-ai-map__provider-plugin-body'
+			),
+		];
+		expect( controls ).toHaveLength( 12 );
+
+		for ( const control of controls ) {
+			expect( control.tagName ).toBe( 'BUTTON' );
+			expect( control.getAttribute( 'data-wp-on--click' ) ).toBe(
+				'actions.inspectCard'
+			);
+			expect( control.getAttribute( 'data-wp-bind--aria-label' ) ).toBe(
+				'state.cardActionLabel'
+			);
+			expect(
+				control.querySelector( '.core-ai-map__tap-cue' )
+			).not.toBeNull();
+
+			// Each control names a panel that actually exists.
+			const panelId = control.getAttribute( 'aria-controls' );
+			expect( container.querySelector( `#${ panelId }` ) ).not.toBeNull();
+		}
+	} );
+
+	it( 'opens each panel with the flow it was reached from', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup( 'current' );
+
+		const client = container.querySelector(
+			'#core-ai-map-test-panel-client'
+		);
+		const contextBlock = client.querySelector(
+			'.core-ai-map__details-context'
+		);
+
+		expect(
+			contextBlock.querySelector( '.core-ai-map__breadcrumb' ).textContent
+		).toContain( 'WordPress uses AI' );
+		expect( contextBlock.getAttribute( 'data-wp-bind--hidden' ) ).toBe(
+			'state.isStoryNotSelected'
+		);
+		expect(
+			contextBlock.querySelectorAll( '.core-ai-map__role dd' )
+		).toHaveLength( 3 );
+		expect(
+			contextBlock.querySelector( '.core-ai-map__details-lesson' )
+				.textContent
+		).toContain( 'without integrating every external provider separately' );
+
+		// The coding agent takes part in two flows and explains both.
+		expect(
+			container
+				.querySelector( '#core-ai-map-test-panel-agent' )
+				.querySelectorAll( '.core-ai-map__details-context' )
+		).toHaveLength( 2 );
+	} );
+
+	it( 'labels the flow controls and the component explorer in the open', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup( 'current' );
+
+		const rail = container.querySelector( '.core-ai-map__rail' );
+		const railLabel = rail.querySelector( '.core-ai-map__rail-label' );
+
+		expect( railLabel.textContent.trim() ).toBe( 'Choose another flow' );
+		expect( rail.getAttribute( 'aria-labelledby' ) ).toBe(
+			railLabel.getAttribute( 'id' )
+		);
+		expect(
+			container.querySelector( '.core-ai-map__browse' ).textContent.trim()
+		).toBe( 'Browse all components' );
+
+		const guidance = container.querySelector( '.core-ai-map__guidance' );
+		expect( guidance.closest( '.core-ai-map__topbar' ) ).not.toBeNull();
+		expect( guidance.textContent.trim() ).toBe( 'Choose a flow to begin.' );
+
+		const takeaways = [
+			...container.querySelectorAll( '.core-ai-map__takeaway' ),
+		];
+		expect( takeaways ).toHaveLength( 4 );
+		for ( const takeaway of takeaways ) {
+			expect( takeaway.querySelector( 'strong' ).textContent ).toBe(
+				'What this flow shows'
+			);
+		}
 	} );
 } );
