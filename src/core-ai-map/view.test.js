@@ -215,6 +215,110 @@ describe( 'Core AI Living Block Map', () => {
 		expect( themeHeader.hasAttribute( 'aria-hidden' ) ).toBe( false );
 	} );
 
+	it( 'synchronizes SVG state markers from the final kiosk effect', () => {
+		root.insertAdjacentHTML(
+			'beforeend',
+			`<svg class="core-ai-map__wires">
+				<path data-core-ai-rule="left"></path>
+				<path data-core-ai-rule="right"></path>
+				<g class="core-ai-map__hairlines is-hidden"></g>
+				<g data-core-ai-preview="0"><path class="core-ai-map__preview-path"></path><circle class="core-ai-map__preview-signal"></circle></g>
+				<g data-core-ai-preview="1" hidden><path class="core-ai-map__preview-path"></path><circle class="core-ai-map__preview-signal"></circle></g>
+				<g class="core-ai-map__flow">
+					<path data-core-ai-story="uses-ai" data-core-ai-variant="edges"></path>
+					<path data-core-ai-story="uses-ai" data-core-ai-variant="rest"></path>
+				</g>
+				<path class="core-ai-map__config-path" data-core-ai-story="uses-ai" data-core-ai-variant="edges" hidden></path>
+				<path class="core-ai-map__config-path" data-core-ai-story="uses-ai" data-core-ai-variant="rest" hidden></path>
+			</svg>`
+		);
+		context.screen = 'map';
+		context.story = 'uses-ai';
+		context.recompose = false;
+		context.flowPhase = 'transition';
+		const effects = [];
+		useEffect.mockImplementation( ( callback ) =>
+			effects.push( callback )
+		);
+
+		mapStore.callbacks.useKiosk();
+		effects.at( -1 )();
+
+		const wires = root.querySelector( '.core-ai-map__wires' );
+		expect(
+			wires.querySelector( '[data-core-ai-rule="right"]' ).classList
+		).toContain( 'is-lit' );
+		expect(
+			wires.querySelector( '[data-core-ai-rule="left"]' ).classList
+		).not.toContain( 'is-lit' );
+		expect(
+			wires.querySelector( '.core-ai-map__hairlines' ).classList
+		).not.toContain( 'is-hidden' );
+		expect(
+			wires
+				.querySelector(
+					'[data-core-ai-variant="rest"]:not(.core-ai-map__config-path)'
+				)
+				.classList.contains( 'is-visible' )
+		).toBe( true );
+		expect(
+			wires
+				.querySelector(
+					'[data-core-ai-variant="rest"]:not(.core-ai-map__config-path)'
+				)
+				.classList.contains( 'is-live' )
+		).toBe( true );
+		expect(
+			wires
+				.querySelector(
+					'[data-core-ai-variant="edges"]:not(.core-ai-map__config-path)'
+				)
+				.classList.contains( 'is-visible' )
+		).toBe( false );
+		expect(
+			wires.querySelector(
+				'.core-ai-map__config-path[data-core-ai-variant="rest"]'
+			).hidden
+		).toBe( false );
+		expect(
+			wires.querySelector(
+				'.core-ai-map__config-path[data-core-ai-variant="edges"]'
+			).hidden
+		).toBe( true );
+
+		context.screen = 'attract';
+		context.story = '';
+		context.recompose = true;
+		context.previewIndex = 1;
+		context.previewPhase = 'signalling';
+		effects.at( -1 )();
+
+		expect(
+			wires.querySelector( '.core-ai-map__hairlines' ).classList
+		).toContain( 'is-hidden' );
+		expect(
+			wires.querySelector( '[data-core-ai-preview="0"]' ).hidden
+		).toBe( true );
+		expect(
+			wires.querySelector( '[data-core-ai-preview="1"]' ).hidden
+		).toBe( false );
+		expect(
+			wires
+				.querySelector( '[data-core-ai-preview="1"] path' )
+				.classList.contains( 'is-live' )
+		).toBe( true );
+		expect(
+			wires
+				.querySelector( '[data-core-ai-preview="1"] circle' )
+				.classList.contains( 'is-live' )
+		).toBe( true );
+		expect(
+			wires.querySelector(
+				'.core-ai-map__config-path[data-core-ai-variant="rest"]'
+			).hidden
+		).toBe( true );
+	} );
+
 	afterEach( () => {
 		jest.clearAllTimers();
 		jest.useRealTimers();

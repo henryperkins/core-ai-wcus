@@ -151,7 +151,7 @@ echo ob_get_clean();
 		},
 	} );
 
-	if ( result.status !== 0 ) {
+	if ( result.status !== 0 || result.stderr.trim() ) {
 		throw new Error(
 			result.stderr || 'Could not render legacy map markup.'
 		);
@@ -161,6 +161,21 @@ echo ob_get_clean();
 };
 
 describe( 'Core AI map render contract', () => {
+	it( 'renders SVG without Interactivity directives or PHP stderr', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup();
+
+		const directives = Array.from( container.querySelectorAll( 'svg' ) )
+			.flatMap( ( svg ) => [ svg, ...svg.querySelectorAll( '*' ) ] )
+			.flatMap( ( element ) =>
+				Array.from( element.attributes )
+					.map( ( attribute ) => attribute.name )
+					.filter( ( name ) => name.startsWith( 'data-wp-' ) )
+			);
+
+		expect( directives ).toEqual( [] );
+	} );
+
 	it( 'keeps the neutral composition clear of every card intersection', () => {
 		const container = document.createElement( 'div' );
 		container.innerHTML = renderLegacyMarkup();

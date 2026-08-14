@@ -141,13 +141,121 @@ const reducedMotion = ( root ) =>
 			window.matchMedia?.( '(prefers-reduced-motion: reduce)' ).matches
 	);
 
-const isCurrentPathVariant = ( context ) => {
-	if ( ! context.story || context.storyId !== context.story ) {
+const isCurrentPathVariant = (
+	context,
+	storyId = context.storyId,
+	variant = context.variant
+) => {
+	if ( ! context.story || storyId !== context.story ) {
 		return false;
 	}
-	return (
-		context.variant === ( context.recompose === false ? 'rest' : 'edges' )
+	return variant === ( context.recompose === false ? 'rest' : 'edges' );
+};
+
+const isRuleLit = ( context, side = context.side ) =>
+	( activeLayout( context )?.crosses || [] ).includes( side );
+
+const areHairlinesHidden = ( context ) =>
+	context.screen === 'attract' || isRecomposed( context );
+
+const isEdgeLive = ( context, root, storyId, variant ) =>
+	Boolean(
+		isCurrentPathVariant( context, storyId, variant ) &&
+			( context.flowPhase ?? 'transition' ) === 'transition' &&
+			! reducedMotion( root )
 	);
+
+const isPreviewHidden = ( context, previewId = context.previewId ) =>
+	context.screen !== 'attract' ||
+	Number( previewId ) !== Number( context.previewIndex );
+
+const isPreviewPathVisible = ( context, root, previewId ) =>
+	Boolean(
+		! isPreviewHidden( context, previewId ) &&
+			( reducedMotion( root ) ||
+				[ 'drawing', 'signalling', 'settled' ].includes(
+					context.previewPhase
+				) )
+	);
+
+const isPreviewTextVisible = ( context, root, previewId ) =>
+	Boolean(
+		! isPreviewHidden( context, previewId ) &&
+			( reducedMotion( root ) ||
+				[ 'signalling', 'settled' ].includes( context.previewPhase ) )
+	);
+
+const isPreviewSignalLive = ( context, root, previewId ) =>
+	Boolean(
+		! isPreviewHidden( context, previewId ) &&
+			context.previewPhase === 'signalling' &&
+			! reducedMotion( root )
+	);
+
+const isProviderConfigPathHidden = ( context, storyId, variant ) =>
+	context.screen !== 'map' ||
+	! isCurrentPathVariant( context, storyId, variant );
+
+const syncSvgState = ( root, context ) => {
+	if ( ! root ) {
+		return;
+	}
+
+	root.querySelectorAll( '[data-core-ai-rule]' ).forEach( ( rule ) => {
+		rule.classList.toggle(
+			'is-lit',
+			isRuleLit( context, rule.dataset.coreAiRule )
+		);
+	} );
+	root.querySelectorAll( '.core-ai-map__hairlines' ).forEach(
+		( hairlines ) => {
+			hairlines.classList.toggle(
+				'is-hidden',
+				areHairlinesHidden( context )
+			);
+		}
+	);
+	root.querySelectorAll( '[data-core-ai-preview]' ).forEach( ( preview ) => {
+		const previewId = preview.dataset.coreAiPreview;
+		const hidden = isPreviewHidden( context, previewId );
+		preview.hidden = hidden;
+		preview.querySelectorAll( 'path' ).forEach( ( path ) => {
+			path.classList.toggle(
+				'is-live',
+				isPreviewPathVisible( context, root, previewId )
+			);
+		} );
+		preview
+			.querySelectorAll( '.core-ai-map__preview-signal' )
+			.forEach( ( signal ) => {
+				signal.classList.toggle(
+					'is-live',
+					isPreviewSignalLive( context, root, previewId )
+				);
+			} );
+	} );
+	root.querySelectorAll( '.core-ai-map__flow [data-core-ai-story]' ).forEach(
+		( path ) => {
+			const { coreAiStory: storyId, coreAiVariant: variant } =
+				path.dataset;
+			const visible = isCurrentPathVariant( context, storyId, variant );
+			path.classList.toggle( 'is-visible', visible );
+			path.classList.toggle(
+				'is-live',
+				isEdgeLive( context, root, storyId, variant )
+			);
+		}
+	);
+	root.querySelectorAll(
+		'.core-ai-map__config-path[data-core-ai-story]'
+	).forEach( ( path ) => {
+		const { coreAiStory: storyId, coreAiVariant: variant } = path.dataset;
+		path.hidden = isProviderConfigPathHidden( context, storyId, variant );
+	} );
+	root.querySelectorAll( '[data-core-ai-bench-flow]' ).forEach( ( flow ) => {
+		flow.classList.toggle( 'is-live', Boolean( context.benchPathsLive ) );
+		flow.classList.toggle( 'is-visible', context.screen === 'bench' );
+	} );
 };
 
 const focusElement = ( element, delay = 40 ) => {
@@ -575,13 +683,10 @@ store( 'core-ai/map', {
 
 		get isRuleLit() {
 			const context = getContext();
-			return ( activeLayout( context )?.crosses || [] ).includes(
-				context.side
-			);
+			return isRuleLit( context );
 		},
 		get areHairlinesHidden() {
-			const context = getContext();
-			return context.screen === 'attract' || isRecomposed( context );
+			return areHairlinesHidden( getContext() );
 		},
 		get isOutsideZoneLit() {
 			return activeLayout( getContext() )?.zone === 'outside';
@@ -606,10 +711,11 @@ store( 'core-ai/map', {
 		},
 		get isEdgeLive() {
 			const context = getContext();
-			return Boolean(
-				isCurrentPathVariant( context ) &&
-					( context.flowPhase ?? 'transition' ) === 'transition' &&
-					! reducedMotion( getRoot( getElement().ref ) )
+			return isEdgeLive(
+				context,
+				getRoot( getElement().ref ),
+				context.storyId,
+				context.variant
 			);
 		},
 		get isSparkLive() {
@@ -639,38 +745,30 @@ store( 'core-ai/map', {
 		},
 
 		get isPreviewHidden() {
-			const context = getContext();
-			return (
-				context.screen !== 'attract' ||
-				Number( context.previewId ) !== Number( context.previewIndex )
-			);
+			return isPreviewHidden( getContext() );
 		},
 		get isPreviewPathVisible() {
 			const context = getContext();
-			return Boolean(
-				! this.isPreviewHidden &&
-					( reducedMotion( getRoot( getElement().ref ) ) ||
-						[ 'drawing', 'signalling', 'settled' ].includes(
-							context.previewPhase
-						) )
+			return isPreviewPathVisible(
+				context,
+				getRoot( getElement().ref ),
+				context.previewId
 			);
 		},
 		get isPreviewTextVisible() {
 			const context = getContext();
-			return Boolean(
-				! this.isPreviewHidden &&
-					( reducedMotion( getRoot( getElement().ref ) ) ||
-						[ 'signalling', 'settled' ].includes(
-							context.previewPhase
-						) )
+			return isPreviewTextVisible(
+				context,
+				getRoot( getElement().ref ),
+				context.previewId
 			);
 		},
 		get isPreviewSignalLive() {
 			const context = getContext();
-			return Boolean(
-				! this.isPreviewHidden &&
-					context.previewPhase === 'signalling' &&
-					! reducedMotion( getRoot( getElement().ref ) )
+			return isPreviewSignalLive(
+				context,
+				getRoot( getElement().ref ),
+				context.previewId
 			);
 		},
 
@@ -718,8 +816,10 @@ store( 'core-ai/map', {
 		},
 		get isProviderConfigPathHidden() {
 			const context = getContext();
-			return (
-				context.screen !== 'map' || ! isCurrentPathVariant( context )
+			return isProviderConfigPathHidden(
+				context,
+				context.storyId,
+				context.variant
 			);
 		},
 
@@ -1351,6 +1451,19 @@ store( 'core-ai/map', {
 				context.story,
 				context.inspect,
 				context.benchStage,
+			] );
+
+			useEffect( () => {
+				const { ref: root } = getElement();
+				syncSvgState( root, getContext() );
+			}, [
+				context.screen,
+				context.story,
+				context.recompose,
+				context.flowPhase,
+				context.previewIndex,
+				context.previewPhase,
+				context.shapes,
 			] );
 		},
 	},

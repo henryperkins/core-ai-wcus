@@ -1048,13 +1048,12 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						<path
 							class="core-ai-map__rule core-ai-map__rule--<?php echo esc_attr( $side ); ?>"
 							d="<?php echo esc_attr( $path ); ?>"
-							<?php echo wp_interactivity_data_wp_context( array( 'side' => $side ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-							data-wp-class--is-lit="state.isRuleLit"
+							data-core-ai-rule="<?php echo esc_attr( $side ); ?>"
 						></path>
 					<?php endforeach; ?>
 				</g>
 
-				<g class="core-ai-map__hairlines" data-wp-class--is-hidden="state.areHairlinesHidden">
+				<g class="core-ai-map__hairlines is-hidden">
 					<path d="M504 234 L556 234"></path>
 					<path d="M792 234 L912 234"></path>
 					<path d="M674 308 L674 400"></path>
@@ -1065,46 +1064,38 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				<g
 					class="core-ai-map__preview-flow"
 					data-core-ai-preview="0"
-					<?php echo wp_interactivity_data_wp_context( array( 'previewId' => 0 ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-					data-wp-bind--hidden="state.isPreviewHidden"
 				>
-					<path d="M449 259 L488 259" data-wp-class--is-live="state.isPreviewPathVisible" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
-					<path d="M677 259 L716 259" data-wp-class--is-live="state.isPreviewPathVisible" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
-					<path d="M876 259 L1060 259" data-wp-class--is-live="state.isPreviewPathVisible" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
-					<path class="core-ai-map__config-path core-ai-map__preview-config" d="M798 340 L798 284" data-wp-class--is-live="state.isPreviewPathVisible"></path>
-					<circle class="core-ai-map__preview-signal" r="5.5" cx="0" cy="0" data-wp-class--is-live="state.isPreviewSignalLive"></circle>
+					<path d="M449 259 L488 259" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
+					<path d="M677 259 L716 259" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
+					<path d="M876 259 L1060 259" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
+					<path class="core-ai-map__config-path core-ai-map__preview-config" d="M798 340 L798 284"></path>
+					<circle class="core-ai-map__preview-signal" r="5.5" cx="0" cy="0"></circle>
 				</g>
 				<g
 					class="core-ai-map__preview-flow"
 					data-core-ai-preview="1"
-					<?php echo wp_interactivity_data_wp_context( array( 'previewId' => 1 ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-					data-wp-bind--hidden="state.isPreviewHidden"
 					hidden
 				>
-					<path d="M180 257 L216 257" data-wp-class--is-live="state.isPreviewPathVisible" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
-					<path d="M369 259 L514 259" data-wp-class--is-live="state.isPreviewPathVisible" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
-					<circle class="core-ai-map__preview-signal" r="5.5" cx="0" cy="0" data-wp-class--is-live="state.isPreviewSignalLive"></circle>
+					<path d="M180 257 L216 257" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
+					<path d="M369 259 L514 259" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
+					<circle class="core-ai-map__preview-signal" r="5.5" cx="0" cy="0"></circle>
 				</g>
 				<g
 					class="core-ai-map__preview-flow"
 					data-core-ai-preview="2"
-					<?php echo wp_interactivity_data_wp_context( array( 'previewId' => 2 ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-					data-wp-bind--hidden="state.isPreviewHidden"
 					hidden
 				>
-					<path d="M108 242 L108 266" data-wp-class--is-live="state.isPreviewPathVisible" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
-					<path d="M108 364 L108 388" data-wp-class--is-live="state.isPreviewPathVisible" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
-					<circle class="core-ai-map__preview-signal" r="5.5" cx="0" cy="0" data-wp-class--is-live="state.isPreviewSignalLive"></circle>
+					<path d="M108 242 L108 266" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
+					<path d="M108 364 L108 388" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
+					<circle class="core-ai-map__preview-signal" r="5.5" cx="0" cy="0"></circle>
 				</g>
 				<g
 					class="core-ai-map__preview-flow"
 					data-core-ai-preview="3"
-					<?php echo wp_interactivity_data_wp_context( array( 'previewId' => 3 ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-					data-wp-bind--hidden="state.isPreviewHidden"
 					hidden
 				>
-					<path d="M186 240 C280 244 300 320 424 372" data-wp-class--is-live="state.isPreviewPathVisible" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
-					<circle class="core-ai-map__preview-signal" r="5.5" cx="0" cy="0" data-wp-class--is-live="state.isPreviewSignalLive"></circle>
+					<path d="M186 240 C280 244 300 320 424 372" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"></path>
+					<circle class="core-ai-map__preview-signal" r="5.5" cx="0" cy="0"></circle>
 				</g>
 
 				<?php
@@ -1125,16 +1116,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							<?php foreach ( $story_paths[ $variant ] as $edge => $path ) : ?>
 								<path
 									d="<?php echo esc_attr( $path ); ?>"
-									<?php
-									echo wp_interactivity_data_wp_context( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-										array(
-											'storyId' => $story_id,
-											'variant' => $variant,
-										)
-									);
-									?>
-									data-wp-class--is-live="state.isEdgeLive"
-									data-wp-class--is-visible="state.isPathVisible"
+									data-core-ai-story="<?php echo esc_attr( $story_id ); ?>"
+									data-core-ai-variant="<?php echo esc_attr( $variant ); ?>"
 									marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-tip)"
 								></path>
 							<?php endforeach; ?>
@@ -1148,8 +1131,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							<path
 								class="core-ai-map__config-path"
 								d="<?php echo esc_attr( $path ); ?>"
-								<?php echo wp_interactivity_data_wp_context( array( 'storyId' => $story_id, 'variant' => $variant ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-								data-wp-bind--hidden="state.isProviderConfigPathHidden"
+								data-core-ai-story="<?php echo esc_attr( $story_id ); ?>"
+								data-core-ai-variant="<?php echo esc_attr( $variant ); ?>"
 								hidden
 							></path>
 						<?php endforeach; ?>
@@ -1681,7 +1664,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				<path class="core-ai-map__bench-boundary" d="M240 148 L240 512"></path>
 				<path class="core-ai-map__bench-boundary" d="M1030 148 L1030 512"></path>
 				<path class="core-ai-map__bench-divider" d="M24 552 L1342 552"></path>
-				<g class="core-ai-map__bench-flow" data-wp-class--is-live="state.benchPathsLive" data-wp-class--is-visible="state.isBench">
+				<g class="core-ai-map__bench-flow" data-core-ai-bench-flow>
 					<path d="M204 200 C420 132 940 128 1148 194" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-bench-tip)"></path>
 					<path d="M1240 286 C1240 348 1088 322 986 300" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-bench-tip)"></path>
 					<path d="M654 266 L626 266" marker-end="url(#<?php echo esc_attr( $instance_id ); ?>-bench-tip)"></path>
