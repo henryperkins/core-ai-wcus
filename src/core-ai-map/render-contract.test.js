@@ -39,7 +39,7 @@ require ${ JSON.stringify( renderPath ) };
 		},
 	} );
 
-	if ( result.status !== 0 ) {
+	if ( result.status !== 0 || result.stderr.trim() ) {
 		throw new Error( result.stderr || 'Could not render the map context.' );
 	}
 
