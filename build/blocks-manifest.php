@@ -5,7 +5,7 @@ return array(
 		'$schema' => 'https://schemas.wp.org/trunk/block.json',
 		'apiVersion' => 3,
 		'name' => 'core-ai/core-ai-map',
-		'version' => '3.2.2',
+		'version' => '3.2.3',
 		'title' => 'Core AI Living Block Map',
 		'category' => 'design',
 		'icon' => 'wordpress',
