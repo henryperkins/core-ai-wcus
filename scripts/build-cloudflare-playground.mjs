@@ -41,6 +41,15 @@ export const playgroundWordPressVersion = 'beta';
 export const requiredRuntimeDirectories = [
 	`wp-${ playgroundWordPressVersion }`,
 ];
+
+// Playground bulk-restores the files its minified WordPress build strips by
+// fetching this one archive. WordPress outgrew the Cloudflare Pages 25 MiB
+// per-asset ceiling between 7.0 (21.3 MB) and 7.1 (27.2 MB), so the booth
+// cannot serve it. Playground treats a failed fetch as a warning rather than a
+// fatal, and the unpacked tree above still answers each stripped asset
+// individually through wordpress-remote-asset-paths, so dropping the archive
+// costs extra requests on a cold start instead of breaking the exhibit.
+export const oversizedRuntimeAsset = 'wordpress-static.zip';
 export const playgroundLoadingMessage = 'Preparing WordPress';
 export const kioskLoadingMessage =
 	'Building a real WordPress site in your browser. A cold start can take a minute or more.';
@@ -472,7 +481,7 @@ const patchPlaygroundLoaderRuntime = async ( outputDirectory ) => {
 	await rm( originalAssetPath );
 };
 
-const getRuntimeFiles = async ( sourceDirectory ) => {
+export const getRuntimeFiles = async ( sourceDirectory ) => {
 	const manifestPath = join(
 		sourceDirectory,
 		'assets-required-for-offline-mode.json'
@@ -535,6 +544,9 @@ const getRuntimeFiles = async ( sourceDirectory ) => {
 			join( sourceDirectory, directory ),
 			sourceDirectory
 		) ) {
+			if ( file.relativePath.endsWith( `/${ oversizedRuntimeAsset }` ) ) {
+				continue;
+			}
 			selected.add( file.relativePath );
 		}
 	}

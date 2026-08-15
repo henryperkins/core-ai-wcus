@@ -21,6 +21,8 @@ import {
 	buildCloudflarePlayground,
 	pagesHeaders,
 	patchKioskIndex,
+	getRuntimeFiles,
+	oversizedRuntimeAsset,
 	requiredRuntimeDirectories,
 	validatePagesAssetBudget,
 } from '../../scripts/build-cloudflare-playground.mjs';
@@ -433,6 +435,41 @@ test( 'rejects a stale plug-in ZIP before replacing existing build output', asyn
 
 test( 'ships the pinned WordPress static fallback tree', () => {
 	assert.deepEqual( requiredRuntimeDirectories, [ 'wp-beta' ] );
+} );
+
+test( 'drops the runtime archive that exceeds the Pages per-asset ceiling', async ( t ) => {
+	const temporaryDirectory = await mkdtemp(
+		join( projectDirectory, '.tmp-oversized-runtime-asset-' )
+	);
+	t.after( () => rm( temporaryDirectory, { recursive: true, force: true } ) );
+	const source = join( temporaryDirectory, 'source' );
+	await createStaticSourceFixture( source );
+
+	const runtimeDirectory = join( source, requiredRuntimeDirectories[ 0 ] );
+	await writeFile(
+		join( runtimeDirectory, oversizedRuntimeAsset ),
+		'over the ceiling'
+	);
+	await mkdir( join( runtimeDirectory, 'wp-includes' ), { recursive: true } );
+	await writeFile(
+		join( runtimeDirectory, 'wp-includes', 'kept.css' ),
+		'kept'
+	);
+
+	const files = await getRuntimeFiles( source );
+
+	assert.ok(
+		! files.includes(
+			`${ requiredRuntimeDirectories[ 0 ] }/${ oversizedRuntimeAsset }`
+		),
+		'the oversized archive must not reach the Pages artifact'
+	);
+	assert.ok(
+		files.includes(
+			`${ requiredRuntimeDirectories[ 0 ] }/wp-includes/kept.css`
+		),
+		'the rest of the fallback tree must still ship'
+	);
 } );
 
 test( 'rejects a Pages artifact that exceeds the free-tier asset constraints', () => {
