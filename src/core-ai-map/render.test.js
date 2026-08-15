@@ -23,7 +23,7 @@ const worker = fs.readFileSync(
 	'utf8'
 );
 
-describe( 'Living Block Map v3.2.1 server render', () => {
+describe( 'Living Block Map v3.2.3 server render', () => {
 	it( 'renders the provider plugin runtime layer and Connectors sidecar', () => {
 		expect( render ).toContain( 'core-ai-map__provider-plugin' );
 		expect( render ).toContain( 'AI provider plugin' );
