@@ -1,10 +1,32 @@
 # Core AI Living Block Map
 
-Version and design: **3.2.1**. Core AI Living Block Map is one dynamic,
+Version and design: **3.2.2**. Core AI Living Block Map is one dynamic,
 server-rendered `core-ai/core-ai-map` block for explaining how WordPress and AI
 building blocks fit together on a kiosk. Its server markup is enhanced by the
 WordPress Interactivity API. The repository also contains a reproducible,
 self-hosted WordPress Playground artifact for static-hosted demonstrations.
+
+## 3.2.2 release notes
+
+This release moves the Playground kiosk from WordPress 7.0 to the `beta`
+channel, so the exhibit runs a WordPress 7.1 release candidate rather than
+describing 7.1 as unshipped. AI Client and Connectors copy was corrected
+against a real admin screen: the JavaScript prompt API is administrator-gated
+rather than absent, requests carry text, image, speech, or video, and
+Connectors resolves keys from an environment variable, then a `wp-config`
+constant, then the database. The ability-calling edge joining the two halves of
+the map was added, and Connectors is framed as general connection
+infrastructure whose first users are AI providers rather than its only intended
+ones.
+
+It also closes an accessibility pass. The About footnote grew from 26 to 34
+authored pixels so it clears the 24-pixel target floor once the stage is
+scaled; the zone rule and the outside-WordPress edge moved to WordPress admin
+gray-500 to clear 3:1 as graphics that carry meaning; dormant hairlines and the
+actor ghost stack became tokens so `prefers-contrast: more` reaches them; a
+persistent visually hidden `h1` names the exhibit in every screen state; and
+the welcome card dropped a backdrop blur that was recompositing on every frame
+of the attract loop.
 
 ## 3.2.1 release notes
 
@@ -53,11 +75,27 @@ npm run plugin-zip
 On a fresh page, select the theme's blank or full-width template, insert the
 single **Core AI Living Block Map** block, set it to full width, and publish a
 non-home/root permalink. The authored target is a 1366 x 1024 landscape kiosk
-stage. It is also compatible with 1024 x 768, with authored controls at least
-60 logical pixels in the header and story rail. Nested controls such as Apply
-remain 44 logical pixels, so 1024 x 768 is a compatibility view rather than a
-fully supported touch layout. Physical iPad touch acceptance is still a
-separate required sign-off.
+stage.
+
+The stage is one fixed composition scaled to fit the viewport, so every
+authored size shrinks by the same factor. At the 1024 x 768 compatibility size
+that factor is 0.7496, and the rendered figures are what a finger actually
+meets:
+
+| Control | Authored | Rendered at 1024 x 768 |
+| --- | --- | --- |
+| Story rail buttons | 68 px | 51 px |
+| Welcome primary action | 64 px | 48 px |
+| Header, story, panel, tab and dialog controls | 60 px | 45 px |
+| Nested controls such as Apply | 44 px | 33 px |
+| About footnote | 34 px | 25 px |
+
+Every control meets WCAG 2.2 SC 2.5.8 (24 x 24) by size at both supported
+sizes. At 1024 x 768 only two fall below SC 2.5.5 (44 x 44): the workbench
+Apply control at 33 px and the About footnote at 25 px. Everything else clears
+it, though the 60 px class clears it by less than a pixel. That is why
+1024 x 768 is a compatibility view rather than a fully supported touch layout.
+Physical iPad touch acceptance is still a separate required sign-off.
 
 The reviewed date carried by this release is **Reviewed 14 Aug 2026**. It is
 shown inside the **About this exhibit** panel, reached from the footnote under
@@ -117,7 +155,7 @@ channel's static fallback tree. It validates Cloudflare Pages Free's 20,000-file
 and 25 MiB-per-asset limits, removes upstream Google Fonts and analytics, and
 uses a local Blueprint and plugin ZIP. `npm run plugin-zip` creates the local
 `core-ai-map.zip`; the Pages build copies those exact bytes to the release URL
-`/kiosk-blueprint/core-ai-map-3.2.1.zip`. It also emits a deployment manifest
+`/kiosk-blueprint/core-ai-map-3.2.2.zip`. It also emits a deployment manifest
 with that path, its byte count, and its SHA-256, plus a Pages rewrite that keeps
 the Playground runtime's literal `/remote.html` endpoint from being redirected
 to Cloudflare's extensionless route. The build owns the accessible outer
@@ -209,7 +247,7 @@ $dist = (Resolve-Path -LiteralPath 'dist-playground').Path
 $manifestPath = Join-Path $dist 'deployment-manifest.json'
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $artifactRelative = [string] $manifest.pluginArtifact.path
-$expectedArtifact = 'kiosk-blueprint/core-ai-map-3.2.1.zip'
+$expectedArtifact = 'kiosk-blueprint/core-ai-map-3.2.2.zip'
 
 if ($artifactRelative -ne $expectedArtifact) {
     throw "Expected $expectedArtifact; manifest has $artifactRelative."
@@ -278,13 +316,13 @@ foreach ($hostName in $hosts) {
 
     $remoteBlueprint = Invoke-RestMethod `
         -Uri "$hostName/kiosk-blueprint/blueprint.json?probe=$probe"
-    if ($remoteBlueprint.plugins.Count -ne 1 -or $remoteBlueprint.plugins[0].source -ne './core-ai-map-3.2.1.zip') {
+    if ($remoteBlueprint.plugins.Count -ne 1 -or $remoteBlueprint.plugins[0].source -ne './core-ai-map-3.2.2.zip') {
         throw "Blueprint plugin source mismatch on $hostName."
     }
 
     $originName = ([Uri] $hostName).Host
     $downloadPath = [IO.Path]::GetFullPath(
-        (Join-Path ([IO.Path]::GetTempPath()) "core-ai-map-${originName}-3.2.1-${PID}.zip")
+        (Join-Path ([IO.Path]::GetTempPath()) "core-ai-map-${originName}-3.2.2-${PID}.zip")
     )
     if (Test-Path -LiteralPath $downloadPath) {
         throw "Refusing to overwrite existing verification file: $downloadPath"

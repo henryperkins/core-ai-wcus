@@ -28,7 +28,7 @@ Features include:
 * Offline support limited to a non-root kiosk permalink. Offline mode is disabled on the home/root URL so its worker cannot control unrelated site pages.
 * Existing serialized card, actor, story, and panel arrays merge current canonical defaults by id, while user copy fields remain editable.
 
-The release is reviewed 12 Aug 2026. The authored target is 1366 x 1024 landscape. At 1024 x 768, the header and story controls remain at least 60 logical pixels, while nested controls such as Apply remain 44 logical pixels. Treat 1024 x 768 as a compatibility view, not a fully supported touch layout; physical iPad acceptance remains a separate sign-off.
+The release is reviewed 14 Aug 2026. The authored target is 1366 x 1024 landscape. The stage is scaled to fit the viewport, so authored sizes shrink with it. At 1024 x 768 the factor is 0.7496: story rail buttons authored at 68 logical pixels render at 51, header and panel controls authored at 60 render at 45, nested controls such as Apply render at 33, and the About footnote renders at 25. Every control meets WCAG 2.2 SC 2.5.8 by size at both sizes. Only the Apply control and the About footnote fall below SC 2.5.5 at 1024 x 768; everything else clears it, the 60-pixel class by less than a pixel. Treat 1024 x 768 as a compatibility view, not a fully supported touch layout; physical iPad acceptance remains a separate sign-off.
 
 == Installation ==
 

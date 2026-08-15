@@ -319,7 +319,7 @@ describe( 'Living Block Map v3.2.1 server render', () => {
 
 	it( 'normalizes versioned cache keys and precaches built local fonts', () => {
 		expect( worker ).toContain(
-			'const CACHE_NAME = `${ CACHE_SCOPE_PREFIX }v3.2.1-review-1`;'
+			'const CACHE_NAME = `${ CACHE_SCOPE_PREFIX }v3.2.2-review-1`;'
 		);
 		expect( worker ).toContain( "searchParams.delete( 'ver' )" );
 		expect( worker ).toMatch(

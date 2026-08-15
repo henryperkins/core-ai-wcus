@@ -40,6 +40,11 @@
  * viewport the design targets — and the stage is scaled to fit whatever
  * viewport it lands in. `--cai-scale` is 1 on the kiosk; `view.js` recomputes
  * it on resize so the geometry below never has to be responsive.
+ *
+ * Every size below is authored-space and shrinks with that factor. At the
+ * 1024x768 compatibility size the factor is 0.7496, so `min-height: 60px`
+ * renders at 45px and `min-height: 44px` at 33px. Check a touch target
+ * against the rendered figure, never against the declaration.
  */
 
 body.core-ai-kiosk-active {
@@ -65,7 +70,9 @@ body.core-ai-kiosk-active {
 	--core-ai-canvas: #f6f7f7;
 	--core-ai-surface: #fff;
 	--core-ai-line: #dcdcde;
-	--core-ai-line-strong: #a7aaad;
+	--core-ai-line-strong: #8c8f94;
+	--core-ai-line-dormant: #a7aaad;
+	--core-ai-line-ghost: #c3c4c7;
 	--core-ai-text-muted: #646970;
 	--core-ai-warning: #dba617;
 	--core-ai-warning-ink: #8a6300;
@@ -450,9 +457,17 @@ body.core-ai-kiosk-active {
 		}
 	}
 
+	/**
+	 * The zone rule is the line that says which side of WordPress you are on,
+	 * so it is a graphic required to understand the map and owes 3:1 under
+	 * SC 1.4.11. `--core-ai-line-strong` is the lightest admin gray that
+	 * clears it: 3.02:1 on the canvas, 3.22:1 over the plate. The quiet/loud
+	 * split between the side rules and the bottom one rides on stroke-width
+	 * now — there is no legal gray between passing and this one.
+	 */
 	&__rule {
 		fill: none;
-		stroke: rgba(30, 30, 30, 0.3);
+		stroke: var(--core-ai-line-strong);
 		stroke-dasharray: 5 7;
 		stroke-width: 1.2;
 		transition:
@@ -460,7 +475,6 @@ body.core-ai-kiosk-active {
 			stroke-width 260ms ease;
 
 		&--bottom {
-			stroke: rgba(30, 30, 30, 0.18);
 			stroke-width: 1;
 		}
 
@@ -477,9 +491,17 @@ body.core-ai-kiosk-active {
 			opacity: 0;
 		}
 
+		/**
+		 * Dormant structure, not a graphic the visitor has to read — the live
+		 * path carries that. It stays deliberately below the zone rule and the
+		 * outside-WordPress edge so the resting map keeps receding. Tokenised
+		 * only so `prefers-contrast: more` can reach it, which a hard-coded
+		 * rgba() could not.
+		 */
 		path {
 			fill: none;
-			stroke: rgba(167, 170, 173, 0.62);
+			stroke: var(--core-ai-line-dormant);
+			stroke-opacity: 0.62;
 			stroke-width: 1;
 		}
 	}
@@ -736,16 +758,22 @@ body.core-ai-kiosk-active {
 		background: var(--core-ai-surface);
 		border-radius: var(--core-ai-radius);
 
+		/**
+		 * The stack recedes, so the three edges have to stay in order under
+		 * both contrast settings: ghost, dormant, then the card's own
+		 * line-strong. Pairing them the other way round inverts the depth
+		 * under `prefers-contrast: more`, where `line` is darker than `ghost`.
+		 */
 		&--far {
 			top: 8px;
 			left: 8px;
-			border: 1px dashed #c3c4c7;
+			border: 1px dashed var(--core-ai-line-ghost);
 		}
 
 		&--near {
 			top: 4px;
 			left: 4px;
-			border: 1px dashed #b4b6b9;
+			border: 1px dashed var(--core-ai-line-dormant);
 		}
 	}
 
@@ -1658,8 +1686,9 @@ body.core-ai-kiosk-active {
 
 	/**
 	 * The transparency disclosure is a footnote, not a control the exhibit
-	 * competes for attention with: quiet text under the story rail, sized so
-	 * a finger still clears the 24px minimum target.
+	 * competes for attention with: quiet text under the story rail. Quiet is
+	 * a matter of colour and weight, though — never of size. It is the route
+	 * to the exhibit's provenance, so it is sized as a real target.
 	 */
 	&__colophon {
 		position: absolute;
@@ -1672,12 +1701,16 @@ body.core-ai-kiosk-active {
 
 		/**
 		 * Nested so the footnote outranks the `font: inherit` reset every
-		 * button in the kiosk starts from. The explicit line-height keeps the
-		 * box 26px tall, which is what the bottom band is measured against.
+		 * button in the kiosk starts from. The 18px line-height plus 8px of
+		 * vertical padding makes the box 34px by content math rather than by
+		 * min-height alone, so every engine agrees on it. 34 is the smallest
+		 * box that still measures 24px once the stage scales to 0.7496 on a
+		 * 1024x768 panel — it renders at 25px and clears SC 2.5.8 by size.
+		 * The band allows 36px before the rail at `bottom: 48px` is hit.
 		 */
 		.core-ai-map__about-trigger {
-			min-height: 26px;
-			padding: 4px 10px;
+			min-height: 34px;
+			padding: 8px 10px;
 			color: var(--core-ai-text-muted);
 			font-size: 12px;
 			font-weight: 500;
@@ -1689,6 +1722,19 @@ body.core-ai-kiosk-active {
 			border-radius: 2px;
 			cursor: pointer;
 			transition: color 180ms ease;
+
+			/**
+			 * The global ring stands 7px off its box, and a 34px box leaves
+			 * only 2px under the rail. Pulling the offset in narrows the
+			 * standoff to 5px, so the overlap goes from 5px to 3px rather
+			 * than away — clearing it entirely would cost the 12px the
+			 * colophon keeps between a touch target and the panel bezel. The
+			 * colophon follows the rail in DOM order at the same z-index, so
+			 * the ring paints on top and stays legible against its surface.
+			 */
+			&:focus-visible {
+				outline-offset: 2px;
+			}
 		}
 	}
 
@@ -1702,11 +1748,19 @@ body.core-ai-kiosk-active {
 		width: 990px;
 		padding: 30px 42px 28px;
 		text-align: center;
-		background: rgba(255, 255, 255, 0.94);
+
+		/**
+		 * Opaque, and no backdrop blur. At 94% the backdrop showing through
+		 * was two levels out of 255 — but the filter still forced a blur of
+		 * the whole 990px region on every frame the cards behind it drifted,
+		 * which is the entire attract loop. The 24/64 shadow and the hairline
+		 * were always what sold the float. `__plate` and `__legend--map` make
+		 * the same read on alpha alone.
+		 */
+		background: var(--core-ai-surface);
 		border: 1px solid var(--core-ai-line);
 		border-radius: var(--core-ai-radius);
 		box-shadow: 0 24px 64px rgba(30, 30, 30, 0.1);
-		backdrop-filter: blur(8px);
 
 		h1 {
 			max-width: 760px;
@@ -2603,9 +2657,10 @@ body.core-ai-kiosk-active {
 		pointer-events: none;
 	}
 
+	/* The zone rule again, drawn on the bench. Same graphic, same token. */
 	&__bench-boundary {
 		fill: none;
-		stroke: rgba(30, 30, 30, 0.3);
+		stroke: var(--core-ai-line-strong);
 		stroke-dasharray: 5 7;
 		stroke-width: 1.2;
 	}
@@ -3226,13 +3281,29 @@ body.core-ai-kiosk-active {
 
 @media (prefers-contrast: more) {
 
+	/**
+	 * The four line weights keep their order here rather than all bottoming
+	 * out together: `line` frames a component, `dormant` connects at rest,
+	 * `line-strong` draws a boundary, and each is a step darker than the last.
+	 * The zone rule is deliberately not pinned to a literal — it follows
+	 * `line-strong` to #3c434a, which is what keeps the boundary heavier than
+	 * the dormant hairline lying behind it.
+	 */
 	.core-ai-map {
 		--core-ai-line: #646970;
 		--core-ai-line-strong: #3c434a;
+		--core-ai-line-dormant: #50575e;
+		--core-ai-line-ghost: #8c8f94;
 	}
 
-	.core-ai-map__rule {
-		stroke: #646970;
+	/**
+	 * The dormant hairlines drop their 62% alpha. Held back, the remapped
+	 * token would composite to roughly 2.5:1 and the preference would go half
+	 * answered; at full strength it reaches 7.3:1 and still reads a clear step
+	 * lighter than the zone rule it sits behind.
+	 */
+	.core-ai-map__hairlines path {
+		stroke-opacity: 1;
 	}
 }
 

@@ -739,7 +739,7 @@ async ( page ) => {
 	);
 	assert(
 		neutral.footnote.height >= 24,
-		'About footnote fell below the 24px minimum touch target.'
+		'About footnote fell below 24px at 1366 x 1024 (scale 1).'
 	);
 	const neutralGeometry = await measureCardGeometry();
 	observations.neutralGeometry = neutralGeometry;
@@ -1118,7 +1118,7 @@ async ( page ) => {
 	);
 	assert(
 		( await apply.boundingBox() ).height >= 44,
-		'AI Plugin Apply control was smaller than 44px.'
+		'AI Plugin Apply control was smaller than its authored 44px at scale 1.'
 	);
 	await apply.click();
 	await page.waitForFunction( () =>
@@ -1301,7 +1301,7 @@ async ( page ) => {
 	assert(
 		welcomeActionHeights.primary >= 44 &&
 			welcomeActionHeights.browse >= 44,
-		`1024 welcome actions fell below 44px: ${ JSON.stringify( welcomeActionHeights ) }`
+		`1024 welcome actions fell below the 44px rendered SC 2.5.5 floor: ${ JSON.stringify( welcomeActionHeights ) }`
 	);
 	await page
 		.getByRole( 'button', { name: 'Explore the first flow' } )
@@ -1317,6 +1317,12 @@ async ( page ) => {
 		const reset = document
 			.querySelector( '.core-ai-map__reset' )
 			.getBoundingClientRect();
+		const footnote = document
+			.querySelector( '.core-ai-map__about-trigger' )
+			.getBoundingClientRect();
+		const rail = document
+			.querySelector( '.core-ai-map__rail' )
+			.getBoundingClientRect();
 		return {
 			scale: Number.parseFloat(
 				getComputedStyle( map ).getPropertyValue( '--cai-scale' )
@@ -1324,6 +1330,9 @@ async ( page ) => {
 			stage: stage.toJSON(),
 			storyHeight: story.height,
 			resetHeight: reset.height,
+			footnoteHeight: footnote.height,
+			footnoteClearsRail: Math.round( footnote.top - rail.bottom ),
+			footnoteClearsStage: Math.round( stage.bottom - footnote.bottom ),
 			scrollWidth: document.documentElement.scrollWidth,
 			scrollHeight: document.documentElement.scrollHeight,
 		};
@@ -1343,7 +1352,29 @@ async ( page ) => {
 	);
 	assert(
 		compatibility.storyHeight >= 44 && compatibility.resetHeight >= 44,
-		'1024 controls fell below 44px.'
+		'1024 controls fell below the 44px rendered SC 2.5.5 floor.'
+	);
+	/*
+	 * The gate the documentation actually leans on. Authored sizes tell you
+	 * nothing here — the stage transform is what a finger meets, so measure
+	 * the footnote at the size where it is smallest and still has to be
+	 * reachable. 34px authored renders at 25px; the band leaves it two
+	 * authored pixels of clearance under the rail, so both halves are tight
+	 * enough that either could regress without the other noticing.
+	 */
+	assert(
+		compatibility.footnoteHeight >= 24,
+		`About footnote fell below the 24px rendered SC 2.5.8 floor at 1024 x 768: ${ compatibility.footnoteHeight }.`
+	);
+	assert(
+		compatibility.footnoteClearsRail > 0 &&
+			compatibility.footnoteClearsStage >= 0,
+		`About footnote collided with the story rail or the stage edge at 1024 x 768: ${ JSON.stringify(
+			{
+				clearsRail: compatibility.footnoteClearsRail,
+				clearsStage: compatibility.footnoteClearsStage,
+			}
+		) }`
 	);
 	const compatibilityNeutralGeometry = await measureCardGeometry();
 	observations.compatibilityNeutralGeometry = compatibilityNeutralGeometry;

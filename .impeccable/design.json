@@ -1,0 +1,316 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-15T00:00:00Z",
+  "title": "Design System: Core AI Living Block Map",
+  "extensions": {
+    "colorMeta": {
+      "blue": {
+        "role": "primary",
+        "displayName": "Live Blue",
+        "canonical": "#3858e9",
+        "note": "WordPress admin accent. Marks work happening now: the active flow path, in-flow card borders, the selected rail button, the primary action, the tap cue, and the focus ring.",
+        "tonalRamp": ["#080d33", "#0f1750", "#16226f", "#1e3a8a", "#2843bd", "#3858e9", "#8098f2", "#e3e8fd"]
+      },
+      "blue-dark": {
+        "role": "primary",
+        "displayName": "Deep Blue",
+        "canonical": "#1e3a8a",
+        "note": "Text only, and only on Result Tint. Sets resolved values: router results, socket labels, breadcrumbs, applied workbench state.",
+        "tonalRamp": ["#080d33", "#0f1750", "#16226f", "#1e3a8a", "#2843bd", "#3858e9", "#8098f2", "#e3e8fd"]
+      },
+      "blue-wash": {
+        "role": "primary",
+        "displayName": "Participant Wash",
+        "canonical": "#f4f6ff",
+        "note": "The palest fill in the system and the single signal that a card belongs to the selected flow. Never interchangeable with Result Tint.",
+        "tonalRamp": ["#080d33", "#0f1750", "#16226f", "#1e3a8a", "#2843bd", "#3858e9", "#8098f2", "#f4f6ff"]
+      },
+      "blue-tint": {
+        "role": "primary",
+        "displayName": "Result Tint",
+        "canonical": "#eef1ff",
+        "note": "Chip fill for a settled value, always paired with Deep Blue text and Result Line.",
+        "tonalRamp": ["#080d33", "#0f1750", "#16226f", "#1e3a8a", "#2843bd", "#3858e9", "#aab5ff", "#eef1ff"]
+      },
+      "blue-line": {
+        "role": "primary",
+        "displayName": "Result Line",
+        "canonical": "#aab5ff",
+        "note": "Border on a result chip, and the dashed edge of a sidecar card standing beside the live path.",
+        "tonalRamp": ["#080d33", "#0f1750", "#16226f", "#1e3a8a", "#2843bd", "#3858e9", "#aab5ff", "#eef1ff"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#1e1e1e",
+        "note": "WordPress gray-900. All primary text, and the icon stroke on a card at rest.",
+        "tonalRamp": ["#1e1e1e", "#2f2f2f", "#50575e", "#646970", "#757575", "#a7aaad", "#dcdcde", "#f6f7f7"]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Soft Ink",
+        "canonical": "#50575e",
+        "note": "WordPress gray-700. Supporting sentences under a card name, panel notes, the secondary action.",
+        "tonalRamp": ["#1e1e1e", "#2f2f2f", "#50575e", "#646970", "#757575", "#a7aaad", "#dcdcde", "#f6f7f7"]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Muted Text",
+        "canonical": "#646970",
+        "note": "WordPress gray-600. The label register — zone titles, badges, rail numbers, colophon — and the stroke of the dashed configuration path.",
+        "tonalRamp": ["#1e1e1e", "#2f2f2f", "#50575e", "#646970", "#757575", "#a7aaad", "#dcdcde", "#f6f7f7"]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Stage Canvas",
+        "canonical": "#f6f7f7",
+        "note": "WordPress gray-100. The stage ground, carrying a 56px graph rule at 3% ink.",
+        "tonalRamp": ["#1e1e1e", "#2f2f2f", "#50575e", "#646970", "#757575", "#a7aaad", "#dcdcde", "#f6f7f7"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "canonical": "#ffffff",
+        "note": "Every card, panel, and dialog.",
+        "tonalRamp": ["#1e1e1e", "#2f2f2f", "#50575e", "#646970", "#757575", "#a7aaad", "#dcdcde", "#ffffff"]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#dcdcde",
+        "note": "WordPress gray-300. Solid 1px frame on a component that lives inside WordPress. Darkens to #646970 under prefers-contrast: more.",
+        "tonalRamp": ["#1e1e1e", "#2f2f2f", "#50575e", "#646970", "#757575", "#a7aaad", "#dcdcde", "#f6f7f7"]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Strong Hairline",
+        "canonical": "#8c8f94",
+        "note": "WordPress gray-500. The dashed edge of something outside WordPress, and the zone rule that separates inside from outside. Gray-500 rather than gray-400 because that boundary is a graphic the visitor has to read: it clears SC 1.4.11 at 3.02:1 on the canvas and 3.24:1 on a card. Darkens to #3c434a under prefers-contrast: more.",
+        "tonalRamp": ["#1e1e1e", "#2f2f2f", "#50575e", "#646970", "#757575", "#a7aaad", "#dcdcde", "#f6f7f7"]
+      },
+      "line-dormant": {
+        "role": "neutral",
+        "displayName": "Dormant Line",
+        "canonical": "#a7aaad",
+        "note": "WordPress gray-400. The latent connector between cards at rest, drawn at 62% stroke-opacity, and the nearer of the two ghost cards stacked behind an actor. Deliberately below 3:1 and deliberately below Strong Hairline: it is ambient structure, not a graphic required to understand the map, and the resting board depends on it receding. Remaps to #50575e at full opacity under prefers-contrast: more.",
+        "tonalRamp": ["#1e1e1e", "#2f2f2f", "#50575e", "#646970", "#757575", "#a7aaad", "#dcdcde", "#f6f7f7"]
+      },
+      "line-ghost": {
+        "role": "neutral",
+        "displayName": "Ghost Line",
+        "canonical": "#c3c4c7",
+        "note": "The farther of the two offset cards stacked behind an actor. Purely a depth cue: the stack runs Ghost Line, Dormant Line, Strong Hairline from back to front, and holds that order under prefers-contrast: more, where it remaps to #8c8f94.",
+        "tonalRamp": ["#1e1e1e", "#2f2f2f", "#50575e", "#646970", "#757575", "#a7aaad", "#dcdcde", "#f6f7f7"]
+      },
+      "warning": {
+        "role": "tertiary",
+        "displayName": "Caution",
+        "canonical": "#dba617",
+        "note": "The only non-blue signal color in the exhibit. Reserved entirely for the offline pill; marks an operational state, never content.",
+        "tonalRamp": ["#3d2c00", "#5c4300", "#8a6300", "#b98600", "#dba617", "#e8c04f", "#f2d675", "#fff8e1"]
+      },
+      "warning-ink": {
+        "role": "tertiary",
+        "displayName": "Caution Ink",
+        "canonical": "#8a6300",
+        "note": "Offline pill label, on Caution Tint.",
+        "tonalRamp": ["#3d2c00", "#5c4300", "#8a6300", "#b98600", "#dba617", "#e8c04f", "#f2d675", "#fff8e1"]
+      },
+      "warning-tint": {
+        "role": "tertiary",
+        "displayName": "Caution Tint",
+        "canonical": "#fff8e1",
+        "note": "Offline pill fill.",
+        "tonalRamp": ["#3d2c00", "#5c4300", "#8a6300", "#b98600", "#dba617", "#e8c04f", "#f2d675", "#fff8e1"]
+      },
+      "warning-line": {
+        "role": "tertiary",
+        "displayName": "Caution Line",
+        "canonical": "#f2d675",
+        "note": "Offline pill border.",
+        "tonalRamp": ["#3d2c00", "#5c4300", "#8a6300", "#b98600", "#dba617", "#e8c04f", "#f2d675", "#fff8e1"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "EB Garamond 500 at 54px. A component's name in the inspect panel and the About dialog title. The welcome headline is the same register at 52px / line-height 1 / -0.035em, balanced and capped at 760px."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "EB Garamond 500 at 34px. Titles of sub-surfaces reached from inside the map: the WP-Bench run loop, the Abilities inspector, the workbench."
+      },
+      "title": {
+        "displayName": "Card Title",
+        "purpose": "Inter 620 at 22px. The name on a component card. Drops to 15px / 1.15 when the card parks or becomes a sidecar and its description is dropped."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Inter 400 at 15px / 1.5-1.55 for panel copy; 16px / 1.4 for welcome orientation, rising to 18px / 560 weight for its first sentence. The panel lede is 19px / 1.5 and appears once per panel."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Inter 650-700 at 10-12px, uppercase, 0.06-0.15em tracking. Zone titles, badges, the rail label, panel section headings, and the 11px tap cue in Live Blue."
+      },
+      "numeral": {
+        "displayName": "Numeral / Stamp",
+        "purpose": "IBM Plex Mono 650 at 12-13px. Welcome step numerals, the keep-scrolling pill, and the reviewed-date stamp. Monospace marks a value, never a sentence."
+      }
+    },
+    "fonts": [
+      { "name": "Core AI EB Garamond", "role": "display", "source": "assets/fonts/eb-garamond-latin-wght-normal.woff2", "axes": "variable 400-800" },
+      { "name": "Core AI Inter", "role": "body", "source": "assets/fonts/inter-latin-wght-normal.woff2", "axes": "variable 100-900" },
+      { "name": "Core AI IBM Plex Mono", "role": "numeral", "source": "assets/fonts/ibm-plex-mono-latin-{400,500,600,700}-normal.woff2", "axes": "static 400/500/600/700" }
+    ],
+    "shadows": [
+      { "name": "seat", "value": "0 1px 2px rgba(30, 30, 30, 0.05)", "purpose": "Contact, not lift. Marks a card, strip, or provider layer as pressable. Removed on :disabled, which is what makes elevation a permission signal." },
+      { "name": "welcome-float", "value": "0 24px 64px rgba(30, 30, 30, 0.1)", "purpose": "The welcome card floating over the attract canvas. The card is opaque and carries no backdrop-filter: at 94% opacity the blur was averaging a two-level signal while forcing a recomposite on every frame of the attract loop, and this shadow plus the hairline were always what sold the float." },
+      { "name": "panel-float", "value": "-24px 0 64px rgba(30, 30, 30, 0.12)", "purpose": "The inspect panel's left edge, cast directionally across the map it covers." },
+      { "name": "dialog-float", "value": "0 24px 64px rgba(30, 30, 30, 0.2)", "purpose": "The About dialog, the deepest surface in the system, over a rgba(30, 30, 30, 0.22) scrim." },
+      { "name": "scroll-fade", "value": "0 -16px 32px 12px #ffffff", "purpose": "Not depth. A surface-colored mask that lets the keep-scrolling pill sit legibly over panel text." }
+    ],
+    "motion": [
+      { "name": "ease-stage", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Hard expo-out. Everything that moves in space: a card taking its position, the canvas shifting, a card resizing." },
+      { "name": "ease-state", "value": "ease", "purpose": "Color and opacity only." },
+      { "name": "duration-control", "value": "180ms", "purpose": "Control color and border response." },
+      { "name": "duration-surface", "value": "200ms", "purpose": "Card border and background on state change." },
+      { "name": "duration-opacity", "value": "320ms", "purpose": "Fades, dimming, strip reveals." },
+      { "name": "duration-path", "value": "600ms", "purpose": "The live path drawing via stroke-dashoffset. This is the beat the conclusion waits behind." },
+      { "name": "duration-place", "value": "620ms", "purpose": "A card travelling to its position in a flow." },
+      { "name": "drift", "value": "6s-7.9s", "purpose": "Three staggered float keyframes on the attract screen only. Stops on engagement and never returns." },
+      { "name": "reduced-motion", "value": "0.01ms", "purpose": "prefers-reduced-motion collapses every duration, cancels all animation, and snaps paths and tokens to their end state — the settled composition, not a degraded one." }
+    ],
+    "breakpoints": [
+      { "name": "kiosk", "value": "1366px", "note": "Authored stage width at 1366 x 1024. The composition is fixed; --cai-scale carries it to other viewports." },
+      { "name": "compatibility", "value": "1024px", "note": "1024 x 768 is the same composition at a smaller scale, not a different layout. --cai-scale is 0.7496 there, so authored 60px header and rail controls render at 45px and authored 44px nested controls render at 33px. Nested controls therefore fall below SC 2.5.5 at this size, which is why it is a compatibility view rather than a fully supported touch layout." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Component Card",
+      "kind": "card",
+      "refersTo": "block-card",
+      "description": "A building block that lives inside WordPress, at rest on the stage. Solid border, seat shadow, pressable.",
+      "html": "<div class=\"ds-block-card\"><button class=\"ds-block-body\" type=\"button\"><span class=\"ds-block-head\"><svg class=\"ds-block-icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M3 9h18M9 21V9\"/></svg><span class=\"ds-block-badge\">Core</span></span><span class=\"ds-block-name\"><strong>AI Client</strong><small>One interface to every provider.</small></span></button></div>",
+      "css": ".ds-block-card { width: 236px; height: 148px; font-family: 'Core AI Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1e1e1e; } .ds-block-body { display: flex; width: 100%; height: 100%; flex-direction: column; justify-content: space-between; padding: 16px; text-align: left; background: #fff; border: 1px solid #dcdcde; border-radius: 4px; box-shadow: 0 1px 2px rgba(30,30,30,0.05); cursor: pointer; color: inherit; font: inherit; transition: border-color 200ms ease, background 200ms ease; } .ds-block-head { display: flex; width: 100%; align-items: flex-start; justify-content: space-between; gap: 12px; } .ds-block-icon { flex: none; width: 26px; height: 26px; fill: none; stroke: #1e1e1e; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transition: stroke 200ms ease; } .ds-block-badge { color: #50575e; font-size: 12px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; } .ds-block-name strong { display: block; font-size: 22px; font-weight: 620; line-height: 1.05; letter-spacing: -0.02em; } .ds-block-name small { display: block; margin-top: 5px; color: #50575e; font-size: 15px; line-height: 1.3; } .ds-block-body:hover { border-color: #3858e9; } .ds-block-body:focus-visible { outline: 3px solid #3858e9; outline-offset: 4px; } .ds-block-body:disabled { cursor: default; box-shadow: none; }"
+    },
+    {
+      "name": "Component Card — in flow",
+      "kind": "card",
+      "refersTo": "block-card-active",
+      "description": "The same card while it participates in the selected flow: wash fill, Live Blue border and icon, and the tap cue that makes the participation contract visible.",
+      "html": "<div class=\"ds-block-card-active\"><button class=\"ds-block-body-active\" type=\"button\"><span class=\"ds-block-head\"><svg class=\"ds-block-icon-active\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M3 9h18M9 21V9\"/></svg><span class=\"ds-block-badge\">Step 2</span></span><span class=\"ds-block-name\"><strong>AI Client</strong><small>One interface to every provider.</small></span><span class=\"ds-tap-cue\">Tap to see its role</span></button></div>",
+      "css": ".ds-block-card-active { width: 236px; height: 148px; font-family: 'Core AI Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1e1e1e; } .ds-block-body-active { display: flex; width: 100%; height: 100%; flex-direction: column; justify-content: space-between; padding: 16px; text-align: left; background: #f4f6ff; border: 1px solid #3858e9; border-radius: 4px; box-shadow: 0 1px 2px rgba(30,30,30,0.05); cursor: pointer; color: inherit; font: inherit; } .ds-block-icon-active { flex: none; width: 26px; height: 26px; fill: none; stroke: #3858e9; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; } .ds-tap-cue { display: block; margin-top: 6px; color: #3858e9; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; line-height: 1.2; text-transform: uppercase; white-space: nowrap; } .ds-block-body-active:focus-visible { outline: 3px solid #3858e9; outline-offset: 4px; }"
+    },
+    {
+      "name": "Actor Card",
+      "kind": "card",
+      "refersTo": "actor-card",
+      "description": "Something outside WordPress. Dashed border plus two offset dashed ghosts, so an outside participant reads as a stack of somewhere-else rather than a single object on this board.",
+      "html": "<div class=\"ds-actor-card\"><button class=\"ds-actor-body\" type=\"button\"><span class=\"ds-actor-badge\">Outside WordPress</span><strong>External AI service</strong><small>Receives the request, returns a result.</small></button></div>",
+      "css": ".ds-actor-card { position: relative; width: 180px; font-family: 'Core AI Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1e1e1e; } .ds-actor-card::before, .ds-actor-card::after { content: ''; position: absolute; inset: 0; background: #fff; border-radius: 4px; } .ds-actor-card::before { transform: translate(8px, 8px); border: 1px dashed #c3c4c7; } .ds-actor-card::after { transform: translate(4px, 4px); border: 1px dashed #a7aaad; } .ds-actor-body { position: relative; z-index: 1; display: block; width: 100%; min-height: 120px; padding: 14px; text-align: left; background: #fff; border: 1px dashed #8c8f94; border-radius: 4px; cursor: pointer; color: inherit; font: inherit; } .ds-actor-badge { display: block; color: #646970; font-size: 11px; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; } .ds-actor-body strong { display: block; margin-top: 8px; font-size: 18px; font-weight: 620; letter-spacing: -0.01em; } .ds-actor-body small { display: block; margin-top: 2px; color: #50575e; font-size: 14px; line-height: 1.25; } .ds-actor-body:focus-visible { outline: 3px solid #3858e9; outline-offset: 4px; }"
+    },
+    {
+      "name": "Primary Action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "One per screen. Solid Live Blue with a stroked icon — the welcome card's Explore the first flow.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Explore the first flow<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 12h14M13 6l6 6-6 6\"/></svg></button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 14px; min-height: 64px; padding: 0 26px; color: #fff; font-family: 'Core AI Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 17px; font-weight: 650; white-space: nowrap; background: #3858e9; border: 1px solid #3858e9; border-radius: 4px; cursor: pointer; } .ds-btn-primary svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 1.7; stroke-linecap: round; } .ds-btn-primary:focus-visible { outline: 3px solid #3858e9; outline-offset: 4px; }"
+    },
+    {
+      "name": "Control Button",
+      "kind": "button",
+      "refersTo": "button-control",
+      "description": "White with a hairline, authored 60px tall for kiosk touch — 45px rendered at 1024 x 768 — Start over, Browse all components, Replay. Hover swaps the border to Live Blue and does nothing else.",
+      "html": "<button class=\"ds-btn-control\" type=\"button\">Start over</button>",
+      "css": ".ds-btn-control { min-width: 100px; min-height: 60px; padding: 0 16px; color: #1e1e1e; font-family: 'Core AI Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; font-weight: 620; white-space: nowrap; background: #fff; border: 1px solid #dcdcde; border-radius: 4px; cursor: pointer; transition: color 180ms ease, border-color 180ms ease; } .ds-btn-control:hover { color: #3858e9; border-color: #3858e9; } .ds-btn-control:focus-visible { outline: 3px solid #3858e9; outline-offset: 4px; }"
+    },
+    {
+      "name": "Secondary Action",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "The escape hatch for a returning visitor. No fill, no border, underlined — deliberately unable to compete with the primary action beside it.",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">Browse all components</button>",
+      "css": ".ds-btn-secondary { min-height: 60px; padding: 0 8px; color: #50575e; font-family: 'Core AI Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; background: transparent; border: 0; border-radius: 2px; cursor: pointer; transition: color 180ms ease; } .ds-btn-secondary:hover { color: #3858e9; } .ds-btn-secondary:focus-visible { outline: 3px solid #3858e9; outline-offset: 4px; }"
+    },
+    {
+      "name": "Flow Rail Button",
+      "kind": "nav",
+      "refersTo": "rail-button",
+      "description": "Primary navigation on the map screen. Stacks a muted number, a title, and an outcome subtitle that predicts what the flow will show before it is activated.",
+      "html": "<button class=\"ds-rail-btn\" type=\"button\" aria-pressed=\"false\"><span class=\"ds-rail-number\">01</span><span class=\"ds-rail-copy\"><strong>WordPress uses AI</strong><span class=\"ds-rail-outcome\">WordPress requests an AI result</span></span></button>",
+      "css": ".ds-rail-btn { display: flex; align-items: center; gap: 9px; min-height: 68px; padding: 9px 12px; color: #1e1e1e; font-family: 'Core AI Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; text-align: left; background: #fff; border: 1px solid #dcdcde; border-radius: 4px; cursor: pointer; transition: color 180ms ease, background 180ms ease, border-color 180ms ease; } .ds-rail-number { flex: none; color: #646970; font-size: 12px; font-weight: 700; } .ds-rail-copy { display: grid; min-width: 0; gap: 2px; } .ds-rail-copy strong { font-size: 14px; font-weight: 680; line-height: 1.15; } .ds-rail-outcome { color: #646970; font-size: 11px; font-weight: 500; line-height: 1.2; } .ds-rail-btn:hover { border-color: #3858e9; } .ds-rail-btn:focus-visible { outline: 3px solid #3858e9; outline-offset: 4px; }"
+    },
+    {
+      "name": "Flow Rail Button — active",
+      "kind": "nav",
+      "refersTo": "rail-button-active",
+      "description": "The selected flow. Inverts to solid Live Blue with all three text layers turning white, and carries aria-pressed=\"true\".",
+      "html": "<button class=\"ds-rail-btn-active\" type=\"button\" aria-pressed=\"true\"><span class=\"ds-rail-number-active\">01</span><span class=\"ds-rail-copy\"><strong>WordPress uses AI</strong><span class=\"ds-rail-outcome-active\">WordPress requests an AI result</span></span></button>",
+      "css": ".ds-rail-btn-active { display: flex; align-items: center; gap: 9px; min-height: 68px; padding: 9px 12px; color: #fff; font-family: 'Core AI Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; text-align: left; background: #3858e9; border: 1px solid #3858e9; border-radius: 4px; cursor: pointer; } .ds-rail-number-active { flex: none; color: #fff; font-size: 12px; font-weight: 700; } .ds-rail-btn-active .ds-rail-copy { display: grid; min-width: 0; gap: 2px; } .ds-rail-btn-active .ds-rail-copy strong { font-size: 14px; font-weight: 680; line-height: 1.15; } .ds-rail-outcome-active { color: #fff; font-size: 11px; font-weight: 500; line-height: 1.2; } .ds-rail-btn-active:focus-visible { outline: 3px solid #3858e9; outline-offset: 4px; }"
+    },
+    {
+      "name": "Result Chip",
+      "kind": "chip",
+      "refersTo": "result-chip",
+      "description": "A settled value. Deep Blue on Result Tint with a Result Line border — distinct from Participant Wash, which says a card is in the story rather than that a value has resolved.",
+      "html": "<span class=\"ds-result-chip\">gpt-4o-mini</span>",
+      "css": ".ds-result-chip { display: inline-block; padding: 2px 6px; color: #1e3a8a; font-family: 'Core AI IBM Plex Mono', ui-monospace, sfmono-regular, menlo, monospace; font-size: 12px; font-weight: 500; background: #eef1ff; border: 1px solid #aab5ff; border-radius: 3px; }"
+    },
+    {
+      "name": "Offline Pill",
+      "kind": "custom",
+      "refersTo": "offline-pill",
+      "description": "The only non-blue signal in the exhibit. Marks an operational state in the top bar, never content.",
+      "html": "<p class=\"ds-offline-pill\"><span></span>Offline ready</p>",
+      "css": ".ds-offline-pill { display: inline-flex; align-items: center; gap: 8px; height: 30px; margin: 0; padding: 0 12px; color: #8a6300; font-family: 'Core AI Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 12px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; background: #fff8e1; border: 1px solid #f2d675; border-radius: 999px; } .ds-offline-pill span { width: 7px; height: 7px; background: #dba617; border-radius: 50%; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Keynote Stage",
+    "overview": "The exhibit is staged, not published. A fixed 1366 x 1024 composition — the code calls it __stage and means it — holds every component in its authored position, and the system's entire job is to decide what is lit right now. Choose a flow and one blue path draws across the board in 600ms; the cards on that path fill with a pale wash and take a border, and everything else falls to 0.4 opacity and goes disabled. The path finishes, and only then does the conclusion appear. That withheld beat is the design.\n\nThe voice is a product introduction, not a reference work. It says one thing, waits for it to land, and then says the next. Nothing is enumerated for completeness. There is no index, no alphabetical anything, no dense unbroken column of prose, and no attempt to be exhaustive about a subject that could easily fill a manual. Four flows, each with one premise and one conclusion; depth waits inside a panel the visitor chooses to open. This is the opposite of an encyclopedia and it must stay that way.\n\nMaterially it is almost austere. The ground is WordPress's own admin gray (#f6f7f7) under a 56px graph rule at 3% ink. Cards are white with a single hairline and a shadow so slight it reads as contact rather than lift. Type carries the drama instead: EB Garamond at 52-54px with tight negative tracking, set against Inter at 11-15px doing all the structural work. The serif is what makes it feel like a stage rather than a control panel — a headline in a museum, not a heading in a manual.",
+    "keyCharacteristics": [
+      "One flow lit at a time; every non-participant dimmed to 0.4 and genuinely disabled",
+      "A fixed authored stage scaled by --cai-scale, never a responsive layout",
+      "Near-flat surfaces, where a 1px shadow is a promise of interactivity rather than decoration",
+      "Solid means live work; dashed means supporting — consistently, across lines, borders, and cards",
+      "Editorial serif display over a plain functional sans; no third voice",
+      "Motion that builds to a reveal, then stops completely"
+    ],
+    "rules": [
+      { "name": "The One Live Path Rule", "body": "Live Blue marks exactly one thing at a time: the work happening right now. Two lit paths on one stage is a bug, not a busy screen.", "section": "colors" },
+      { "name": "The Two Blues Rule", "body": "blue-wash says this card is in the story. blue-tint says this is a settled result. They are one step apart in lightness and they are never swapped.", "section": "colors" },
+      { "name": "The Borrowed Ramp Rule", "body": "The grays are WordPress admin tokens, exactly. Don't substitute a near neighbor, and don't introduce a gray the admin palette doesn't have.", "section": "colors" },
+      { "name": "The Serif Speaks Once Rule", "body": "EB Garamond appears only where the exhibit names something — the welcome headline, a component title, a sub-surface title. It never sets body copy, never sets a label, and never sets a control.", "section": "typography" },
+      { "name": "The Two Voices Rule", "body": "There are exactly two reading voices, serif and sans, plus mono for values. A third family, or Inter pressed into display duty at 34px+, breaks the staging.", "section": "typography" },
+      { "name": "The Fixed Stage Rule", "body": "Never add a media query inside the stage. If something doesn't fit, re-author the composition or change the scale — the geometry below __stage is allowed to assume 1366 x 1024 forever.", "section": "layout" },
+      { "name": "The Allocated Band Rule", "body": "The bottom band's vertical budget is spent. The rail label takes a grid column rather than a line, and the colophon's line-height and padding are pinned to keep its box at 34px — the smallest box that still measures 24px once the stage is scaled to 0.7496. The arithmetic is 12 + 34 + 2 = 48: two authored pixels are all that separate the colophon from the rail. Adding a line anywhere down there, or another pixel of height, pushes the rail into the canvas.", "section": "layout" },
+      { "name": "The Seat Is a Promise Rule", "body": "The 1px seat means this responds to a tap. :disabled takes it away. Never paint it on something inert, and never remove it from something live.", "section": "elevation" },
+      { "name": "The Three Floats Rule", "body": "Only the welcome card, the inspect panel, and the About dialog leave the stage plane. Nothing else earns a 24/64 shadow — a fourth floating surface means the composition has failed somewhere else.", "section": "elevation" },
+      { "name": "The Dashed-Means-Supporting Rule", "body": "Dashed always means does not carry the live request. It covers outside actors, sidecar cards standing beside a flow, configuration paths, and zone boundaries. A component executing the request is never drawn dashed.", "section": "shapes" },
+      { "name": "The 4px Rule", "body": "--core-ai-radius is the answer. Deviate only when the element is smaller than a fingertip, or when it reports state and therefore takes a pill.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do light exactly one path at a time, and dim every non-participant to 0.4 with the native disabled attribute — dimming without disabling is a lie the visitor can tap.",
+      "Do give a pressable card the 1px seat and take it away on :disabled. That shadow is the system's only promise of interactivity.",
+      "Do draw anything that supports rather than executes with a dash — outside actors, sidecars, configuration paths, zone rules.",
+      "Do withhold the conclusion until the path settles, and then leave it up. The beat before the reveal is the pedagogy.",
+      "Do keep EB Garamond for naming only, at 34px or above, with negative tracking.",
+      "Do use the WordPress admin grays exactly as tokenized, and keep Live Blue for live work.",
+      "Do author new geometry in fixed 1366 x 1024 coordinates and let --cai-scale carry it to other sizes.",
+      "Do author controls at 60px in the header and rail and 44px for nested controls, and read both as authored numbers: --cai-scale renders them at 45px and 33px at 1024 x 768. Anything a finger has to find owes 24px rendered, not authored."
+    ],
+    "donts": [
+      "Don't write an encyclopedia. No index, no glossary, no alphabetical ordering, no exhaustive enumeration, and no unbroken column of reference prose. One premise, one reveal, one conclusion per flow — depth waits inside a panel the visitor opened.",
+      "Don't put a tap cue, a seat shadow, or a pointer cursor on a card that cannot open a panel.",
+      "Don't add a fourth floating surface. Three things leave the stage plane and that is the whole list.",
+      "Don't introduce a media query inside __stage, or make any geometry below it responsive.",
+      "Don't add a third type family, or promote Inter into the display register.",
+      "Don't use Live Blue as a fill for anything that isn't the active flow, the selected rail button, or the primary action — and never as a decorative background.",
+      "Don't swap blue-wash and blue-tint. Participation and result are different claims.",
+      "Don't let any animation loop after the visitor engages, and don't build meaning that only exists while something is moving.",
+      "Don't add provider-specific branding, logos, or vendor color to the map."
+    ]
+  }
+}

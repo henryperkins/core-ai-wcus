@@ -4,8 +4,8 @@
  *
  * The kiosk is drawn inside a fixed 1366x1024 stage. Every coordinate below is
  * in that space; `style.scss` scales the whole stage to fit the viewport, so
- * the geometry stays exact on the target iPad Pro 13" and degrades sanely
- * everywhere else.
+ * the geometry stays exact on the target iPad Pro 13" and is uniformly
+ * three-quarter size at the 1024x768 compatibility view.
  *
  * @var array    $attributes Block attributes.
  * @var string   $content    Saved block content.
@@ -1361,6 +1361,21 @@ $wrapper_attributes = get_block_wrapper_attributes(
 ?>
 
 <section <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> <?php echo wp_interactivity_data_wp_context( $context ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+	<?php
+	/*
+	 * The visible h1 lives on the welcome card, which goes away the moment a
+	 * visitor picks a flow — leaving the exhibit with no level-one heading for
+	 * the rest of the session. This one carries the name in every other state.
+	 * It is bound to the inverse of the welcome card's own binding, so exactly
+	 * one h1 is exposed at a time rather than two competing ones.
+	 */
+	?>
+	<h1
+		class="core-ai-map__sr-only"
+		data-wp-bind--hidden="state.isAttract"
+		hidden
+	><?php echo esc_html( $attributes['title'] ?? '' ); ?></h1>
+
 	<div class="core-ai-map__stage">
 		<div class="core-ai-map__grid" aria-hidden="true"></div>
 
