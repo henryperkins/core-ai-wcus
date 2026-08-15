@@ -431,7 +431,8 @@ smaller than a fingertip, or when it reports state and therefore takes a pill.
 - **Hover / Focus:** hover is gated behind `@media (hover: hover)` and does one thing —
   swaps the border to Live Blue. Focus is a 3px Live Blue outline at 4px offset,
   system-wide, on every button and link except the About trigger. That trigger uses an
-  intentional 2px offset so its ring does not overlap the story rail above it.
+  intentional 2px offset that limits overlap with the story rail and keeps the
+  ring legible over it.
 
 ### Cards / Containers
 

@@ -8,18 +8,20 @@ self-hosted WordPress Playground artifact for static-hosted demonstrations.
 
 ## 3.2.3 release notes
 
-This release hardens the accessibility work shipped in 3.2.2. Server-rendered
-markup now exposes exactly one named level-one heading before Interactivity API
+This release delivers the accessibility remediation. Server-rendered markup
+now exposes exactly one named level-one heading before Interactivity API
 hydration, and a cleared editable title falls back to the block's schema
-default. The darker strong-line token is limited to controls and boundaries
-that carry meaning; ambient edges again use the dormant line, while dashed
-configuration strokes have their own normal- and higher-contrast token.
+default. The About footnote clears the 24px rendered target floor at the
+compatibility scale, the welcome card avoids a continuously recomposited
+backdrop blur, and the contrast tokens now distinguish meaning-carrying
+boundaries, configuration strokes, dormant edges, and actor ghosts.
 
 The 1024 x 768 compatibility gate now follows the real UI through the 68px
-rail, 60px panel, tab and dialog controls, the 44px workbench Apply control,
-and the 34px About footnote. It verifies that every measured control clears the
-24px minimum and that Apply and the footnote are the only documented controls
-below the 44px enhanced target at that scale.
+rail, the Tests story and WP-Bench, 60px panel, tab and dialog controls, the
+44px workbench Apply control, and the 34px About footnote. It requires each
+declared surface's exact control count, checks both axes against the 24px and
+44px floors, and preserves Apply and the footnote as the only documented
+enhanced-target exceptions at that scale.
 
 ## 3.2.2 release notes
 
@@ -33,15 +35,6 @@ constant, then the database. The ability-calling edge joining the two halves of
 the map was added, and Connectors is framed as general connection
 infrastructure whose first users are AI providers rather than its only intended
 ones.
-
-It also closes an accessibility pass. The About footnote grew from 26 to 34
-authored pixels so it clears the 24-pixel target floor once the stage is
-scaled; the zone rule and the outside-WordPress edge moved to WordPress admin
-Gray 30 to clear 3:1 as graphics that carry meaning; dormant hairlines and the
-actor ghost stack became tokens so `prefers-contrast: more` reaches them; a
-persistent visually hidden `h1` names the exhibit in every screen state; and
-the welcome card dropped a backdrop blur that was recompositing on every frame
-of the attract loop.
 
 ## 3.2.1 release notes
 
@@ -154,6 +147,8 @@ git switch main
 git pull --ff-only
 if (git status --porcelain) { throw 'Production checkout is not clean.' }
 npm ci
+npm run build
+git diff --exit-code -- build
 npm run plugin-zip
 $env:PLAYGROUND_SOURCE_DIR = 'C:\path\to\wasm-wordpress-net'
 npm run build:playground

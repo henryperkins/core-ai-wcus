@@ -661,7 +661,7 @@ export const buildCloudflarePlayground = async ( {
 	}
 	const pluginArtifactPath = `kiosk-blueprint/${ pluginFileName }`;
 	const pluginContents = await readFile( pluginZipPath );
-	validatePluginArchiveIdentity( pluginContents, pluginVersion );
+	validatePluginArchiveIdentity( pluginContents );
 
 	if ( ! isInside( projectDirectory, output ) ) {
 		throw new Error(

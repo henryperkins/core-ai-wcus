@@ -29,6 +29,7 @@ jobs:
             - run: npm run test:unit -- --runInBand
             - run: npm run test:playground
             - run: npm run build
+            - run: git diff --exit-code -- build
             - run: npm run plugin-zip
             - run: npm run create:playground-source-fixture -- "$RUNNER_TEMP/playground-static-source"
             - run: npm run build:playground -- --source "$RUNNER_TEMP/playground-static-source" --output dist-playground --source-commit "${{ github.sha }}"

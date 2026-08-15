@@ -117,8 +117,8 @@ async ( page ) => {
 
 			return { cards, intersections, bodyOverflows, textOverflows };
 		} );
-	const measureVisibleControls = ( definitions ) =>
-		page.evaluate( ( controls ) => {
+	const measureVisibleControls = async ( definitions, surface ) => {
+		const groups = await page.evaluate( ( controls ) => {
 			const isVisible = ( element ) => {
 				const rect = element.getBoundingClientRect();
 				const style = getComputedStyle( element );
@@ -131,20 +131,40 @@ async ( page ) => {
 				);
 			};
 
-			return controls.flatMap( ( control ) => {
+			return controls.map( ( control ) => {
 				const elements = [
 					...document.querySelectorAll( control.selector ),
 				].filter( isVisible );
-				return elements.map( ( element, index ) => ( {
-					name:
-						elements.length > 1
-							? `${ control.name } ${ index + 1 }`
-							: control.name,
-					authoredHeight: control.authoredHeight,
-					renderedHeight: element.getBoundingClientRect().height,
-				} ) );
+				return {
+					name: control.name,
+					selector: control.selector,
+					expectedCount: control.expectedCount,
+					visibleCount: elements.length,
+					measurements: elements.map( ( element, index ) => {
+						const bounds = element.getBoundingClientRect();
+						return {
+							name:
+								elements.length > 1
+									? `${ control.name } ${ index + 1 }`
+									: control.name,
+							authoredHeight: control.authoredHeight,
+							renderedWidth: bounds.width,
+							renderedHeight: bounds.height,
+						};
+					} ),
+				};
 			} );
 		}, definitions );
+
+		for ( const group of groups ) {
+			assert(
+				group.visibleCount === group.expectedCount,
+				`${ surface } target gate expected ${ group.expectedCount } visible ${ group.name } control(s) for ${ group.selector }; found ${ group.visibleCount }.`
+			);
+		}
+
+		return groups.flatMap( ( group ) => group.measurements );
+	};
 	const assertCardGeometry = ( geometry, composition ) => {
 		assert(
 			geometry.intersections.length === 0,
@@ -723,6 +743,7 @@ async ( page ) => {
 				railOverlap: overlapArea( rail, footnote ),
 				clearsRail: Math.round( footnote.top - rail.bottom ),
 				clearsStage: Math.round( stage.bottom - footnote.bottom ),
+				width: Math.round( footnote.width ),
 				height: Math.round( footnote.height ),
 			},
 		};
@@ -766,8 +787,8 @@ async ( page ) => {
 		'About footnote did not sit clear of the story rail inside the stage.'
 	);
 	assert(
-		neutral.footnote.height >= 24,
-		'About footnote fell below 24px at 1366 x 1024 (scale 1).'
+		neutral.footnote.width >= 24 && neutral.footnote.height >= 24,
+		'About footnote fell below 24 x 24px at 1366 x 1024 (scale 1).'
 	);
 	const neutralGeometry = await measureCardGeometry();
 	observations.neutralGeometry = neutralGeometry;
@@ -1144,9 +1165,10 @@ async ( page ) => {
 		await apply.isVisible(),
 		'AI Plugin Apply control was not visible.'
 	);
+	const applyBounds = await apply.boundingBox();
 	assert(
-		( await apply.boundingBox() ).height >= 44,
-		'AI Plugin Apply control was smaller than its authored 44px at scale 1.'
+		applyBounds.width >= 44 && applyBounds.height >= 44,
+		`AI Plugin Apply control was smaller than its authored 44 x 44px at scale 1: ${ JSON.stringify( applyBounds ) }`
 	);
 	await apply.click();
 	await page.waitForFunction( () =>
@@ -1317,23 +1339,73 @@ async ( page ) => {
 	await page.emulateMedia( { reducedMotion: 'no-preference' } );
 	await page.setViewportSize( { width: 1024, height: 768 } );
 	await page.reload( { waitUntil: 'networkidle' } );
-	const welcomeActionHeights = await page.evaluate( () => ( {
-		primary: document
-			.querySelector( '.core-ai-map__prompt' )
-			.getBoundingClientRect().height,
-		browse: document
-			.querySelector( '.core-ai-map__attract-browse' )
-			.getBoundingClientRect().height,
-	} ) );
-	observations.welcomeActionHeights = welcomeActionHeights;
-	assert(
-		welcomeActionHeights.primary >= 44 &&
-			welcomeActionHeights.browse >= 44,
-		`1024 welcome actions fell below the 44px rendered SC 2.5.5 floor: ${ JSON.stringify( welcomeActionHeights ) }`
+	const compatibilityWelcomeControls = await measureVisibleControls(
+		[
+			{
+				name: 'Welcome primary action',
+				selector: '.core-ai-map__prompt',
+				authoredHeight: 64,
+				expectedCount: 1,
+			},
+			{
+				name: 'Welcome browse action',
+				selector: '.core-ai-map__attract-browse',
+				authoredHeight: 60,
+				expectedCount: 1,
+			},
+		],
+		'1024 welcome'
 	);
-	await page
-		.getByRole( 'button', { name: 'Explore the first flow' } )
-		.click();
+	await page.locator( '.core-ai-map__attract-browse' ).click();
+	await page.waitForTimeout( 120 );
+	const compatibilityBrowseControls = await measureVisibleControls(
+		[
+			{
+				name: 'Rail control',
+				selector: '.core-ai-map__rail button',
+				authoredHeight: 68,
+				expectedCount: 4,
+			},
+			{
+				name: 'Start over',
+				selector: '.core-ai-map__reset',
+				authoredHeight: 60,
+				expectedCount: 1,
+			},
+			{
+				name: 'Browse all components',
+				selector: '.core-ai-map__browse',
+				authoredHeight: 60,
+				expectedCount: 1,
+			},
+			{
+				name: 'About footnote',
+				selector: '.core-ai-map__about-trigger',
+				authoredHeight: 34,
+				expectedCount: 1,
+			},
+		],
+		'1024 component browser'
+	);
+	await storyButtons.nth( 0 ).click();
+	await page.waitForTimeout( 800 );
+	const compatibilityStoryControls = await measureVisibleControls(
+		[
+			{
+				name: 'Replay',
+				selector: '.core-ai-map__story-copy .core-ai-map__replay',
+				authoredHeight: 60,
+				expectedCount: 1,
+			},
+			{
+				name: 'Apply',
+				selector: '.core-ai-map__workbench-apply',
+				authoredHeight: 44,
+				expectedCount: 1,
+			},
+		],
+		'1024 Story 01'
+	);
 	const compatibility = await page.evaluate( () => {
 		const map = document.querySelector( '.core-ai-map' );
 		const stage = document
@@ -1356,8 +1428,11 @@ async ( page ) => {
 				getComputedStyle( map ).getPropertyValue( '--cai-scale' )
 			),
 			stage: stage.toJSON(),
+			storyWidth: story.width,
 			storyHeight: story.height,
+			resetWidth: reset.width,
 			resetHeight: reset.height,
+			footnoteWidth: footnote.width,
 			footnoteHeight: footnote.height,
 			footnoteClearsRail: footnote.top - rail.bottom,
 			footnoteClearsStage: stage.bottom - footnote.bottom,
@@ -1365,43 +1440,6 @@ async ( page ) => {
 			scrollHeight: document.documentElement.scrollHeight,
 		};
 	} );
-	const compatibilityMapControls = await measureVisibleControls( [
-		{
-			name: 'Rail control',
-			selector: '.core-ai-map__rail button',
-			authoredHeight: 68,
-		},
-		{
-			name: 'Start over',
-			selector: '.core-ai-map__reset',
-			authoredHeight: 60,
-		},
-		{
-			name: 'Browse all components',
-			selector: '.core-ai-map__browse',
-			authoredHeight: 60,
-		},
-		{
-			name: 'Replay',
-			selector: '.core-ai-map__story-copy .core-ai-map__replay',
-			authoredHeight: 60,
-		},
-		{
-			name: 'Run loop',
-			selector: '.core-ai-map__run-loop-link',
-			authoredHeight: 60,
-		},
-		{
-			name: 'Apply',
-			selector: '.core-ai-map__workbench-apply',
-			authoredHeight: 44,
-		},
-		{
-			name: 'About footnote',
-			selector: '.core-ai-map__about-trigger',
-			authoredHeight: 34,
-		},
-	] );
 	observations.compatibility = compatibility;
 	assert(
 		Math.abs( compatibility.scale - 0.75 ) < 0.002,
@@ -1416,8 +1454,11 @@ async ( page ) => {
 		'1024 page scrolled.'
 	);
 	assert(
-		compatibility.storyHeight >= 44 && compatibility.resetHeight >= 44,
-		'1024 controls fell below the 44px rendered SC 2.5.5 floor.'
+		compatibility.storyWidth >= 44 &&
+			compatibility.storyHeight >= 44 &&
+			compatibility.resetWidth >= 44 &&
+			compatibility.resetHeight >= 44,
+		`1024 rail or reset control fell below the 44 x 44px rendered SC 2.5.5 floor: ${ JSON.stringify( compatibility ) }`
 	);
 	/*
 	 * The gate the documentation actually leans on. Authored sizes tell you
@@ -1428,8 +1469,12 @@ async ( page ) => {
 	 * enough that either could regress without the other noticing.
 	 */
 	assert(
-		compatibility.footnoteHeight >= 24,
-		`About footnote fell below the 24px rendered SC 2.5.8 floor at 1024 x 768: ${ compatibility.footnoteHeight }.`
+		compatibility.footnoteWidth >= 24 &&
+			compatibility.footnoteHeight >= 24,
+		`About footnote fell below the 24 x 24px rendered SC 2.5.8 floor at 1024 x 768: ${ JSON.stringify( {
+			width: compatibility.footnoteWidth,
+			height: compatibility.footnoteHeight,
+		} ) }.`
 	);
 	assert(
 		compatibility.footnoteClearsRail > 0 &&
@@ -1444,6 +1489,45 @@ async ( page ) => {
 	const compatibilityNeutralGeometry = await measureCardGeometry();
 	observations.compatibilityNeutralGeometry = compatibilityNeutralGeometry;
 	assertCardGeometry( compatibilityNeutralGeometry, '1024 neutral map' );
+
+	/*
+	 * Run-loop and WP-Bench targets exist only after following the Tests story.
+	 * Reach each surface through its rendered controls before measuring it.
+	 */
+	await storyButtons.nth( 3 ).click();
+	await page.waitForTimeout( 800 );
+	const compatibilityTestsControls = await measureVisibleControls(
+		[
+			{
+				name: 'Run loop',
+				selector: '.core-ai-map__run-loop-link',
+				authoredHeight: 60,
+				expectedCount: 1,
+			},
+		],
+		'1024 Tests story'
+	);
+	await page.locator( '.core-ai-map__run-loop-link:visible' ).click();
+	await page.waitForTimeout( 120 );
+	const compatibilityBenchControls = await measureVisibleControls(
+		[
+			{
+				name: 'Bench Back',
+				selector: '.core-ai-map__bench-heading button',
+				authoredHeight: 60,
+				expectedCount: 1,
+			},
+			{
+				name: 'Bench stage',
+				selector: '.core-ai-map__bench-stage',
+				authoredHeight: 112,
+				expectedCount: 5,
+			},
+		],
+		'1024 WP-Bench'
+	);
+	await page.locator( '.core-ai-map__bench-heading button' ).click();
+	await page.waitForTimeout( 80 );
 
 	/*
 	 * Follow the UI into a real inspector so the compatibility gate covers the
@@ -1462,16 +1546,16 @@ async ( page ) => {
 			name: 'Panel Back',
 			selector: '.core-ai-map__details-close',
 			authoredHeight: 60,
+			expectedCount: 1,
 		},
 		{
 			name: 'Abilities tab',
 			selector: '.core-ai-map__ability-tabs [role="tab"]',
 			authoredHeight: 60,
+			expectedCount: 3,
 		},
-	] );
-	assert(
-		compatibilityPanelControls.length === 4,
-		`1024 panel gate did not measure Back plus all three tabs: ${ JSON.stringify( compatibilityPanelControls ) }`
+	],
+		'1024 Abilities inspector'
 	);
 	await page.locator( '.core-ai-map__details-close' ).click();
 	await page.waitForTimeout( 80 );
@@ -1483,61 +1567,47 @@ async ( page ) => {
 			name: 'About dialog Back',
 			selector: '.core-ai-map__about-close',
 			authoredHeight: 60,
+			expectedCount: 1,
 		},
-	] );
-	assert(
-		compatibilityDialogControls.length === 1,
-		`1024 dialog gate did not measure its Back control: ${ JSON.stringify( compatibilityDialogControls ) }`
+	],
+		'1024 About dialog'
 	);
 	await page.locator( '.core-ai-map__about-close' ).click();
 	await page.waitForTimeout( 80 );
 
 	const compatibilityControls = [
-		{
-			name: 'Welcome primary action',
-			authoredHeight: 64,
-			renderedHeight: welcomeActionHeights.primary,
-		},
-		{
-			name: 'Welcome browse action',
-			authoredHeight: 60,
-			renderedHeight: welcomeActionHeights.browse,
-		},
-		...compatibilityMapControls,
+		...compatibilityWelcomeControls,
+		...compatibilityBrowseControls,
+		...compatibilityStoryControls,
+		...compatibilityTestsControls,
+		...compatibilityBenchControls,
 		...compatibilityPanelControls,
 		...compatibilityDialogControls,
 	];
 	observations.compatibilityControls = compatibilityControls;
 	assert(
 		compatibilityControls.every(
-			( control ) => control.renderedHeight >= 24
+			( control ) =>
+				control.renderedWidth >= 24 && control.renderedHeight >= 24
 		),
-		`1024 named controls fell below the 24px rendered SC 2.5.8 floor: ${ JSON.stringify(
+		`1024 named controls fell below the 24 x 24px rendered SC 2.5.8 floor: ${ JSON.stringify(
 			compatibilityControls.filter(
-				( control ) => control.renderedHeight < 24
+				( control ) =>
+					control.renderedWidth < 24 || control.renderedHeight < 24
 			)
 		) }`
 	);
-	const compatibilitySixtyPixelControls = compatibilityControls.filter(
-		( control ) => control.authoredHeight === 60
-	);
-	assert(
-		compatibilitySixtyPixelControls.length >= 6 &&
-			compatibilitySixtyPixelControls.every(
-				( control ) => control.renderedHeight >= 44
-			),
-		`1024 60px controls fell below the 44px rendered SC 2.5.5 target: ${ JSON.stringify(
-			compatibilitySixtyPixelControls
-		) }`
-	);
 	const compatibilityEnhancedTargetExceptions = compatibilityControls
-		.filter( ( control ) => control.renderedHeight < 44 )
+		.filter(
+			( control ) =>
+				control.renderedWidth < 44 || control.renderedHeight < 44
+		)
 		.map( ( control ) => control.name )
 		.sort();
 	assert(
 		JSON.stringify( compatibilityEnhancedTargetExceptions ) ===
 			JSON.stringify( [ 'About footnote', 'Apply' ] ),
-		`1024 SC 2.5.5 exceptions were not exactly Apply and About footnote: ${ JSON.stringify(
+		`1024 44 x 44px SC 2.5.5 exceptions were not exactly Apply and About footnote: ${ JSON.stringify(
 			compatibilityEnhancedTargetExceptions
 		) }`
 	);

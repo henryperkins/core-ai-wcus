@@ -140,6 +140,7 @@ test( 'verification workflow runs the complete non-deploying release-build contr
 		'npm run test:unit -- --runInBand',
 		'npm run test:playground',
 		'npm run build',
+		'git diff --exit-code -- build',
 		'npm run plugin-zip',
 		'npm run create:playground-source-fixture',
 		'npm run build:playground',

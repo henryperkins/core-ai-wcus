@@ -145,7 +145,7 @@ export const verifyPlaygroundArtifact = async ( {
 			'Plugin artifact SHA-256 does not match the manifest.'
 		);
 	}
-	validatePluginArchiveIdentity( contents, releaseIdentity.pluginVersion );
+	validatePluginArchiveIdentity( contents );
 
 	return {
 		directory: outputDirectory,
