@@ -4,7 +4,7 @@ import test from 'node:test';
 import { validatePluginArchiveIdentity } from '../../scripts/plugin-release-identity.mjs';
 import { createPluginZipFixture } from './plugin-zip-fixture.mjs';
 
-const currentVersion = '3.2.1';
+const currentVersion = '3.2.2';
 
 test( 'accepts a plug-in archive whose three internal versions agree', () => {
 	assert.deepEqual(
@@ -28,7 +28,7 @@ for ( const [ label, overrides, expectedError ] of [
 			constantVersion: currentVersion,
 			blockVersion: currentVersion,
 		},
-		/plug-in header version 3\.1\.2 does not match expected 3\.2\.1/i,
+		/plug-in header version 3\.1\.2 does not match expected 3\.2\.2/i,
 	],
 	[
 		'CORE_AI_MAP_VERSION constant',
@@ -37,7 +37,7 @@ for ( const [ label, overrides, expectedError ] of [
 			constantVersion: '3.1.2',
 			blockVersion: currentVersion,
 		},
-		/CORE_AI_MAP_VERSION 3\.1\.2 does not match expected 3\.2\.1/i,
+		/CORE_AI_MAP_VERSION 3\.1\.2 does not match expected 3\.2\.2/i,
 	],
 	[
 		'built block metadata',
@@ -46,7 +46,7 @@ for ( const [ label, overrides, expectedError ] of [
 			constantVersion: currentVersion,
 			blockVersion: '3.1.2',
 		},
-		/built block metadata version 3\.1\.2 does not match expected 3\.2\.1/i,
+		/built block metadata version 3\.1\.2 does not match expected 3\.2\.2/i,
 	],
 ] ) {
 	test( `rejects a stale ${ label }`, () => {

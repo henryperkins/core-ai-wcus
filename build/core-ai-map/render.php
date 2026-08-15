@@ -664,6 +664,70 @@ $panels = $migrate_legacy_defaults(
 );
 
 /*
+ * The connector-accuracy pass corrects three claims a visitor could check
+ * against a real admin screen — that Core's client is PHP only, that the
+ * AI Client's modalities are text/image/JSON, and that Connectors is where
+ * credentials are stored — and adds the ability-calling edge that joins the
+ * two halves of the map. It also retires the wording that called 7.1 unshipped
+ * and the booth a 7.0 site, now that the kiosk boots a 7.1 release candidate.
+ * Replace only the exact v3.2.1 values so authored copy is still authoritative.
+ */
+$panels = $migrate_legacy_defaults(
+	$panels,
+	$panel_defaults,
+	array(
+		'abilities'       => array(
+			'notes' => array(
+				array(
+					'heading' => 'Under the hood',
+					'text'    => 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution are scheduled for WordPress 7.1 on August 19, 2026; this exhibit runs WordPress 7.0, so read the Anatomy panel as forward-looking.',
+				),
+			),
+		),
+		'client'          => array(
+			'connect' => array(
+				array( 'label' => 'Text, image or JSON request' ),
+				array(
+					'label'  => 'AI Client',
+					'accent' => true,
+				),
+				array( 'label' => 'Normalized result' ),
+			),
+			'notes'   => array(
+				array(
+					'heading' => 'Under the hood',
+					'text'    => 'A WordPress wrapper around the provider-agnostic PHP AI Client, which handles provider communication, model selection, and normalized results. Consuming plugins never integrate a provider directly. Core’s client is PHP only: for editor JavaScript, register a REST endpoint per feature. Check support before showing any AI interface — the checks are free, and a 7.0 site may have no provider configured at all.',
+				),
+			),
+		),
+		'connectors'      => array(
+			'lede'  => 'Where a site owner discovers and configures provider plugins, stores credentials, and sees connection status. It supports the request path; it is not the request executor.',
+			'notes' => array(
+				array(
+					'heading' => 'Providers',
+					'text'    => 'Provider plugins register with the AI Client. Connectors auto-discovers them and gives site owners installation, configuration, credential, and status controls. The map stays vendor-neutral: no provider owns a position on the canvas.',
+				),
+				array(
+					'heading' => 'Under the hood',
+					'text'    => 'Introduced in WordPress 7.0 as a standardized framework for registering and managing connections to external services, starting with AI providers.',
+				),
+			),
+		),
+		'provider-plugin' => array(
+			'lede'  => 'A provider-specific integration installed as a WordPress plugin. It speaks one external service’s protocol using the credentials the site owner stored through Connectors.',
+			'roles' => array(
+				'uses-ai' => array(
+					'receives' => 'The routed request from the AI Client.',
+					'does'     => 'Speaks one external service’s protocol, using the stored credentials.',
+					'returns'  => 'That service’s reply, handed back to the AI Client.',
+					'lesson'   => 'The provider-specific part is a plugin. Swapping providers does not change the feature that asked.',
+				),
+			),
+		),
+	)
+);
+
+/*
  * Destinations are product-owned visitor data rather than editable kiosk copy.
  * Overwrite serialized values so already-inserted blocks migrate away from the
  * old generic links and QR placeholders on their next render.
@@ -1959,7 +2023,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								<span class="core-ai-map__chain-step"><?php esc_html_e( 'Run', 'core-ai-map' ); ?></span><span class="core-ai-map__chain-arrow" aria-hidden="true">&rarr;</span>
 								<span class="core-ai-map__chain-step is-accent"><?php esc_html_e( 'Typed output', 'core-ai-map' ); ?></span>
 							</div>
-							<p class="core-ai-map__details-note"><?php esc_html_e( 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution are scheduled for WordPress 7.1 on August 19, 2026; this exhibit runs WordPress 7.0, so read the Anatomy panel as forward-looking.', 'core-ai-map' ); ?></p>
+							<p class="core-ai-map__details-note"><?php esc_html_e( 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution arrive in WordPress 7.1 on August 19, 2026. This exhibit runs a 7.1 release candidate, so the Anatomy panel describes the version you are looking at.', 'core-ai-map' ); ?></p>
+							<p class="core-ai-map__details-note"><strong><?php esc_html_e( 'Reached from both directions.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'An outside assistant is not the only caller. A request made by the AI Client inside WordPress can name registered abilities a model is allowed to call, and every one of those calls still passes the same permission check.', 'core-ai-map' ); ?></p>
 							<?php $render_qr( $panel_id, $panel ); ?>
 						</div>
 
@@ -1990,8 +2055,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								<li><b>A</b><span><strong><?php esc_html_e( 'Two segments, lowercase.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'The name is public API. Renaming it later breaks every caller.', 'core-ai-map' ); ?></span></li>
 								<li><b>B</b><span><strong><?php esc_html_e( 'This is the part an agent reads.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'It picks the ability from these two lines alone. If the description needs an “and”, it is two abilities.', 'core-ai-map' ); ?></span></li>
 								<li><b>C</b><span><strong><?php esc_html_e( 'Checked on every call.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'An editor button, a REST client and an outside assistant all pass through the same gate.', 'core-ai-map' ); ?></span></li>
-								<li><b>D</b><span><strong><?php esc_html_e( 'One public default, per-channel control. Scheduled for 7.1.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'Public seeds outside channels such as REST, MCP adapters, and agents; each channel can still be turned off independently.', 'core-ai-map' ); ?></span></li>
-								<li><b>E</b><span><strong><?php esc_html_e( 'Annotations are hints, not enforcement.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'Core’s own words: hints for tooling and documentation. Read-only tells a client this ability changes nothing. It does not stop anyone from calling it.', 'core-ai-map' ); ?></span></li>
+								<li><b>D</b><span><strong><?php esc_html_e( 'One public default, per-channel control. New in 7.1.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'Public seeds outside channels such as REST, MCP adapters, and agents; each channel can still be turned off independently.', 'core-ai-map' ); ?></span></li>
+								<li><b>E</b><span><strong><?php esc_html_e( 'Hints to clients about behavior — and the verb core requires.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'Read-only tells a client this ability changes nothing; over REST it also makes GET the only way to call it. What it never does is decide who may call it.', 'core-ai-map' ); ?></span></li>
 							</ul>
 							<p class="core-ai-map__details-warning"><strong><?php esc_html_e( 'Validation is not sanitization.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'The schema checks types and required fields. It does not clean input, and it does not fill in the defaults you wrote. Whatever arrives is raw.', 'core-ai-map' ); ?></p>
 						</div>
@@ -2017,7 +2082,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								<li><strong><?php esc_html_e( 'The ability decides', 'core-ai-map' ); ?></strong><span><?php esc_html_e( 'Only the last gate sees what is actually being asked — which booking, which date, on whose behalf. This is the one you write.', 'core-ai-map' ); ?></span></li>
 							</ol>
 							<p class="core-ai-map__details-warning"><strong><?php esc_html_e( 'All three must pass.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'The first two default to little more than “someone is logged in”. A permission check only ever tried as an administrator has not been tested.', 'core-ai-map' ); ?></p>
-							<p class="core-ai-map__details-note"><?php esc_html_e( 'An assistant acts as a real logged-in user. An ability that is too generous hands an outside service that user’s reach. Exposure is not authorisation: public decides what a client may see, never what it may run.', 'core-ai-map' ); ?></p>
+							<p class="core-ai-map__details-note"><?php esc_html_e( 'An assistant acts as a real logged-in user. An ability that is too generous hands an outside service that user’s reach. Exposure is not authorization: public decides what a client may see, never what it may run.', 'core-ai-map' ); ?></p>
 						</div>
 					<?php else : ?>
 

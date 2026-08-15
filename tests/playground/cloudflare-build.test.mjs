@@ -83,7 +83,7 @@ test( 'static Playground source fixture preserves the test runtime tree through 
 		expectedStaticSourceFiles
 	);
 	assert.ok(
-		( await stat( join( moduleDirectory, 'wp-7.0' ) ) ).isDirectory()
+		( await stat( join( moduleDirectory, 'wp-beta' ) ) ).isDirectory()
 	);
 	assert.match(
 		await readFile( join( moduleDirectory, 'index.html' ), 'utf8' ),
@@ -100,7 +100,9 @@ test( 'static Playground source fixture preserves the test runtime tree through 
 		await listFixtureFiles( cliDirectory ),
 		expectedStaticSourceFiles
 	);
-	assert.ok( ( await stat( join( cliDirectory, 'wp-7.0' ) ) ).isDirectory() );
+	assert.ok(
+		( await stat( join( cliDirectory, 'wp-beta' ) ) ).isDirectory()
+	);
 } );
 
 test( 'verification workflow runs the complete non-deploying release-build contract', async () => {
@@ -261,7 +263,7 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 	const outputDirectory = join( temporaryDirectory, 'output' );
 	const pluginZipPath = join( temporaryDirectory, 'fixture-plugin.zip' );
 	const pluginContents = createPluginZipFixture( {
-		headerVersion: '3.2.1',
+		headerVersion: '3.2.2',
 	} );
 	await createStaticSourceFixture( sourceDirectory );
 	await writeFile( pluginZipPath, pluginContents );
@@ -343,7 +345,7 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 	);
 	assert.deepEqual(
 		await readFile(
-			join( outputDirectory, 'kiosk-blueprint', 'core-ai-map-3.2.1.zip' )
+			join( outputDirectory, 'kiosk-blueprint', 'core-ai-map-3.2.2.zip' )
 		),
 		pluginContents
 	);
@@ -361,12 +363,12 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 		)
 	);
 	assert.deepEqual( deploymentManifest.pluginArtifact, {
-		path: 'kiosk-blueprint/core-ai-map-3.2.1.zip',
+		path: 'kiosk-blueprint/core-ai-map-3.2.2.zip',
 		bytes: pluginContents.byteLength,
 		sha256: createHash( 'sha256' ).update( pluginContents ).digest( 'hex' ),
 	} );
 	assert.equal( deploymentManifest.sourceCommit, 'source-commit-fixture' );
-	assert.equal( deploymentManifest.pluginVersion, '3.2.1' );
+	assert.equal( deploymentManifest.pluginVersion, '3.2.2' );
 	assert.equal( deploymentManifest.builtAt, '2026-08-13T12:34:56.000Z' );
 
 	const webManifest = JSON.parse(
@@ -421,7 +423,7 @@ test( 'rejects a stale plug-in ZIP before replacing existing build output', asyn
 			sourceCommit: 'source-commit-fixture',
 			builtAt: '2026-08-13T12:34:56.000Z',
 		} ),
-		/plug-in header version 3\.1\.2 does not match expected 3\.2\.1/i
+		/plug-in header version 3\.1\.2 does not match expected 3\.2\.2/i
 	);
 	assert.equal(
 		await readFile( sentinelPath, 'utf8' ),
@@ -430,7 +432,7 @@ test( 'rejects a stale plug-in ZIP before replacing existing build output', asyn
 } );
 
 test( 'ships the pinned WordPress static fallback tree', () => {
-	assert.deepEqual( requiredRuntimeDirectories, [ 'wp-7.0' ] );
+	assert.deepEqual( requiredRuntimeDirectories, [ 'wp-beta' ] );
 } );
 
 test( 'rejects a Pages artifact that exceeds the free-tier asset constraints', () => {

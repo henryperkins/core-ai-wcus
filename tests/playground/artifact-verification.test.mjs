@@ -144,7 +144,7 @@ test( 'rejects a hashed artifact whose internal plug-in identity is stale', asyn
 			directory,
 			sourceCommit: expectedSourceCommit,
 		} ),
-		/plug-in header version 3\.1\.2 does not match expected 3\.2\.1/i
+		/plug-in header version 3\.1\.2 does not match expected 3\.2\.2/i
 	);
 } );
 
@@ -169,7 +169,7 @@ test( 'rejects an artifact that is not published under its versioned filename', 
 			directory,
 			sourceCommit: expectedSourceCommit,
 		} ),
-		/artifact path .* must be kiosk-blueprint\/core-ai-map-3\.2\.1\.zip/i
+		/artifact path .* must be kiosk-blueprint\/core-ai-map-3\.2\.2\.zip/i
 	);
 } );
 

@@ -2,7 +2,7 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "core-ai/core-ai-map",
-	"version": "3.2.1",
+	"version": "3.2.2",
 	"title": "Core AI Living Block Map",
 	"category": "design",
 	"icon": "wordpress",
@@ -238,7 +238,7 @@
 					"notes": [
 						{
 							"heading": "Under the hood",
-							"text": "The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution are scheduled for WordPress 7.1 on August 19, 2026; this exhibit runs WordPress 7.0, so read the Anatomy panel as forward-looking."
+							"text": "The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution arrive in WordPress 7.1 on August 19, 2026. This exhibit runs a 7.1 release candidate, so the Anatomy panel describes the version you are looking at."
 						}
 					],
 					"href": "https://developer.wordpress.org/apis/abilities-api/",
@@ -261,14 +261,18 @@
 					"connectHeading": "How it connects",
 					"connectLayout": "chain",
 					"connect": [
-						{ "label": "Text, image or JSON request" },
+						{ "label": "Text, image, speech or video request" },
 						{ "label": "AI Client", "accent": true },
 						{ "label": "Normalized result" }
 					],
 					"notes": [
 						{
 							"heading": "Under the hood",
-							"text": "A WordPress wrapper around the provider-agnostic PHP AI Client, which handles provider communication, model selection, and normalized results. Consuming plugins never integrate a provider directly. Core’s client is PHP only: for editor JavaScript, register a REST endpoint per feature. Check support before showing any AI interface — the checks are free, and a 7.0 site may have no provider configured at all."
+							"text": "A WordPress wrapper around the provider-agnostic PHP AI Client, which handles provider communication, model selection, and normalized results. Consuming plugins never integrate a provider directly. There is a JavaScript prompt API too, but it is administrator-gated and can send any prompt to any configured provider — so for editor features, register a REST endpoint scoped to that one feature. Check support before showing any AI interface — the checks are free, and a 7.0 site may have no provider configured at all."
+						},
+						{
+							"heading": "Calling back into WordPress",
+							"text": "A request can name registered abilities the model is allowed to call. When it calls one, WordPress runs that ability — permission check and all — and folds the result back into the same request. This is where the two halves of the map meet: WordPress asking AI for something can end with WordPress doing the work itself."
 						}
 					],
 					"href": "https://developer.wordpress.org/reference/functions/wp_ai_client_prompt/",
@@ -279,7 +283,7 @@
 					"id": "connectors",
 					"badge": "Core API · 7.0",
 					"title": "Connectors",
-					"lede": "Where a site owner discovers and configures provider plugins, stores credentials, and sees connection status. It supports the request path; it is not the request executor.",
+					"lede": "Where a site owner installs provider plugins, supplies credentials, and sees connection status — one setup shared by every plugin that needs it. It supports the request path; it is not the request executor.",
 					"roles": {
 						"uses-ai": {
 							"receives": "Nothing in the request path — it sits beside it.",
@@ -299,11 +303,11 @@
 					"notes": [
 						{
 							"heading": "Providers",
-							"text": "Provider plugins register with the AI Client. Connectors auto-discovers them and gives site owners installation, configuration, credential, and status controls. The map stays vendor-neutral: no provider owns a position on the canvas."
+							"text": "Provider plugins register with the AI Client. Connectors auto-discovers them, and one button installs and activates the plugin before asking for its key. Keys are read from an environment variable first, then a wp-config constant, then the database — where they sit unencrypted by default. The map stays vendor-neutral: no provider owns a position on the canvas."
 						},
 						{
 							"heading": "Under the hood",
-							"text": "Introduced in WordPress 7.0 as a standardized framework for registering and managing connections to external services, starting with AI providers."
+							"text": "Introduced in WordPress 7.0 as a standardized framework for registering and managing connections to external services. AI providers are the first users of it, not the only intended ones — the framework is built for outside connections generally."
 						}
 					],
 					"href": "https://make.wordpress.org/core/2026/03/18/introducing-the-connectors-api-in-wordpress-7-0/",
@@ -345,7 +349,7 @@
 					"id": "mcp",
 					"badge": "WordPress plugin · not in Core",
 					"title": "MCP Adapter",
-					"lede": "Translation at the edge of the site. It exposes the abilities their authors marked public to authorized outside assistants as MCP tools, resources, and prompts — and translates their calls back into WordPress work.",
+					"lede": "Translation at the edge of the site. It exposes the abilities their authors marked public to authorized outside assistants — as MCP resources and prompts automatically, and as individual tools on a custom server — and translates their calls back into WordPress work.",
 					"roles": {
 						"uses-wp": {
 							"receives": "An MCP tool call from an authorized outside assistant.",
@@ -358,9 +362,10 @@
 					"connectLayout": "chain",
 					"connect": [
 						{ "label": "MCP tool call" },
-						{ "label": "MCP Adapter", "accent": true },
-						{ "label": "Ability" },
-						{ "label": "Permission check" }
+						{ "label": "Transport check" },
+						{ "label": "Meta-tool" },
+						{ "label": "Permission" },
+						{ "label": "Run", "accent": true }
 					],
 					"notes": [
 						{
@@ -437,7 +442,7 @@
 					"id": "assistant",
 					"badge": "Not WordPress",
 					"title": "AI assistant",
-					"lede": "A program outside WordPress — a chat assistant, an editor, an agent — that speaks MCP. It holds no WordPress privileges of its own, and every request it makes is checked by WordPress before anything runs.",
+					"lede": "A program outside WordPress — a chat assistant, an editor, an agent — that speaks MCP. It holds no privileges of its own — it acts as a WordPress user it was given credentials for, and never gets more reach than that user has.",
 					"roles": {
 						"uses-wp": {
 							"receives": "A person’s instruction, outside WordPress.",
@@ -499,11 +504,11 @@
 					"id": "provider-plugin",
 					"badge": "WordPress plugin",
 					"title": "AI provider plugin",
-					"lede": "A provider-specific integration installed as a WordPress plugin. It speaks one external service’s protocol using the credentials the site owner stored through Connectors.",
+					"lede": "A provider-specific integration installed as a WordPress plugin. It speaks one external service’s protocol using the credentials Connectors resolved for it.",
 					"roles": {
 						"uses-ai": {
 							"receives": "The routed request from the AI Client.",
-							"does": "Speaks one external service’s protocol, using the stored credentials.",
+							"does": "Speaks one external service’s protocol, using the credentials Connectors resolved.",
 							"returns": "That service’s reply, handed back to the AI Client.",
 							"lesson": "The provider-specific part is a plugin. Swapping providers does not change the feature that asked."
 						}

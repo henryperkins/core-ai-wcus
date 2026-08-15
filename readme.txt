@@ -2,9 +2,9 @@
 Contributors: wordpressdotorg
 Tags: core-ai, kiosk, interactive
 Requires at least: 7.0
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.2.1
+Stable tag: 3.2.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ One dynamic, server-rendered WordPress block that explains the building blocks c
 
 == Description ==
 
-Core AI Living Block Map 3.2.1 provides one full-width `core-ai/core-ai-map` block. Server markup is enhanced with the WordPress Interactivity API.
+Core AI Living Block Map 3.2.2 provides one full-width `core-ai/core-ai-map` block. Server markup is enhanced with the WordPress Interactivity API.
 
 The attract workflow uses assemble, path, signal, caption, and release phases. After engagement, motion settles; reduced-motion users retain the same story, path, state, and caption information.
 
@@ -93,6 +93,13 @@ Run these commands when building from source:
 `npm run plugin-zip`
 
 == Changelog ==
+
+= 3.2.2 =
+
+* Moved the Playground kiosk from WordPress 7.0 to the `beta` channel, so the exhibit runs a WordPress 7.1 release candidate rather than describing 7.1 as unshipped.
+* Corrected AI Client and Connectors copy against a real admin screen: the JavaScript prompt API is administrator-gated rather than absent, requests carry text, image, speech, or video, and Connectors resolves keys from an environment variable, then a wp-config constant, then the database.
+* Added the ability-calling edge that joins the two halves of the map, where a request made inside WordPress can name abilities the model may call.
+* Framed Connectors as general connection infrastructure whose first users are AI providers, not its only intended ones.
 
 = 3.2.1 =
 

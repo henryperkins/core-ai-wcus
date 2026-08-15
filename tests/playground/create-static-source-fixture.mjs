@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 
 export const createStaticSourceFixture = async ( sourceDirectory ) => {
 	await mkdir( join( sourceDirectory, 'assets' ), { recursive: true } );
-	await mkdir( join( sourceDirectory, 'wp-7.0' ), { recursive: true } );
+	await mkdir( join( sourceDirectory, 'wp-beta' ), { recursive: true } );
 	await writeFile(
 		join( sourceDirectory, 'index.html' ),
 		`<!doctype html><html><head>

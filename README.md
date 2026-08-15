@@ -76,11 +76,21 @@ pull request for this work.
 ## Cloudflare Pages Playground exhibit
 
 `playground/blueprint.json` packages this same plugin into a browser-executed
-WordPress Playground kiosk. It pins WordPress 7.0 and PHP 8.3, creates the
-`/living-block-map/` page, disables Playground network access, and keeps each
-visitor's WordPress state in that visitor's browser. The page disables this
-plugin's own offline worker because Playground already owns the virtual site's
-service worker and browser-local persistence.
+WordPress Playground kiosk. It pins WordPress to Playground's `beta` channel
+and PHP to 8.3, creates the `/living-block-map/` page, disables Playground
+network access, and keeps each visitor's WordPress state in that visitor's
+browser. The page disables this plugin's own offline worker because Playground
+already owns the virtual site's service worker and browser-local persistence.
+
+`beta` is how the exhibit reaches WordPress 7.1: Playground publishes no `7.1`
+branch build and has no syntax for pinning an exact release candidate, so the
+channel is the only route to prerelease 7.1. It resolved to 7.1-RC1 when this
+was written, which lags WordPress.org's own beta channel — 7.1-RC3 as of
+15 August 2026. The channel moves upstream; a built artifact does not. The
+runtime tree is copied out of `PLAYGROUND_SOURCE_DIR` at build time, so a
+deployed booth stays on whatever RC that source carried. Re-download the
+Playground static release to move the booth forward, and switch the pin to
+`7.1` once 7.1 ships on 19 August 2026.
 
 Build the static Pages artifact from an official WordPress Playground static
 release directory:
@@ -102,8 +112,8 @@ npx wrangler pages deploy dist-playground `
     --commit-dirty=false
 ```
 
-The build copies only the assets needed by the pinned runtime plus WordPress
-7.0's static fallback tree. It validates Cloudflare Pages Free's 20,000-file
+The build copies only the assets needed by the pinned runtime plus the `beta`
+channel's static fallback tree. It validates Cloudflare Pages Free's 20,000-file
 and 25 MiB-per-asset limits, removes upstream Google Fonts and analytics, and
 uses a local Blueprint and plugin ZIP. `npm run plugin-zip` creates the local
 `core-ai-map.zip`; the Pages build copies those exact bytes to the release URL

@@ -51,12 +51,15 @@ describe( 'Living Block Map v3.2.1 server render', () => {
 		);
 	} );
 
-	it( 'uses scheduled 7.1 language and a per-channel public default', () => {
+	it( 'uses shipped 7.1 language and a per-channel public default', () => {
 		expect( render ).toContain(
-			'scheduled for WordPress 7.1 on August 19, 2026'
+			'arrive in WordPress 7.1 on August 19, 2026'
 		);
-		expect( render ).toContain( 'this exhibit runs WordPress 7.0' );
+		expect( render ).toContain( 'runs a 7.1 release candidate' );
 		expect( render ).toContain(
+			'One public default, per-channel control. New in 7.1.'
+		);
+		expect( render ).not.toContain(
 			'One public default, per-channel control. Scheduled for 7.1.'
 		);
 	} );

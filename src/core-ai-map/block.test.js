@@ -6,10 +6,10 @@ const metadata = JSON.parse(
 );
 const { attributes } = metadata;
 
-describe( 'Living Block Map v3.2.1 metadata', () => {
-	it( 'identifies the block as Living Block Map v3.2.1', () => {
+describe( 'Living Block Map v3.2.2 metadata', () => {
+	it( 'identifies the block as Living Block Map v3.2.2', () => {
 		expect( metadata.title ).toBe( 'Core AI Living Block Map' );
-		expect( metadata.version ).toBe( '3.2.1' );
+		expect( metadata.version ).toBe( '3.2.2' );
 	} );
 
 	it( 'sets the reviewed date used by the About panel', () => {
@@ -138,17 +138,18 @@ describe( 'Living Block Map v3.2.1 metadata', () => {
 		);
 	} );
 
-	it( 'describes WordPress 7.1 work as scheduled while the exhibit runs 7.0', () => {
+	it( 'dates WordPress 7.1 while telling visitors the exhibit already runs it', () => {
 		const abilities = attributes.panels.default.find(
 			( panel ) => panel.id === 'abilities'
 		);
 		const copy = abilities.notes.map( ( note ) => note.text ).join( ' ' );
 
 		expect( copy ).toContain(
-			'scheduled for WordPress 7.1 on August 19, 2026'
+			'arrive in WordPress 7.1 on August 19, 2026'
 		);
-		expect( copy ).toContain( 'this exhibit runs WordPress 7.0' );
+		expect( copy ).toContain( 'runs a 7.1 release candidate' );
 		expect( copy ).not.toContain( 'ships 19 August' );
+		expect( copy ).not.toContain( 'this exhibit runs WordPress 7.0' );
 	} );
 
 	it( 'uses the seven canonical panel destinations', () => {

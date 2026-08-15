@@ -219,7 +219,7 @@ describe( 'editor copy normalization', () => {
 		).toContain( 'provider plugin' );
 		expect(
 			panels.find( ( item ) => item.id === 'abilities' ).notes[ 0 ].text
-		).toContain( 'scheduled for WordPress 7.1 on August 19, 2026' );
+		).toContain( 'arrive in WordPress 7.1 on August 19, 2026' );
 		expect(
 			panels.find( ( item ) => item.id === 'client' ).lede
 		).toContain( 'installed provider plugin' );

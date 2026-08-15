@@ -28,10 +28,19 @@ const packageManifest = JSON.parse(
 );
 const execFileAsync = promisify( execFile );
 
+// Playground publishes no `7.1` branch build and cannot pin an exact release
+// candidate, so the exhibit rides the `beta` channel — WordPress 7.1-RC1 at the
+// time of writing. The channel moves upstream, but this artifact does not: the
+// runtime tree below is copied out of the static source at build time, which
+// freezes the booth on whatever RC that source carried.
+export const playgroundWordPressVersion = 'beta';
+
 // The virtual-site service worker falls back to this unpacked tree when a
 // WordPress core, theme, or plugin asset is not available from the PHP
 // filesystem. It must match the Blueprint's exact WordPress version.
-export const requiredRuntimeDirectories = [ 'wp-7.0' ];
+export const requiredRuntimeDirectories = [
+	`wp-${ playgroundWordPressVersion }`,
+];
 export const playgroundLoadingMessage = 'Preparing WordPress';
 export const kioskLoadingMessage =
 	'Building a real WordPress site in your browser. A cold start can take a minute or more.';
@@ -511,7 +520,9 @@ const getRuntimeFiles = async ( sourceDirectory ) => {
 			( path.startsWith( 'assets/php_' ) &&
 				! path.startsWith( 'assets/php_8_3-' ) ) ||
 			( path.startsWith( 'assets/wp-' ) &&
-				! path.startsWith( 'assets/wp-7.0.' ) )
+				! path.startsWith(
+					`assets/wp-${ playgroundWordPressVersion }.`
+				) )
 		) {
 			continue;
 		}
@@ -704,7 +715,7 @@ export const buildCloudflarePlayground = async ( {
 				sourceCommit,
 				pluginVersion,
 				builtAt,
-				wordpressVersion: '7.0',
+				wordpressVersion: playgroundWordPressVersion,
 				phpVersion: '8.3',
 				pluginArtifact: {
 					path: pluginArtifactPath,

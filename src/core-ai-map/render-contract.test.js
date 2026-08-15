@@ -111,6 +111,61 @@ const renderLegacyMarkup = ( profile = 'legacy' ) => {
 			},
 		];
 	}
+	if ( profile === 'connector-accuracy' ) {
+		attributes.panels.find( ( item ) => item.id === 'abilities' ).notes = [
+			{
+				heading: 'Under the hood',
+				text: 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution are scheduled for WordPress 7.1 on August 19, 2026; this exhibit runs WordPress 7.0, so read the Anatomy panel as forward-looking.',
+			},
+		];
+		Object.assign(
+			attributes.panels.find( ( item ) => item.id === 'client' ),
+			{
+				connect: [
+					{ label: 'Text, image or JSON request' },
+					{ label: 'AI Client', accent: true },
+					{ label: 'Normalized result' },
+				],
+				notes: [
+					{
+						heading: 'Under the hood',
+						text: 'A WordPress wrapper around the provider-agnostic PHP AI Client, which handles provider communication, model selection, and normalized results. Consuming plugins never integrate a provider directly. Core’s client is PHP only: for editor JavaScript, register a REST endpoint per feature. Check support before showing any AI interface — the checks are free, and a 7.0 site may have no provider configured at all.',
+					},
+				],
+			}
+		);
+		Object.assign(
+			attributes.panels.find( ( item ) => item.id === 'connectors' ),
+			{
+				lede: 'Where a site owner discovers and configures provider plugins, stores credentials, and sees connection status. It supports the request path; it is not the request executor.',
+				notes: [
+					{
+						heading: 'Providers',
+						text: 'Provider plugins register with the AI Client. Connectors auto-discovers them and gives site owners installation, configuration, credential, and status controls. The map stays vendor-neutral: no provider owns a position on the canvas.',
+					},
+					{
+						heading: 'Under the hood',
+						text: 'Introduced in WordPress 7.0 as a standardized framework for registering and managing connections to external services, starting with AI providers.',
+					},
+				],
+			}
+		);
+		Object.assign(
+			attributes.panels.find( ( item ) => item.id === 'provider-plugin' ),
+			{
+				lede: 'A provider-specific integration installed as a WordPress plugin. It speaks one external service’s protocol using the credentials the site owner stored through Connectors.',
+				roles: {
+					'uses-ai': {
+						receives: 'The routed request from the AI Client.',
+						does: 'Speaks one external service’s protocol, using the stored credentials.',
+						returns:
+							'That service’s reply, handed back to the AI Client.',
+						lesson: 'The provider-specific part is a plugin. Swapping providers does not change the feature that asked.',
+					},
+				},
+			}
+		);
+	}
 	attributes.panels = attributes.panels.map( ( panel ) => ( {
 		...panel,
 		href: 'https://legacy.example/generic',
@@ -400,7 +455,7 @@ describe( 'Core AI map render contract', () => {
 		expect( markup ).toContain( 'not the request executor' );
 		expect( markup ).toContain( 'auto-discovers them' );
 		expect( markup ).toContain(
-			'scheduled for WordPress 7.1 on August 19, 2026'
+			'arrive in WordPress 7.1 on August 19, 2026'
 		);
 		expect( markup ).not.toContain( 'ships 19 August' );
 	} );
@@ -413,6 +468,46 @@ describe( 'Core AI map render contract', () => {
 		);
 		expect( markup ).not.toContain(
 			'against the MCP specification the adapter currently targets'
+		);
+	} );
+
+	it( 'migrates v3.2.1 AI Client and Connectors copy to the verified wording', () => {
+		const markup = renderLegacyMarkup( 'connector-accuracy' );
+
+		// The JavaScript prompt API exists on 7.0; it is gated, not absent.
+		expect( markup ).toContain( 'administrator-gated' );
+		expect( markup ).not.toContain( 'Core’s client is PHP only' );
+
+		// Speech and video are modalities; JSON is an output shape.
+		expect( markup ).toContain( 'Text, image, speech or video request' );
+		expect( markup ).not.toContain( 'Text, image or JSON request' );
+
+		// Keys resolve env → constant → database, unencrypted by default.
+		expect( markup ).toContain( 'environment variable first' );
+		expect( markup ).toContain( 'unencrypted by default' );
+		expect( markup ).toContain( 'credentials Connectors resolved' );
+		expect( markup ).not.toContain( 'using the stored credentials' );
+		expect( markup ).not.toContain(
+			'credentials the site owner stored through Connectors'
+		);
+
+		// Connectors is general connection infrastructure, not an AI-only screen.
+		expect( markup ).toContain( 'one setup shared by every plugin' );
+		expect( markup ).toContain( 'not the only intended ones' );
+		expect( markup ).not.toContain(
+			'external services, starting with AI providers'
+		);
+
+		// The ability-calling edge joins the two halves of the map.
+		expect( markup ).toContain( 'Calling back into WordPress' );
+		expect( markup ).toContain( 'Reached from both directions' );
+
+		// The kiosk boots a 7.1 release candidate, so 7.1 is no longer pending
+		// and the exhibit is no longer a 7.0 site.
+		expect( markup ).toContain( 'runs a 7.1 release candidate' );
+		expect( markup ).not.toContain( 'this exhibit runs WordPress 7.0' );
+		expect( markup ).not.toContain(
+			'scheduled for WordPress 7.1 on August 19, 2026'
 		);
 	} );
 

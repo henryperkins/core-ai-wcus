@@ -4,7 +4,7 @@
 	"blueprintMeta": {
 		"name": "Core AI Living Block Map",
 		"description": "A self-contained WordPress Playground kiosk showing the Core AI Living Block Map.",
-		"version": "3.2.1",
+		"version": "3.2.2",
 		"authors": [ "WordPress Contributors" ],
 		"license": "GPL-2.0-or-later"
 	},
@@ -16,7 +16,7 @@
 		}
 	},
 	"contentBaseline": "empty",
-	"wordpressVersion": "7.0",
+	"wordpressVersion": "beta",
 	"phpVersion": "8.3",
 	"siteOptions": {
 		"blogname": "Core AI Living Block Map",
@@ -24,7 +24,7 @@
 	},
 	"plugins": [
 		{
-			"source": "./core-ai-map-3.2.1.zip",
+			"source": "./core-ai-map-3.2.2.zip",
 			"targetDirectoryName": "core-ai-map",
 			"humanReadableName": "Core AI Living Block Map"
 		}

@@ -219,6 +219,22 @@ const PEDAGOGICAL_V320_DEFAULTS = {
 	},
 };
 
+// The kiosk Blueprint now boots a WordPress 7.1 release candidate, so the note
+// that called 7.1 unshipped and the exhibit a 7.0 site no longer describes what
+// a visitor is looking at.
+const RUNTIME_V321_DEFAULTS = {
+	panels: {
+		abilities: {
+			notes: [
+				{
+					heading: 'Under the hood',
+					text: 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution are scheduled for WordPress 7.1 on August 19, 2026; this exhibit runs WordPress 7.0, so read the Anatomy panel as forward-looking.',
+				},
+			],
+		},
+	},
+};
+
 const LEGACY_SCALAR_DEFAULTS = {
 	reviewedDate: [ 'Reviewed 12 Aug 2026' ],
 	title: [ 'How do WordPress and AI work together?' ],
@@ -274,6 +290,7 @@ export const withCurrentDefaults = ( metadata, key, items ) => {
 			LEGACY_DEFAULTS,
 			PRE_BOOTH_V311_DEFAULTS,
 			PEDAGOGICAL_V320_DEFAULTS,
+			RUNTIME_V321_DEFAULTS,
 		].forEach( ( defaultsSet ) => {
 			const legacyFields = defaultsSet[ key ]?.[ item.id ] || {};
 
