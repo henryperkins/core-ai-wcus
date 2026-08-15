@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Core AI Living Block Map
  * Description:       An interactive map of the building blocks connecting WordPress and AI.
- * Version:           3.2.2
+ * Version:           3.2.3
  * Requires at least: 7.0
  * Requires PHP:      7.4
  * Author:            The WordPress Contributors
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CORE_AI_MAP_VERSION', '3.2.2' );
+define( 'CORE_AI_MAP_VERSION', '3.2.3' );
 define( 'CORE_AI_MAP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'CORE_AI_MAP_URL', plugin_dir_url( __FILE__ ) );
 

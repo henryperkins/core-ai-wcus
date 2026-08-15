@@ -37,7 +37,7 @@ describe( 'Living Block Map v3.2.1 server render', () => {
 			/core-ai-map__provider-plugin-body[\s\S]*?data-wp-bind--disabled="state\.isCardNotTappable"/
 		);
 		expect( styles ).toMatch(
-			/&__preview-flow path\.core-ai-map__preview-config\s*\{[\s\S]*?stroke:\s*var\(--core-ai-text-muted\)[\s\S]*?stroke-dasharray:\s*5 6/
+			/&__preview-flow path\.core-ai-map__preview-config\s*\{[\s\S]*?stroke:\s*var\(--core-ai-line-config\)[\s\S]*?stroke-dasharray:\s*5 6/
 		);
 		expect( styles ).toMatch(
 			/&__provider-plugin\.is-dimmed\s*\{\s*opacity:\s*0\.4/
@@ -69,6 +69,36 @@ describe( 'Living Block Map v3.2.1 server render', () => {
 		expect( styles ).not.toMatch( /color:\s*var\(--core-ai-line-strong\)/ );
 		expect( styles ).toMatch(
 			/border:\s*1px dashed var\(--core-ai-line-strong\)/
+		);
+	} );
+
+	it( 'separates configuration strokes and ambient edges from strong boundaries', () => {
+		expect( styles ).toContain( '--core-ai-line-config: #646970;' );
+		expect( styles ).toMatch(
+			/&--dashed::before\s*\{[\s\S]*?border-top:\s*1px dashed var\(--core-ai-line-config\)/
+		);
+		expect( styles ).toMatch(
+			/&--dimmed\s*\{[\s\S]*?border:\s*1px solid var\(--core-ai-line-dormant\)/
+		);
+		expect( styles ).toMatch(
+			/&__config-path\s*\{[\s\S]*?stroke:\s*var\(--core-ai-line-config\)[\s\S]*?opacity:\s*0\.9/
+		);
+		expect( styles ).toMatch(
+			/&__situation,[\s\S]*?&__takeaway\s*\{[\s\S]*?border-top:\s*1px solid var\(--core-ai-line-dormant\)/
+		);
+		expect( styles ).toMatch(
+			/&__details-continuation\s*\{[\s\S]*?border:\s*1px solid var\(--core-ai-line-dormant\)/
+		);
+		for ( const boundary of [
+			/&__rule\s*\{[\s\S]*?stroke:\s*var\(--core-ai-line-strong\)/,
+			/&__actor-body\s*\{[\s\S]*?border:\s*1px dashed var\(--core-ai-line-strong\)/,
+			/&__bench-boundary\s*\{[\s\S]*?stroke:\s*var\(--core-ai-line-strong\)/,
+			/&__bench-stage\s*\{[\s\S]*?border:\s*1px dashed var\(--core-ai-line-strong\)/,
+		] ) {
+			expect( styles ).toMatch( boundary );
+		}
+		expect( styles ).toMatch(
+			/@media \(prefers-contrast: more\)[\s\S]*?--core-ai-line-strong:\s*#1e1e1e;[\s\S]*?--core-ai-line-config:\s*#3c434a;[\s\S]*?--core-ai-line-dormant:\s*#50575e;/
 		);
 	} );
 
@@ -319,7 +349,7 @@ describe( 'Living Block Map v3.2.1 server render', () => {
 
 	it( 'normalizes versioned cache keys and precaches built local fonts', () => {
 		expect( worker ).toContain(
-			'const CACHE_NAME = `${ CACHE_SCOPE_PREFIX }v3.2.2-review-1`;'
+			'const CACHE_NAME = `${ CACHE_SCOPE_PREFIX }v3.2.3-review-1`;'
 		);
 		expect( worker ).toContain( "searchParams.delete( 'ver' )" );
 		expect( worker ).toMatch(

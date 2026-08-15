@@ -1,10 +1,25 @@
 # Core AI Living Block Map
 
-Version and design: **3.2.2**. Core AI Living Block Map is one dynamic,
+Version and design: **3.2.3**. Core AI Living Block Map is one dynamic,
 server-rendered `core-ai/core-ai-map` block for explaining how WordPress and AI
 building blocks fit together on a kiosk. Its server markup is enhanced by the
 WordPress Interactivity API. The repository also contains a reproducible,
 self-hosted WordPress Playground artifact for static-hosted demonstrations.
+
+## 3.2.3 release notes
+
+This release hardens the accessibility work shipped in 3.2.2. Server-rendered
+markup now exposes exactly one named level-one heading before Interactivity API
+hydration, and a cleared editable title falls back to the block's schema
+default. The darker strong-line token is limited to controls and boundaries
+that carry meaning; ambient edges again use the dormant line, while dashed
+configuration strokes have their own normal- and higher-contrast token.
+
+The 1024 x 768 compatibility gate now follows the real UI through the 68px
+rail, 60px panel, tab and dialog controls, the 44px workbench Apply control,
+and the 34px About footnote. It verifies that every measured control clears the
+24px minimum and that Apply and the footnote are the only documented controls
+below the 44px enhanced target at that scale.
 
 ## 3.2.2 release notes
 
@@ -22,7 +37,7 @@ ones.
 It also closes an accessibility pass. The About footnote grew from 26 to 34
 authored pixels so it clears the 24-pixel target floor once the stage is
 scaled; the zone rule and the outside-WordPress edge moved to WordPress admin
-gray-500 to clear 3:1 as graphics that carry meaning; dormant hairlines and the
+Gray 30 to clear 3:1 as graphics that carry meaning; dormant hairlines and the
 actor ghost stack became tokens so `prefers-contrast: more` reaches them; a
 persistent visually hidden `h1` names the exhibit in every screen state; and
 the welcome card dropped a backdrop blur that was recompositing on every frame
@@ -155,7 +170,7 @@ channel's static fallback tree. It validates Cloudflare Pages Free's 20,000-file
 and 25 MiB-per-asset limits, removes upstream Google Fonts and analytics, and
 uses a local Blueprint and plugin ZIP. `npm run plugin-zip` creates the local
 `core-ai-map.zip`; the Pages build copies those exact bytes to the release URL
-`/kiosk-blueprint/core-ai-map-3.2.2.zip`. It also emits a deployment manifest
+`/kiosk-blueprint/core-ai-map-3.2.3.zip`. It also emits a deployment manifest
 with that path, its byte count, and its SHA-256, plus a Pages rewrite that keeps
 the Playground runtime's literal `/remote.html` endpoint from being redirected
 to Cloudflare's extensionless route. The build owns the accessible outer
@@ -247,7 +262,7 @@ $dist = (Resolve-Path -LiteralPath 'dist-playground').Path
 $manifestPath = Join-Path $dist 'deployment-manifest.json'
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $artifactRelative = [string] $manifest.pluginArtifact.path
-$expectedArtifact = 'kiosk-blueprint/core-ai-map-3.2.2.zip'
+$expectedArtifact = 'kiosk-blueprint/core-ai-map-3.2.3.zip'
 
 if ($artifactRelative -ne $expectedArtifact) {
     throw "Expected $expectedArtifact; manifest has $artifactRelative."
@@ -316,13 +331,13 @@ foreach ($hostName in $hosts) {
 
     $remoteBlueprint = Invoke-RestMethod `
         -Uri "$hostName/kiosk-blueprint/blueprint.json?probe=$probe"
-    if ($remoteBlueprint.plugins.Count -ne 1 -or $remoteBlueprint.plugins[0].source -ne './core-ai-map-3.2.2.zip') {
+    if ($remoteBlueprint.plugins.Count -ne 1 -or $remoteBlueprint.plugins[0].source -ne './core-ai-map-3.2.3.zip') {
         throw "Blueprint plugin source mismatch on $hostName."
     }
 
     $originName = ([Uri] $hostName).Host
     $downloadPath = [IO.Path]::GetFullPath(
-        (Join-Path ([IO.Path]::GetTempPath()) "core-ai-map-${originName}-3.2.2-${PID}.zip")
+        (Join-Path ([IO.Path]::GetTempPath()) "core-ai-map-${originName}-3.2.3-${PID}.zip")
     )
     if (Test-Path -LiteralPath $downloadPath) {
         throw "Refusing to overwrite existing verification file: $downloadPath"

@@ -14,6 +14,7 @@ colors:
   surface: "#ffffff"
   line: "#dcdcde"
   line-strong: "#8c8f94"
+  line-config: "#646970"
   line-dormant: "#a7aaad"
   line-ghost: "#c3c4c7"
   warning: "#dba617"
@@ -189,8 +190,9 @@ control panel — a headline in a museum, not a heading in a manual.
 ## Colors
 
 The neutral ramp and the accent are WordPress's own admin tokens — `#3858e9` with
-`gray-100/300/400/500/600/700/800/900`, plus `#c3c4c7` between 300 and 400 — which is
-what lets an exhibit about WordPress look
+the exact neutral values `#f6f7f7`, `#dcdcde`, `#a7aaad`, `#8c8f94`, `#757575`,
+`#646970`, `#50575e`, `#2f2f2f` and `#1e1e1e`, plus `#c3c4c7` — which is what
+lets an exhibit about WordPress look
 like it belongs to WordPress. The blue derivatives and the caution set are
 project-authored extensions on top of that foundation.
 
@@ -213,21 +215,30 @@ project-authored extensions on top of that foundation.
 - **Soft Ink** (`ink-soft`): supporting sentences under a card name, panel notes, the
   secondary action.
 - **Muted Text** (`text-muted`): the label register — zone titles, badges, rail
-  numbers, the colophon — and the stroke of the dashed configuration path.
+  numbers and the colophon.
 - **Canvas** (`canvas`): the stage ground, carrying the 56px graph rule.
 - **Surface** (`surface`): every card, panel, and dialog.
 - **Hairline** (`line`) and **Strong Hairline** (`line-strong`): the two border weights.
   `line` frames a component inside WordPress; `line-strong` draws the dashed edge of
-  something outside it. `line-strong` is gray-500 rather than gray-400 because the
+  something outside it. `line-strong` is Gray 30 rather than Gray 20 because the
   boundary it draws is a graphic the visitor has to read, and 3:1 is the floor for
-  that — it clears at 3.02:1 on the canvas and 3.24:1 on a card.
+  that — it clears at 3.02:1 on the canvas and 3.24:1 on a card. Under
+  `prefers-contrast: more`, the strong boundary becomes full-strength `#1e1e1e`.
+- **Configuration Line** (`line-config`): the dashed supporting stroke, `#646970` at
+  0.9 opacity in normal contrast so its incumbent appearance does not change. In
+  `prefers-contrast: more` it becomes `#3c434a` at the same opacity: darker than the
+  full-strength dormant line but lighter than the full-strength strong boundary after
+  compositing.
 - **Dormant Line** (`line-dormant`) and **Ghost Line** (`line-ghost`): the two weights
   that are allowed to fail 3:1, because neither carries meaning. `line-dormant` is the
   latent connector at rest, held at 62% so it stays under the boundary it sits behind,
   and the nearer of the two ghost cards stacked behind an actor. `line-ghost` is the
-  farther one. The three edges of that stack run `line-ghost`, `line-dormant`,
-  `line-strong` from back to front, and stay in that order under `prefers-contrast:
-  more` — which is the reason they are tokens rather than literals.
+  farther one. Gray 20 is the normal dormant value. The three edges of that stack run
+  `line-ghost`, `line-dormant`, `line-strong` from back to front, and stay in that order
+  under `prefers-contrast: more` — which is the reason they are tokens rather than
+  literals. Normal contrast preserves the historical `line-config` stroke darker than
+  Gray 30; higher contrast explicitly orders ghost/ordinary, dormant, composited
+  configuration, then strong from lightest to darkest.
 
 ### Tertiary
 
@@ -323,10 +334,11 @@ allowed to assume 1366 × 1024 forever.
 
 **The Allocated Band Rule.** The bottom band's vertical budget is spent. The rail label
 takes a grid column rather than a line, and the colophon's line-height and padding are
-pinned to keep its box at 34px — the smallest box that still measures 24px once the
-stage is scaled to 0.7496. The arithmetic is `12 + 34 + 2 = 48`: two authored pixels
-are all that separate the colophon from the rail. Adding a line anywhere down there,
-or another pixel of height, pushes the rail into the canvas.
+pinned to keep its box at 34px. At the 0.7496 compatibility scale, 33 authored pixels
+is the actual minimum that still clears 24 rendered pixels; 34px carries one authored
+pixel of margin. The arithmetic is `12 + 34 + 2 = 48`: two authored pixels are all
+that separate the colophon from the rail. Adding a line anywhere down there, or another
+pixel of height, pushes the rail into the canvas.
 
 ## Elevation & Depth
 
@@ -389,9 +401,9 @@ lives inside WordPress. **Dashed 1px `line-strong`** frames something that does 
 and an actor card additionally carries two offset ghost cards behind it (4px and 8px,
 dashed, progressively lighter) so an outside participant reads as a stack of
 somewhere-else rather than a single object on this board. The same dash logic governs
-the wire layer: a solid 2.4px Live Blue stroke is the request, a dashed `text-muted`
-1.6px stroke is configuration, a dashed 1.2px rule in `line-strong` is the zone boundary, and
-a 1px `line-dormant` hairline at 62% is dormant structure.
+the wire layer: a solid 2.4px Live Blue stroke is the request, a dashed `line-config`
+1.6px stroke at 0.9 opacity is configuration, a dashed 1.2px rule in `line-strong` is
+the zone boundary, and a 1px `line-dormant` hairline at 62% is dormant structure.
 
 ### Named Rules
 
@@ -418,7 +430,8 @@ smaller than a fingertip, or when it reports state and therefore takes a pill.
   offset. Deliberately quieter than the primary and never allowed to compete with it.
 - **Hover / Focus:** hover is gated behind `@media (hover: hover)` and does one thing —
   swaps the border to Live Blue. Focus is a 3px Live Blue outline at 4px offset,
-  system-wide, on every button and link.
+  system-wide, on every button and link except the About trigger. That trigger uses an
+  intentional 2px offset so its ring does not overlap the story rail above it.
 
 ### Cards / Containers
 
@@ -459,9 +472,9 @@ actor card sizes to its content instead of a fixed box.
 
 The SVG layer beneath the cards holds four stroke treatments that are never mixed: the
 live path (solid Live Blue, 2.4px, round cap, drawn by a 600ms `stroke-dashoffset`
-animation), the configuration path (dashed `text-muted`, 1.6px, held at 0.9 opacity), the
-zone rule (dashed `line-strong` at 1.2px, lighting to Live Blue at 1.6px), and dormant
-hairlines (1px `line-dormant` at 62%, faded out when a flow takes over).
+animation), the configuration path (dashed `line-config`, 1.6px, held at 0.9 opacity),
+the zone rule (dashed `line-strong` at 1.2px, lighting to Live Blue at 1.6px), and
+dormant hairlines (1px `line-dormant` at 62%, faded out when a flow takes over).
 
 ### Motion
 

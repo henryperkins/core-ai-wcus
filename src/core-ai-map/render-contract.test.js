@@ -103,6 +103,9 @@ const renderLegacyMarkup = ( profile = 'legacy' ) => {
 			}
 		);
 	}
+	if ( profile === 'blank-title' ) {
+		attributes.title = '';
+	}
 	if ( profile === 'protocol-v320' ) {
 		attributes.panels.find( ( item ) => item.id === 'mcp' ).notes = [
 			{
@@ -833,6 +836,60 @@ describe( 'Core AI map render contract', () => {
 				.querySelector( '#core-ai-map-test-panel-agent' )
 				.querySelectorAll( '.core-ai-map__details-context' )
 		).toHaveLength( 2 );
+	} );
+
+	it( 'keeps exactly one level-one heading, named, in every screen state', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup( 'current' );
+		const headings = Array.from( container.querySelectorAll( 'h1' ) );
+
+		expect( headings ).toHaveLength( 2 );
+		const [ persistent, welcome ] = headings;
+
+		// The welcome card owns the visible heading while the kiosk is on the
+		// attract screen; the persistent one takes over for every state after.
+		expect( welcome.closest( '.core-ai-map__attract' ) ).not.toBeNull();
+		expect( persistent.className ).toBe( 'core-ai-map__sr-only' );
+
+		// Both carry the name, so heading navigation never lands on a blank h1.
+		expect( persistent.textContent.trim() ).toBe(
+			'What is WordPress Core AI?'
+		);
+		expect( welcome.textContent.trim() ).toBe(
+			persistent.textContent.trim()
+		);
+
+		/*
+		 * The pair has to be mutually exclusive before hydration as well as
+		 * after. Both bindings read client-only derived getters, which the
+		 * server resolves to null, and `data-wp-bind` removes whatever it
+		 * evaluates falsy. A plain `state.isAttract` here would therefore have
+		 * its authored `hidden` stripped server-side and expose two level-one
+		 * headings; the negation resolves null to true and keeps it hidden.
+		 */
+		expect( persistent.getAttribute( 'data-wp-bind--hidden' ) ).toBe(
+			'!state.isNotAttract'
+		);
+		expect( persistent.hasAttribute( 'hidden' ) ).toBe( true );
+		expect(
+			welcome
+				.closest( '.core-ai-map__attract' )
+				.getAttribute( 'data-wp-bind--hidden' )
+		).toBe( 'state.isNotAttract' );
+	} );
+
+	it( 'names both headings from the block default when the title is cleared', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup( 'blank-title' );
+
+		expect(
+			Array.from( container.querySelectorAll( 'h1' ) ).map( ( heading ) =>
+				heading.textContent.trim()
+			)
+		).toEqual( [
+			'What is WordPress Core AI?',
+			'What is WordPress Core AI?',
+		] );
 	} );
 
 	it( 'teaches the interaction grammar on the welcome screen', () => {

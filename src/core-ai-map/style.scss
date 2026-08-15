@@ -71,6 +71,7 @@ body.core-ai-kiosk-active {
 	--core-ai-surface: #fff;
 	--core-ai-line: #dcdcde;
 	--core-ai-line-strong: #8c8f94;
+	--core-ai-line-config: #646970;
 	--core-ai-line-dormant: #a7aaad;
 	--core-ai-line-ghost: #c3c4c7;
 	--core-ai-text-muted: #646970;
@@ -415,7 +416,7 @@ body.core-ai-kiosk-active {
 
 		&--dashed::before {
 			right: 0;
-			border-top: 1px dashed var(--core-ai-text-muted);
+			border-top: 1px dashed var(--core-ai-line-config);
 		}
 
 		&--dimmed {
@@ -423,7 +424,7 @@ body.core-ai-kiosk-active {
 			height: 16px;
 			opacity: 0.38;
 			background: var(--core-ai-surface);
-			border: 1px solid var(--core-ai-line-strong);
+			border: 1px solid var(--core-ai-line-dormant);
 			border-radius: 3px;
 		}
 	}
@@ -528,7 +529,7 @@ body.core-ai-kiosk-active {
 
 	&__config-path {
 		fill: none;
-		stroke: var(--core-ai-text-muted);
+		stroke: var(--core-ai-line-config);
 		stroke-dasharray: 5 6;
 		stroke-linecap: round;
 		stroke-width: 1.6;
@@ -562,7 +563,7 @@ body.core-ai-kiosk-active {
 	}
 
 	&__preview-flow path.core-ai-map__preview-config {
-		stroke: var(--core-ai-text-muted);
+		stroke: var(--core-ai-line-config);
 		stroke-dasharray: 5 6;
 		stroke-dashoffset: 0;
 		stroke-width: 1.6;
@@ -1565,7 +1566,7 @@ body.core-ai-kiosk-active {
 	&__takeaway {
 		min-height: 76px;
 		padding-top: 10px;
-		border-top: 1px solid var(--core-ai-line-strong);
+		border-top: 1px solid var(--core-ai-line-dormant);
 	}
 
 	&__story-actions {
@@ -1703,9 +1704,11 @@ body.core-ai-kiosk-active {
 		 * Nested so the footnote outranks the `font: inherit` reset every
 		 * button in the kiosk starts from. The 18px line-height plus 8px of
 		 * vertical padding makes the box 34px by content math rather than by
-		 * min-height alone, so every engine agrees on it. 34 is the smallest
-		 * box that still measures 24px once the stage scales to 0.7496 on a
-		 * 1024x768 panel — it renders at 25px and clears SC 2.5.8 by size.
+		 * min-height alone, so every engine agrees on it. Once the stage scales
+		 * to 0.7496 on a 1024x768 panel this renders at 25.5px and clears SC
+		 * 2.5.8 by size. 33px is the actual floor (24.7px rendered; 32px falls
+		 * to 24.0px and misses), so this carries a pixel of margin rather than
+		 * sitting on the limit — do not read 34 as the minimum.
 		 * The band allows 36px before the rail at `bottom: 48px` is hit.
 		 */
 		.core-ai-map__about-trigger {
@@ -1973,7 +1976,7 @@ body.core-ai-kiosk-active {
 		letter-spacing: 0.035em;
 		text-align: center;
 		background: var(--core-ai-surface);
-		border: 1px solid var(--core-ai-line-strong);
+		border: 1px solid var(--core-ai-line-dormant);
 		border-radius: 999px;
 		box-shadow: 0 -16px 32px 12px var(--core-ai-surface);
 		pointer-events: none;
@@ -3282,25 +3285,29 @@ body.core-ai-kiosk-active {
 @media (prefers-contrast: more) {
 
 	/**
-	 * The four line weights keep their order here rather than all bottoming
-	 * out together: `line` frames a component, `dormant` connects at rest,
-	 * `line-strong` draws a boundary, and each is a step darker than the last.
-	 * The zone rule is deliberately not pinned to a literal — it follows
-	 * `line-strong` to #3c434a, which is what keeps the boundary heavier than
-	 * the dormant hairline lying behind it.
+	 * The supporting-line ladder does not bottom out into one gray. Ghost and
+	 * ordinary hairlines stay lightest; dormant structure reaches #50575e;
+	 * configuration strokes use #3c434a at 0.9 opacity, compositing just darker
+	 * than dormant; and full-strength strong boundaries finish at #1e1e1e.
+	 * At normal contrast the configuration stroke preserves its historical
+	 * #646970-at-0.9 appearance, which composites darker than the Gray 30 strong
+	 * boundary. Higher contrast deliberately reverses those last two weights so
+	 * the full-strength boundary is the heaviest meaning-carrying edge.
 	 */
 	.core-ai-map {
 		--core-ai-line: #646970;
-		--core-ai-line-strong: #3c434a;
+		--core-ai-line-strong: #1e1e1e;
+		--core-ai-line-config: #3c434a;
 		--core-ai-line-dormant: #50575e;
 		--core-ai-line-ghost: #8c8f94;
 	}
 
 	/**
 	 * The dormant hairlines drop their 62% alpha. Held back, the remapped
-	 * token would composite to roughly 2.5:1 and the preference would go half
-	 * answered; at full strength it reaches 7.3:1 and still reads a clear step
-	 * lighter than the zone rule it sits behind.
+	 * token would composite to roughly 2.9:1 and the preference would go half
+	 * answered; at full strength it reaches 6.8:1 against the canvas it
+	 * crosses and still reads lighter than the configuration stroke after its
+	 * opacity is considered, and lighter again than the strong boundary.
 	 */
 	.core-ai-map__hairlines path {
 		stroke-opacity: 1;

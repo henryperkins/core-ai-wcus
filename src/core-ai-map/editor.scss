@@ -76,7 +76,11 @@
 			gap: 5px;
 			padding: 14px;
 			background: #fff;
-			border: 1px dashed #a7aaad;
+			// Kept in step with --core-ai-line-strong on the front end. The
+			// editor preview cannot read that token, so changing the boundary
+			// gray there means changing it here too or the preview drifts back
+			// to a contrast the front end no longer ships.
+			border: 1px dashed #8c8f94;
 			border-radius: 4px;
 		}
 

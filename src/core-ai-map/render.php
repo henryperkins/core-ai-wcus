@@ -821,6 +821,18 @@ foreach ( $attributes['suggestions'] ?? array() as $suggestion ) {
 $eyebrow            = $attributes['eyebrow'] ?? __( 'WordPress Core AI', 'core-ai-map' );
 $reviewed_date      = $attributes['reviewedDate'] ?? __( 'Reviewed 14 Aug 2026', 'core-ai-map' );
 
+/*
+ * Both level-one headings read from this. An author who clears the Title field
+ * serializes an empty string, which `??` passes through untouched, and the
+ * persistent heading below is exposed for the whole post-welcome session — so
+ * an empty value would leave heading navigation on a nameless h1 rather than
+ * on the missing one that heading exists to supply.
+ */
+$map_title = trim( (string) ( $attributes['title'] ?? '' ) );
+if ( '' === $map_title ) {
+	$map_title = (string) ( $default_attributes['title'] ?? __( 'What is WordPress Core AI?', 'core-ai-map' ) );
+}
+
 $label_defaults = array(
 	'railEmptyLabel'    => __( 'Choose a flow', 'core-ai-map' ),
 	'railActiveLabel'   => __( 'Choose another flow', 'core-ai-map' ),
@@ -1366,15 +1378,23 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	 * The visible h1 lives on the welcome card, which goes away the moment a
 	 * visitor picks a flow — leaving the exhibit with no level-one heading for
 	 * the rest of the session. This one carries the name in every other state.
-	 * It is bound to the inverse of the welcome card's own binding, so exactly
-	 * one h1 is exposed at a time rather than two competing ones.
+	 * It negates the welcome card's own binding, so exactly one h1 is exposed
+	 * at a time rather than two competing ones.
+	 *
+	 * The negation is what makes that true before hydration, not just after.
+	 * These are client-only derived getters, so the server resolves them to
+	 * null and `data-wp-bind` removes the attribute it evaluates falsy —
+	 * stripping a plain `hidden` off this heading and serving two level-one
+	 * headings to anything reading the response before view.js runs. Negating
+	 * null yields true, so the served markup starts hidden and stays that way
+	 * until the client resolves the real screen.
 	 */
 	?>
 	<h1
 		class="core-ai-map__sr-only"
-		data-wp-bind--hidden="state.isAttract"
+		data-wp-bind--hidden="!state.isNotAttract"
 		hidden
-	><?php echo esc_html( $attributes['title'] ?? '' ); ?></h1>
+	><?php echo esc_html( $map_title ); ?></h1>
 
 	<div class="core-ai-map__stage">
 		<div class="core-ai-map__grid" aria-hidden="true"></div>
@@ -1847,7 +1867,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 
 		<div class="core-ai-map__attract" data-screen-label="<?php esc_attr_e( 'Living Block Map welcome', 'core-ai-map' ); ?>" data-wp-bind--hidden="state.isNotAttract">
 			<p class="core-ai-map__eyebrow"><?php echo esc_html( $eyebrow ); ?></p>
-			<h1><?php echo esc_html( $attributes['title'] ?? '' ); ?></h1>
+			<h1><?php echo esc_html( $map_title ); ?></h1>
 			<div class="core-ai-map__orientation">
 				<?php foreach ( $intro_paragraphs as $intro_paragraph ) : ?>
 					<p class="core-ai-map__intro"><?php echo esc_html( $intro_paragraph ); ?></p>

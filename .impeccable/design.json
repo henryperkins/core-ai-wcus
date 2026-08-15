@@ -57,7 +57,7 @@
         "role": "neutral",
         "displayName": "Muted Text",
         "canonical": "#646970",
-        "note": "WordPress gray-600. The label register — zone titles, badges, rail numbers, colophon — and the stroke of the dashed configuration path.",
+        "note": "WordPress gray-600. The label register — zone titles, badges, rail numbers, colophon.",
         "tonalRamp": ["#1e1e1e", "#2f2f2f", "#50575e", "#646970", "#757575", "#a7aaad", "#dcdcde", "#f6f7f7"]
       },
       "canvas": {
@@ -85,14 +85,21 @@
         "role": "neutral",
         "displayName": "Strong Hairline",
         "canonical": "#8c8f94",
-        "note": "WordPress gray-500. The dashed edge of something outside WordPress, and the zone rule that separates inside from outside. Gray-500 rather than gray-400 because that boundary is a graphic the visitor has to read: it clears SC 1.4.11 at 3.02:1 on the canvas and 3.24:1 on a card. Darkens to #3c434a under prefers-contrast: more.",
+        "note": "WordPress Gray 30. The dashed edge of something outside WordPress, and the zone rule that separates inside from outside. Gray 30 rather than Gray 20 because that boundary is a graphic the visitor has to read: it clears SC 1.4.11 at 3.02:1 on the canvas and 3.24:1 on a card. Darkens to full-strength #1e1e1e under prefers-contrast: more.",
         "tonalRamp": ["#1e1e1e", "#2f2f2f", "#50575e", "#646970", "#757575", "#a7aaad", "#dcdcde", "#f6f7f7"]
+      },
+      "line-config": {
+        "role": "neutral",
+        "displayName": "Configuration Line",
+        "canonical": "#646970",
+        "note": "Dedicated dashed supporting stroke. It stays #646970 at 0.9 opacity in normal contrast to preserve the incumbent appearance. Under prefers-contrast: more it becomes #3c434a at the same opacity, compositing darker than the full-strength dormant line but lighter than the full-strength strong boundary.",
+        "tonalRamp": ["#1e1e1e", "#2f2f2f", "#3c434a", "#50575e", "#646970", "#757575", "#8c8f94", "#a7aaad"]
       },
       "line-dormant": {
         "role": "neutral",
         "displayName": "Dormant Line",
         "canonical": "#a7aaad",
-        "note": "WordPress gray-400. The latent connector between cards at rest, drawn at 62% stroke-opacity, and the nearer of the two ghost cards stacked behind an actor. Deliberately below 3:1 and deliberately below Strong Hairline: it is ambient structure, not a graphic required to understand the map, and the resting board depends on it receding. Remaps to #50575e at full opacity under prefers-contrast: more.",
+        "note": "WordPress Gray 20. The latent connector between cards at rest, drawn at 62% stroke-opacity, the nearer actor ghost, the dimmed legend swatch, lesson dividers, and the inert continuation cue. Deliberately below 3:1 and deliberately below Strong Hairline: it is ambient structure, not a graphic required to understand the map, and the resting board depends on it receding. Remaps to #50575e at full opacity under prefers-contrast: more.",
         "tonalRamp": ["#1e1e1e", "#2f2f2f", "#50575e", "#646970", "#757575", "#a7aaad", "#dcdcde", "#f6f7f7"]
       },
       "line-ghost": {
@@ -182,7 +189,7 @@
     ],
     "breakpoints": [
       { "name": "kiosk", "value": "1366px", "note": "Authored stage width at 1366 x 1024. The composition is fixed; --cai-scale carries it to other viewports." },
-      { "name": "compatibility", "value": "1024px", "note": "1024 x 768 is the same composition at a smaller scale, not a different layout. --cai-scale is 0.7496 there, so authored 60px header and rail controls render at 45px and authored 44px nested controls render at 33px. Nested controls therefore fall below SC 2.5.5 at this size, which is why it is a compatibility view rather than a fully supported touch layout." }
+      { "name": "compatibility", "value": "1024px", "note": "1024 x 768 is the same composition at a smaller scale, not a different layout. --cai-scale is 0.7496 there: authored 68px rail controls render at about 51px; the 60px header, story, panel, tab and dialog class renders at about 45px; 44px nested controls render at about 33px; and the 34px About footnote renders at about 25px. Only the nested Apply control and About footnote are below the SC 2.5.5 44px target, while every named control clears the SC 2.5.8 24px minimum. This is therefore a compatibility view rather than a fully supported touch layout." }
     ]
   },
   "components": [
@@ -285,7 +292,7 @@
       { "name": "The Serif Speaks Once Rule", "body": "EB Garamond appears only where the exhibit names something — the welcome headline, a component title, a sub-surface title. It never sets body copy, never sets a label, and never sets a control.", "section": "typography" },
       { "name": "The Two Voices Rule", "body": "There are exactly two reading voices, serif and sans, plus mono for values. A third family, or Inter pressed into display duty at 34px+, breaks the staging.", "section": "typography" },
       { "name": "The Fixed Stage Rule", "body": "Never add a media query inside the stage. If something doesn't fit, re-author the composition or change the scale — the geometry below __stage is allowed to assume 1366 x 1024 forever.", "section": "layout" },
-      { "name": "The Allocated Band Rule", "body": "The bottom band's vertical budget is spent. The rail label takes a grid column rather than a line, and the colophon's line-height and padding are pinned to keep its box at 34px — the smallest box that still measures 24px once the stage is scaled to 0.7496. The arithmetic is 12 + 34 + 2 = 48: two authored pixels are all that separate the colophon from the rail. Adding a line anywhere down there, or another pixel of height, pushes the rail into the canvas.", "section": "layout" },
+      { "name": "The Allocated Band Rule", "body": "The bottom band's vertical budget is spent. The rail label takes a grid column rather than a line, and the colophon's line-height and padding are pinned to keep its box at 34px. At the 0.7496 compatibility scale, 33 authored pixels is the actual minimum that still clears 24 rendered pixels; 34px carries one authored pixel of margin. The arithmetic is 12 + 34 + 2 = 48: two authored pixels are all that separate the colophon from the rail. Adding a line anywhere down there, or another pixel of height, pushes the rail into the canvas.", "section": "layout" },
       { "name": "The Seat Is a Promise Rule", "body": "The 1px seat means this responds to a tap. :disabled takes it away. Never paint it on something inert, and never remove it from something live.", "section": "elevation" },
       { "name": "The Three Floats Rule", "body": "Only the welcome card, the inspect panel, and the About dialog leave the stage plane. Nothing else earns a 24/64 shadow — a fourth floating surface means the composition has failed somewhere else.", "section": "elevation" },
       { "name": "The Dashed-Means-Supporting Rule", "body": "Dashed always means does not carry the live request. It covers outside actors, sidecar cards standing beside a flow, configuration paths, and zone boundaries. A component executing the request is never drawn dashed.", "section": "shapes" },
@@ -299,7 +306,7 @@
       "Do keep EB Garamond for naming only, at 34px or above, with negative tracking.",
       "Do use the WordPress admin grays exactly as tokenized, and keep Live Blue for live work.",
       "Do author new geometry in fixed 1366 x 1024 coordinates and let --cai-scale carry it to other sizes.",
-      "Do author controls at 60px in the header and rail and 44px for nested controls, and read both as authored numbers: --cai-scale renders them at 45px and 33px at 1024 x 768. Anything a finger has to find owes 24px rendered, not authored."
+      "Do author rail controls at 68px, the header, story, panel, tab and dialog control class at 60px, nested controls at 44px, and the About footnote at 34px. At 1024 x 768 --cai-scale renders them at about 51px, 45px, 33px and 25px respectively. Apply and the footnote are the only controls below the SC 2.5.5 44px target there, and every named control must clear the SC 2.5.8 24px minimum."
     ],
     "donts": [
       "Don't write an encyclopedia. No index, no glossary, no alphabetical ordering, no exhaustive enumeration, and no unbroken column of reference prose. One premise, one reveal, one conclusion per flow — depth waits inside a panel the visitor opened.",

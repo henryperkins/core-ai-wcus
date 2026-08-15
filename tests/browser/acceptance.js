@@ -117,6 +117,34 @@ async ( page ) => {
 
 			return { cards, intersections, bodyOverflows, textOverflows };
 		} );
+	const measureVisibleControls = ( definitions ) =>
+		page.evaluate( ( controls ) => {
+			const isVisible = ( element ) => {
+				const rect = element.getBoundingClientRect();
+				const style = getComputedStyle( element );
+				return (
+					! element.hidden &&
+					style.visibility !== 'hidden' &&
+					style.display !== 'none' &&
+					rect.width > 0 &&
+					rect.height > 0
+				);
+			};
+
+			return controls.flatMap( ( control ) => {
+				const elements = [
+					...document.querySelectorAll( control.selector ),
+				].filter( isVisible );
+				return elements.map( ( element, index ) => ( {
+					name:
+						elements.length > 1
+							? `${ control.name } ${ index + 1 }`
+							: control.name,
+					authoredHeight: control.authoredHeight,
+					renderedHeight: element.getBoundingClientRect().height,
+				} ) );
+			} );
+		}, definitions );
 	const assertCardGeometry = ( geometry, composition ) => {
 		assert(
 			geometry.intersections.length === 0,
@@ -1331,12 +1359,49 @@ async ( page ) => {
 			storyHeight: story.height,
 			resetHeight: reset.height,
 			footnoteHeight: footnote.height,
-			footnoteClearsRail: Math.round( footnote.top - rail.bottom ),
-			footnoteClearsStage: Math.round( stage.bottom - footnote.bottom ),
+			footnoteClearsRail: footnote.top - rail.bottom,
+			footnoteClearsStage: stage.bottom - footnote.bottom,
 			scrollWidth: document.documentElement.scrollWidth,
 			scrollHeight: document.documentElement.scrollHeight,
 		};
 	} );
+	const compatibilityMapControls = await measureVisibleControls( [
+		{
+			name: 'Rail control',
+			selector: '.core-ai-map__rail button',
+			authoredHeight: 68,
+		},
+		{
+			name: 'Start over',
+			selector: '.core-ai-map__reset',
+			authoredHeight: 60,
+		},
+		{
+			name: 'Browse all components',
+			selector: '.core-ai-map__browse',
+			authoredHeight: 60,
+		},
+		{
+			name: 'Replay',
+			selector: '.core-ai-map__story-copy .core-ai-map__replay',
+			authoredHeight: 60,
+		},
+		{
+			name: 'Run loop',
+			selector: '.core-ai-map__run-loop-link',
+			authoredHeight: 60,
+		},
+		{
+			name: 'Apply',
+			selector: '.core-ai-map__workbench-apply',
+			authoredHeight: 44,
+		},
+		{
+			name: 'About footnote',
+			selector: '.core-ai-map__about-trigger',
+			authoredHeight: 34,
+		},
+	] );
 	observations.compatibility = compatibility;
 	assert(
 		Math.abs( compatibility.scale - 0.75 ) < 0.002,
@@ -1379,6 +1444,103 @@ async ( page ) => {
 	const compatibilityNeutralGeometry = await measureCardGeometry();
 	observations.compatibilityNeutralGeometry = compatibilityNeutralGeometry;
 	assertCardGeometry( compatibilityNeutralGeometry, '1024 neutral map' );
+
+	/*
+	 * Follow the UI into a real inspector so the compatibility gate covers the
+	 * complete visible 60px panel/tab class rather than extrapolating from a
+	 * top-bar control. The Abilities panel supplies one Back control and all
+	 * three tabs; the About dialog supplies the separate dialog class.
+	 */
+	await storyButtons.nth( 1 ).click();
+	await page.waitForTimeout( 800 );
+	await page
+		.locator( '.core-ai-map__block--abilities .core-ai-map__block-body' )
+		.click();
+	await page.waitForTimeout( 120 );
+	const compatibilityPanelControls = await measureVisibleControls( [
+		{
+			name: 'Panel Back',
+			selector: '.core-ai-map__details-close',
+			authoredHeight: 60,
+		},
+		{
+			name: 'Abilities tab',
+			selector: '.core-ai-map__ability-tabs [role="tab"]',
+			authoredHeight: 60,
+		},
+	] );
+	assert(
+		compatibilityPanelControls.length === 4,
+		`1024 panel gate did not measure Back plus all three tabs: ${ JSON.stringify( compatibilityPanelControls ) }`
+	);
+	await page.locator( '.core-ai-map__details-close' ).click();
+	await page.waitForTimeout( 80 );
+
+	await aboutTrigger.click();
+	await page.waitForTimeout( 120 );
+	const compatibilityDialogControls = await measureVisibleControls( [
+		{
+			name: 'About dialog Back',
+			selector: '.core-ai-map__about-close',
+			authoredHeight: 60,
+		},
+	] );
+	assert(
+		compatibilityDialogControls.length === 1,
+		`1024 dialog gate did not measure its Back control: ${ JSON.stringify( compatibilityDialogControls ) }`
+	);
+	await page.locator( '.core-ai-map__about-close' ).click();
+	await page.waitForTimeout( 80 );
+
+	const compatibilityControls = [
+		{
+			name: 'Welcome primary action',
+			authoredHeight: 64,
+			renderedHeight: welcomeActionHeights.primary,
+		},
+		{
+			name: 'Welcome browse action',
+			authoredHeight: 60,
+			renderedHeight: welcomeActionHeights.browse,
+		},
+		...compatibilityMapControls,
+		...compatibilityPanelControls,
+		...compatibilityDialogControls,
+	];
+	observations.compatibilityControls = compatibilityControls;
+	assert(
+		compatibilityControls.every(
+			( control ) => control.renderedHeight >= 24
+		),
+		`1024 named controls fell below the 24px rendered SC 2.5.8 floor: ${ JSON.stringify(
+			compatibilityControls.filter(
+				( control ) => control.renderedHeight < 24
+			)
+		) }`
+	);
+	const compatibilitySixtyPixelControls = compatibilityControls.filter(
+		( control ) => control.authoredHeight === 60
+	);
+	assert(
+		compatibilitySixtyPixelControls.length >= 6 &&
+			compatibilitySixtyPixelControls.every(
+				( control ) => control.renderedHeight >= 44
+			),
+		`1024 60px controls fell below the 44px rendered SC 2.5.5 target: ${ JSON.stringify(
+			compatibilitySixtyPixelControls
+		) }`
+	);
+	const compatibilityEnhancedTargetExceptions = compatibilityControls
+		.filter( ( control ) => control.renderedHeight < 44 )
+		.map( ( control ) => control.name )
+		.sort();
+	assert(
+		JSON.stringify( compatibilityEnhancedTargetExceptions ) ===
+			JSON.stringify( [ 'About footnote', 'Apply' ] ),
+		`1024 SC 2.5.5 exceptions were not exactly Apply and About footnote: ${ JSON.stringify(
+			compatibilityEnhancedTargetExceptions
+		) }`
+	);
 	await page.locator( '.core-ai-map__rail button' ).nth( 0 ).click();
 	await page.waitForTimeout( 800 );
 	const compatibilityStoryOne = await page.evaluate( () => {
