@@ -25,6 +25,7 @@ import {
 	oversizedRuntimeAsset,
 	requiredRuntimeDirectories,
 	validatePagesAssetBudget,
+	writeOversizedAssetPlaceholder,
 } from '../../scripts/build-cloudflare-playground.mjs';
 
 const projectDirectory = resolve(
@@ -470,6 +471,37 @@ test( 'drops the runtime archive that exceeds the Pages per-asset ceiling', asyn
 			`${ requiredRuntimeDirectories[ 0 ] }/wp-includes/kept.css`
 		),
 		'the rest of the fallback tree must still ship'
+	);
+} );
+
+test( 'stands an empty archive where the oversized one would have been', async ( t ) => {
+	const temporaryDirectory = await mkdtemp(
+		join( projectDirectory, '.tmp-oversized-placeholder-' )
+	);
+	t.after( () => rm( temporaryDirectory, { recursive: true, force: true } ) );
+
+	await writeOversizedAssetPlaceholder( temporaryDirectory );
+
+	const contents = await readFile(
+		join(
+			temporaryDirectory,
+			requiredRuntimeDirectories[ 0 ],
+			oversizedRuntimeAsset
+		)
+	);
+
+	// Cloudflare Pages rewrites an unmatched path to the SPA shell and returns
+	// it as 200 text/html, so an absent archive reaches PHP as HTML and kills
+	// the boot with `Could not unzip file`. A real, empty ZIP must be present.
+	assert.deepEqual(
+		[ ...contents.subarray( 0, 4 ) ],
+		[ 0x50, 0x4b, 0x05, 0x06 ],
+		'the placeholder must be a ZIP end-of-central-directory record'
+	);
+	assert.equal(
+		contents.byteLength,
+		22,
+		'the placeholder must be an empty archive, not a truncated one'
 	);
 } );
 

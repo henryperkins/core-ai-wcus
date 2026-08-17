@@ -45,11 +45,25 @@ export const requiredRuntimeDirectories = [
 // Playground bulk-restores the files its minified WordPress build strips by
 // fetching this one archive. WordPress outgrew the Cloudflare Pages 25 MiB
 // per-asset ceiling between 7.0 (21.3 MB) and 7.1 (27.2 MB), so the booth
-// cannot serve it. Playground treats a failed fetch as a warning rather than a
-// fatal, and the unpacked tree above still answers each stripped asset
-// individually through wordpress-remote-asset-paths, so dropping the archive
-// costs extra requests on a cold start instead of breaking the exhibit.
+// cannot serve it. The unpacked tree above still answers each stripped asset
+// individually through wordpress-remote-asset-paths, so the archive itself is
+// not needed to render the exhibit.
+//
+// Omitting it entirely is not enough. Playground tolerates a *failed* fetch,
+// but Cloudflare Pages never fails one: an unmatched path is rewritten to the
+// SPA shell and returned as 200 text/html. Playground hands that HTML to PHP,
+// which raises `Could not unzip file. Error code: 19. File size: 14847 bytes.`
+// and exits 255 — six console errors on every boot, observed on both public
+// hostnames. So ship a valid, empty archive in its place: the restore succeeds
+// and finds nothing, and the per-asset fallback proceeds exactly as before.
 export const oversizedRuntimeAsset = 'wordpress-static.zip';
+
+// A ZIP end-of-central-directory record with zero entries: the smallest
+// archive a conforming reader will accept.
+export const emptyZipArchive = Buffer.from( [
+	0x50, 0x4b, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+] );
 export const playgroundLoadingMessage = 'Preparing WordPress';
 export const kioskLoadingMessage =
 	'Building a real WordPress site in your browser. A cold start can take a minute or more.';
@@ -554,6 +568,25 @@ export const getRuntimeFiles = async ( sourceDirectory ) => {
 	return [ ...selected ].sort();
 };
 
+/**
+ * Stands a valid, empty archive where the oversized one would have been.
+ *
+ * Without it Cloudflare Pages answers the runtime's request with the SPA shell
+ * and PHP dies trying to unzip HTML. See `oversizedRuntimeAsset`.
+ *
+ * @param {string} outputDirectory Root of the generated Pages artifact.
+ */
+export const writeOversizedAssetPlaceholder = async ( outputDirectory ) => {
+	for ( const directory of requiredRuntimeDirectories ) {
+		const placeholderDirectory = join( outputDirectory, directory );
+		await mkdir( placeholderDirectory, { recursive: true } );
+		await writeFile(
+			join( placeholderDirectory, oversizedRuntimeAsset ),
+			emptyZipArchive
+		);
+	}
+};
+
 const copyRuntimeFile = async (
 	sourceDirectory,
 	outputDirectory,
@@ -676,6 +709,7 @@ export const buildCloudflarePlayground = async ( {
 	for ( const runtimeFile of runtimeFiles ) {
 		await copyRuntimeFile( source, output, runtimeFile );
 	}
+	await writeOversizedAssetPlaceholder( output );
 	await writeFile(
 		join( output, 'manifest.json' ),
 		`${ JSON.stringify( kioskManifest, null, 2 ) }\n`,
