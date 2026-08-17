@@ -221,8 +221,8 @@
       "name": "Primary Action",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "One per screen. Solid Live Blue with a stroked icon — the welcome card's Explore the first flow.",
-      "html": "<button class=\"ds-btn-primary\" type=\"button\">Explore the first flow<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 12h14M13 6l6 6-6 6\"/></svg></button>",
+      "description": "One per screen. Solid Live Blue with a stroked icon — the welcome card's Trace the first flow.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Trace the first flow<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 12h14M13 6l6 6-6 6\"/></svg></button>",
       "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 14px; min-height: 64px; padding: 0 26px; color: #fff; font-family: 'Core AI Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 17px; font-weight: 650; white-space: nowrap; background: #3858e9; border: 1px solid #3858e9; border-radius: 4px; cursor: pointer; } .ds-btn-primary svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 1.7; stroke-linecap: round; } .ds-btn-primary:focus-visible { outline: 3px solid #3858e9; outline-offset: 4px; }"
     },
     {

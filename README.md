@@ -1,10 +1,33 @@
 # Core AI Living Block Map
 
-Version and design: **3.2.3**. Core AI Living Block Map is one dynamic,
+Version and design: **3.2.4**. Core AI Living Block Map is one dynamic,
 server-rendered `core-ai/core-ai-map` block for explaining how WordPress and AI
 building blocks fit together on a kiosk. Its server markup is enhanced by the
 WordPress Interactivity API. The repository also contains a reproducible,
 self-hosted WordPress Playground artifact for static-hosted demonstrations.
+
+## 3.2.4 release notes
+
+This release makes the map read as the boundary diagram it always was. The
+shelf of components a flow is not using moved under the WordPress band, the MCP
+Adapter now straddles the boundary rule it translates across, and the canvas
+names its own convention with a "Boundary view" badge and a "Reading the
+diagram" key.
+
+"An agent learns WordPress" was rebuilt around what its guidance is actually
+about. The Abilities API, AI Client, and MCP Adapter stay on the canvas as the
+subject of the skills rather than being parked, the flow ends against a
+boundary stop rather than an arrow, and it offers the flow it leads into once
+it has settled. The third actor is now "Code for this site" and carries the
+panel explaining why an install, not the agent, is what reaches WordPress.
+
+"WordPress uses AI" numbers the external AI service as its fourth step, moves
+Connectors below the request path as a full card joined to it by a dashed
+support line, and gives the provider plugin the same height as the two Core
+cards it sits between. Off-flow actors now leave the canvas instead of being
+parked at its edges. The welcome screen lists the four flows in place of the
+three gestures that reach them, and carries one take-away QR code for questions
+the booth cannot answer in person.
 
 ## 3.2.3 release notes
 
@@ -165,7 +188,7 @@ channel's static fallback tree. It validates Cloudflare Pages Free's 20,000-file
 and 25 MiB-per-asset limits, removes upstream Google Fonts and analytics, and
 uses a local Blueprint and plugin ZIP. `npm run plugin-zip` creates the local
 `core-ai-map.zip`; the Pages build copies those exact bytes to the release URL
-`/kiosk-blueprint/core-ai-map-3.2.3.zip`. It also emits a deployment manifest
+`/kiosk-blueprint/core-ai-map-3.2.4.zip`. It also emits a deployment manifest
 with that path, its byte count, and its SHA-256, plus a Pages rewrite that keeps
 the Playground runtime's literal `/remote.html` endpoint from being redirected
 to Cloudflare's extensionless route. The build owns the accessible outer
@@ -257,7 +280,7 @@ $dist = (Resolve-Path -LiteralPath 'dist-playground').Path
 $manifestPath = Join-Path $dist 'deployment-manifest.json'
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $artifactRelative = [string] $manifest.pluginArtifact.path
-$expectedArtifact = 'kiosk-blueprint/core-ai-map-3.2.3.zip'
+$expectedArtifact = 'kiosk-blueprint/core-ai-map-3.2.4.zip'
 
 if ($artifactRelative -ne $expectedArtifact) {
     throw "Expected $expectedArtifact; manifest has $artifactRelative."
@@ -326,13 +349,13 @@ foreach ($hostName in $hosts) {
 
     $remoteBlueprint = Invoke-RestMethod `
         -Uri "$hostName/kiosk-blueprint/blueprint.json?probe=$probe"
-    if ($remoteBlueprint.plugins.Count -ne 1 -or $remoteBlueprint.plugins[0].source -ne './core-ai-map-3.2.3.zip') {
+    if ($remoteBlueprint.plugins.Count -ne 1 -or $remoteBlueprint.plugins[0].source -ne './core-ai-map-3.2.4.zip') {
         throw "Blueprint plugin source mismatch on $hostName."
     }
 
     $originName = ([Uri] $hostName).Host
     $downloadPath = [IO.Path]::GetFullPath(
-        (Join-Path ([IO.Path]::GetTempPath()) "core-ai-map-${originName}-3.2.3-${PID}.zip")
+        (Join-Path ([IO.Path]::GetTempPath()) "core-ai-map-${originName}-3.2.4-${PID}.zip")
     )
     if (Test-Path -LiteralPath $downloadPath) {
         throw "Refusing to overwrite existing verification file: $downloadPath"

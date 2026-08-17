@@ -2,7 +2,7 @@
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "apiVersion": 3,
   "name": "core-ai/core-ai-map",
-  "version": "3.2.3",
+  "version": "3.2.4",
   "title": "Core AI Living Block Map",
   "category": "design",
   "icon": "wordpress",
@@ -23,15 +23,15 @@
     },
     "title": {
       "type": "string",
-      "default": "What is WordPress Core AI?"
+      "default": "Four ways WordPress and AI meet"
     },
     "intro": {
       "type": "string",
-      "default": "WordPress Core AI is a set of open building blocks that let WordPress use AI services and work with outside assistants—without tying WordPress to one provider.\n\nExplore four flows to see what happens inside WordPress, what happens outside it, and how the projects connect."
+      "default": "Core AI is a set of open building blocks: WordPress can call out to an AI service, and an outside assistant can call into WordPress. No single provider, no single assistant.\n\nEach flow traces one real request end to end, and shows who holds permission at every step. Pick one to begin, then tap any component for its role."
     },
     "prompt": {
       "type": "string",
-      "default": "Explore the first flow"
+      "default": "Trace the first flow"
     },
     "labels": {
       "type": "object",
@@ -49,7 +49,8 @@
         "tapCue": "Tap for its role",
         "receivesLabel": "Receives",
         "doesLabel": "Does",
-        "returnsLabel": "Passes on"
+        "returnsLabel": "Passes on",
+        "shelfLabel": "Also part of the ecosystem"
       }
     },
     "guidance": {
@@ -61,6 +62,7 @@
         "browse": "Tap any component to learn what it is and where it belongs.",
         "cardAction": "%1$s — view its role in “%2$s.”",
         "cardActionStep": "Step %1$s: %2$s — view its role in “%3$s.”",
+        "cardQuiet": "%1$s — what “%2$s” is about. Open its details.",
         "cardInactive": "%1$s — not part of this flow.",
         "cardActionBrowse": "%1$s — open its details."
       }
@@ -151,9 +153,9 @@
         },
         {
           "id": "task",
-          "name": "A WordPress task",
-          "tagline": "Plugin or theme work",
-          "badge": "Not WordPress"
+          "name": "Code for this site",
+          "tagline": "A plugin, block, or ability registration",
+          "badge": "Still outside"
         }
       ]
     },
@@ -200,10 +202,11 @@
         {
           "id": "learns",
           "title": "An agent learns WordPress",
-          "copy": "Agent Skills attaches current WordPress guidance to a coding agent, which then starts the task. All of this happens outside the site — nothing inside WordPress runs.",
+          "copy": "Agent Skills attaches current WordPress guidance to a coding agent, which writes code for this site. All of this happens outside the site — nothing inside WordPress runs.",
           "situation": "A coding agent receives WordPress-specific guidance before writing code.",
-          "takeaway": "Agent Skills changes the information available to the coding agent. Nothing runs on the WordPress site during this flow.",
-          "outcome": "A coding agent receives WordPress guidance"
+          "takeaway": "The guidance is about the Core AI surfaces themselves — abilities, the AI Client, the MCP Adapter. It changes what the agent writes, never what the site runs: the code only reaches WordPress when a person installs it.",
+          "outcome": "A coding agent receives WordPress guidance",
+          "nextLabel": "See how that code is tested"
         },
         {
           "id": "tests",
@@ -275,11 +278,17 @@
           "connectLayout": "chain",
           "connect": [
             {
-              "label": "Text, image, speech or video request"
+              "label": "Capability request"
             },
             {
               "label": "AI Client",
               "accent": true
+            },
+            {
+              "label": "Model resolution"
+            },
+            {
+              "label": "Provider plugin"
             },
             {
               "label": "Normalized result"
@@ -288,7 +297,11 @@
           "notes": [
             {
               "heading": "Under the hood",
-              "text": "A WordPress wrapper around the provider-agnostic PHP AI Client, which handles provider communication, model selection, and normalized results. Consuming plugins never integrate a provider directly. There is a JavaScript prompt API too, but it is administrator-gated and can send any prompt to any configured provider — so for editor features, register a REST endpoint scoped to that one feature. Check support before showing any AI interface — the checks are free, and a 7.0 site may have no provider configured at all."
+              "text": "A WordPress wrapper around the provider-agnostic PHP AI Client, which handles provider communication, model selection, and normalized results. Consuming plugins never integrate a provider directly. A named model is a preference, not a requirement: if none of the preferred ones are configured, the request falls back to the first available model that can do the job. Core’s client is PHP only — the JavaScript prompt builder lives outside Core and is administrator-only, because it can send any prompt to any configured provider, so a feature exposes its own REST endpoint instead. Check support before showing any AI interface: the check is free and makes no network call, and a 7.0 site may have no provider configured at all."
+            },
+            {
+              "heading": "Not every request returns a result",
+              "text": "A failure arrives as a WordPress error rather than an exception, and a site can block prompts outright — the support check then reports false and the feature hides itself. Design for the empty answer as well as the good one."
             },
             {
               "heading": "Calling back into WordPress",
@@ -333,11 +346,11 @@
           "notes": [
             {
               "heading": "Providers",
-              "text": "Provider plugins register with the AI Client. Connectors auto-discovers them, and one button installs and activates the plugin before asking for its key. Keys are read from an environment variable first, then a wp-config constant, then the database — where they sit unencrypted by default. The map stays vendor-neutral: no provider owns a position on the canvas."
+              "text": "Provider plugins register with the AI Client. Connectors auto-discovers them, and one button installs and activates the plugin before asking for its key. The map stays vendor-neutral: no provider owns a position on the canvas."
             },
             {
               "heading": "Under the hood",
-              "text": "Introduced in WordPress 7.0 as a standardized framework for registering and managing connections to external services. AI providers are the first users of it, not the only intended ones — the framework is built for outside connections generally."
+              "text": "Introduced in WordPress 7.0 as a standardized framework for registering and managing connections to external services. AI providers are the first users of it, not the only intended ones — the framework is built for outside connections generally. A saved key is not always the key in use: an environment variable is read first, then a wp-config constant, then the value stored here in the database, where it sits unencrypted by default — so on a managed host the platform’s own key can quietly outrank the one typed into this screen."
             }
           ],
           "href": "https://make.wordpress.org/core/2026/03/18/introducing-the-connectors-api-in-wordpress-7-0/",
@@ -348,7 +361,7 @@
           "id": "plugin",
           "badge": "Experimental reference plugin",
           "title": "AI Plugin",
-          "lede": "Where the foundations become things people can use: alt text, summaries, titles, editorial notes, image generation. Nothing is on by default: you enable one experiment at a time.",
+          "lede": "Where the foundations become things people can use: alt text, summaries, titles, editorial notes, image generation. Nothing is on by default: a site owner switches AI on, then enables one experiment at a time.",
           "roles": {
             "uses-ai": {
               "receives": "A person’s request in the editor — alt text, a summary, a title.",
@@ -388,7 +401,7 @@
           "id": "mcp",
           "badge": "WordPress plugin · not in Core",
           "title": "MCP Adapter",
-          "lede": "Translation at the edge of the site. It exposes the abilities their authors marked public to authorized outside assistants — as MCP resources and prompts automatically, and as individual tools on a custom server — and translates their calls back into WordPress work.",
+          "lede": "Translation at the edge of the site. It exposes the abilities their authors marked public to authorized outside assistants — as MCP resources and prompts automatically, and as individual tools on a custom server — then translates their calls back into WordPress work. On the default server abilities are reached through three adapter tools rather than listed one by one.",
           "roles": {
             "uses-wp": {
               "receives": "An MCP tool call from an authorized outside assistant.",
@@ -450,7 +463,7 @@
               "label": "Sandbox"
             },
             {
-              "label": "Lint and runtime checks"
+              "label": "Static and runtime checks"
             },
             {
               "label": "Evidence",
@@ -460,7 +473,7 @@
           "notes": [
             {
               "heading": "Under the hood",
-              "text": "One suite, one dimension: code generation tasks graded by static checks and runtime assertions in a real WordPress environment. WordPress itself runs the assertions. Passing is all-or-nothing: a partially correct result still fails. Run --check-reference-solution first to prove the grader accepts the canonical solution, then --check-exploits to prove trivial stubs fail."
+              "text": "One suite, one dimension: the wp-core-v1 code generation tasks, graded by runtime assertions in a real WordPress environment. WordPress itself runs the assertions. Static checks sit alongside as a diagnostic — a missing pattern costs nothing, but a forbidden one fails the test outright. Passing is all-or-nothing: a partially correct result still fails. Run --check-reference-solution first to prove the grader accepts the canonical solution, then --check-exploits to prove trivial stubs fail."
             }
           ],
           "href": "https://github.com/WordPress/wp-bench",
@@ -474,10 +487,10 @@
           "lede": "Portable instruction bundles — guidance, checklists, references — that help a coding assistant follow current WordPress practice. Nothing here runs on a live site.",
           "roles": {
             "learns": {
-              "receives": "A selection of WordPress guidance — checklists, references, procedures.",
+              "receives": "A selection of WordPress guidance — checklists, references, procedures, several of them about Core AI itself.",
               "does": "Supplies those instructions to the coding agent before it writes the requested code.",
               "returns": "An agent that follows current WordPress practice.",
-              "lesson": "The guidance affects the agent’s work outside the site; it does not execute on a live WordPress installation."
+              "lesson": "A skill is guidance, not code. It reaches the agent, never the site — which is why three of the skills can teach the Abilities API without a WordPress install anywhere nearby."
             }
           },
           "connectHeading": "How it connects",
@@ -508,15 +521,21 @@
           "id": "assistant",
           "badge": "Not WordPress",
           "title": "AI assistant",
-          "lede": "A program outside WordPress — a chat assistant, an editor, an agent — that speaks MCP. It holds no privileges of its own — it acts as a WordPress user it was given credentials for, and never gets more reach than that user has.",
+          "lede": "A program outside WordPress — a chat assistant, an editor, an agent — that speaks MCP. It holds no privileges of its own: it signs in as a WordPress user it was given credentials for, and never reaches further than that user can.",
           "roles": {
             "uses-wp": {
               "receives": "A person’s instruction, outside WordPress.",
-              "does": "Decides a WordPress action is needed and issues an MCP tool call.",
-              "returns": "Whatever WordPress allows back — nothing more.",
+              "does": "Signs in as the WordPress user it was given credentials for, then issues an MCP tool call.",
+              "returns": "Whatever that user is allowed to get back — nothing more.",
               "lesson": "The assistant is a client, not an authority. It asks; it does not decide."
             }
-          }
+          },
+          "notes": [
+            {
+              "heading": "How it signs in",
+              "text": "The MCP Adapter ships no login of its own. In practice a site owner issues an application password for one specific WordPress user, and the assistant sends it with every call. Choose that user deliberately — it is the ceiling on everything the assistant can do."
+            }
+          ]
         },
         {
           "id": "agent",
@@ -526,13 +545,13 @@
           "roles": {
             "learns": {
               "receives": "The attached guidance, plus the task it was asked to do.",
-              "does": "Writes plugin or theme code, outside the site.",
+              "does": "Writes plugin or theme code, outside the site — including code that registers abilities or calls the AI Client.",
               "returns": "Code a person still has to review and install.",
-              "lesson": "Nothing here touches a running site. The agent produces text, not changes."
+              "lesson": "Nothing here touches a running site. The agent produces text, not changes — and what it writes is where the other three flows come from."
             },
             "tests": {
               "receives": "One task and its requirements, as a single message.",
-              "does": "Writes PHP. It gets no conversation, no retry, and no sight of the assertions.",
+              "does": "Writes PHP. No conversation, no retry, no sight of the assertions — and in a baseline run, no system prompt either.",
               "returns": "Whatever it wrote, parsed out of the reply and passed on unrepaired.",
               "lesson": "Every model gets exactly the same task, so a difference in the result is a difference in the model."
             }
@@ -554,31 +573,71 @@
         },
         {
           "id": "task",
-          "badge": "Not WordPress",
-          "title": "A WordPress task",
-          "lede": "The actual work someone wants done: a plugin, a theme, a fix. On this map it stands for the job itself, not for any code running on a site.",
+          "badge": "Not WordPress yet",
+          "title": "Code for this site",
+          "lede": "What the agent produced: files, a diff, a pull request. A plugin, a block, an ability registration — written for this WordPress and not yet part of it.",
           "roles": {
             "learns": {
-              "receives": "The agent’s attention, once the guidance is attached.",
-              "does": "Stands for the real work — a plugin, a theme, a fix.",
-              "returns": "Finished code, still outside WordPress.",
-              "lesson": "The site is not involved until a person installs what the agent wrote."
+              "receives": "The agent’s output — files, a diff, a pull request.",
+              "does": "Sits outside the site, waiting. A plugin, a block, an ability registration: written for this WordPress, not yet part of it.",
+              "returns": "Nothing, until a person reads it and installs it.",
+              "lesson": "This is the only way the flow reaches WordPress, and it is a person, not the agent. That is why the boundary here is a stop, not an arrow."
             }
-          }
+          },
+          "connectHeading": "How it connects",
+          "connectLayout": "chain",
+          "connect": [
+            {
+              "label": "Written outside"
+            },
+            {
+              "label": "A person reviews",
+              "accent": true
+            },
+            {
+              "label": "Installed on the site"
+            }
+          ],
+          "notes": [
+            {
+              "heading": "Under the hood",
+              "text": "This is the only point where the flow can reach WordPress, and a person makes it happen — which is why the boundary on the map shows a stop here rather than an arrow. It is also where the other three flows begin: code written in this flow is what registers the abilities an assistant later calls, what asks the AI Client for a result, and what WP-Bench runs when someone wants evidence that it works."
+            }
+          ]
         },
         {
           "id": "provider-plugin",
           "badge": "WordPress plugin",
           "title": "AI provider plugin",
-          "lede": "A provider-specific integration installed as a WordPress plugin. It speaks one external service’s protocol using the credentials Connectors resolved for it.",
+          "lede": "A provider-specific integration installed as a WordPress plugin. It speaks one external service’s protocol using the credentials Connectors resolved for it, and it is what turns that service into something a site owner can choose.",
           "roles": {
             "uses-ai": {
               "receives": "The routed request from the AI Client.",
-              "does": "Speaks one external service’s protocol, using the credentials Connectors resolved.",
+              "does": "Speaks one external service’s protocol, using the credentials Connectors resolved for it.",
               "returns": "That service’s reply, handed back to the AI Client.",
               "lesson": "The provider-specific part is a plugin. Swapping providers does not change the feature that asked."
             }
-          }
+          },
+          "connectHeading": "How it connects",
+          "connectLayout": "chain",
+          "connect": [
+            {
+              "label": "Registers its models"
+            },
+            {
+              "label": "Appears in Connectors",
+              "accent": true
+            },
+            {
+              "label": "Receives routed requests"
+            }
+          ],
+          "notes": [
+            {
+              "heading": "Under the hood",
+              "text": "Registration is what makes the Connectors card exist: the plugin declares itself and each model’s capabilities to the AI Client, and Connectors reads that registry to build the Settings screen. A declared capability is a promise — the Client routes matching requests to whatever the plugin claims it can do. Credentials are read from an environment variable, then a PHP constant, then whatever was saved in Connectors."
+            }
+          ]
         }
       ]
     }

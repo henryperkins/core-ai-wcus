@@ -100,11 +100,27 @@ const isLayoutSidecar = ( layout, id ) =>
 	Boolean( layout?.sidecars?.includes( id ) );
 
 /**
+ * Whether a card is the subject of a flow rather than a step in it.
+ *
+ * The agent-learning flow is about three components no step of it touches. They
+ * stay on the canvas, unnumbered and at shelf scale, because "here is what the
+ * guidance covers" is the lesson — parking them would say the opposite.
+ *
+ * @param {Object} layout Story layout.
+ * @param {string} id     Card id.
+ * @return {boolean} True when the card is quiet in this flow.
+ */
+const isLayoutQuiet = ( layout, id ) =>
+	Boolean( layout?.quiet?.includes( id ) );
+
+/**
  * Whether a card takes part in the selected flow.
  *
  * Participation is the single rule the interface is built on: a participating
- * card is highlighted, tappable, cued, and carries a role. Everything else is
- * parked, quiet, and inert until the visitor picks a different flow.
+ * card is highlighted, tappable, cued, and carries a role. Parked cards are
+ * inert until the visitor picks a different flow. Quiet cards are the one
+ * exception — they take no step, but they stay tappable and cued, because the
+ * flow is about them.
  *
  * @param {Object} context Element context.
  * @param {string} id      Card id.
@@ -257,7 +273,13 @@ const syncSvgState = ( root, context ) => {
 	root.querySelectorAll( '[data-core-ai-preview]' ).forEach( ( preview ) => {
 		const previewId = preview.dataset.coreAiPreview;
 		const hidden = isPreviewHidden( context, previewId );
-		preview.hidden = hidden;
+		/*
+		 * `hidden` is an HTMLElement property; assigning it to an SVG node
+		 * sets a JavaScript expando and leaves the attribute — and therefore
+		 * the rendering — exactly as the server left it. Toggle the attribute
+		 * so these groups actually appear and disappear.
+		 */
+		preview.toggleAttribute( 'hidden', hidden );
 		preview.querySelectorAll( 'path' ).forEach( ( path ) => {
 			path.classList.toggle(
 				'is-live',
@@ -289,7 +311,17 @@ const syncSvgState = ( root, context ) => {
 		'.core-ai-map__config-path[data-core-ai-story]'
 	).forEach( ( path ) => {
 		const { coreAiStory: storyId, coreAiVariant: variant } = path.dataset;
-		path.hidden = isProviderConfigPathHidden( context, storyId, variant );
+		path.toggleAttribute(
+			'hidden',
+			isProviderConfigPathHidden( context, storyId, variant )
+		);
+	} );
+	root.querySelectorAll( '[data-core-ai-gate]' ).forEach( ( gate ) => {
+		gate.classList.toggle(
+			'is-visible',
+			context.screen === 'map' &&
+				context.story === gate.dataset.coreAiGate
+		);
 	} );
 	root.querySelectorAll( '[data-core-ai-bench-flow]' ).forEach( ( flow ) => {
 		flow.classList.toggle( 'is-live', Boolean( context.benchPathsLive ) );
@@ -628,6 +660,13 @@ store( 'core-ai/map', {
 		get isRailHidden() {
 			return getContext().screen !== 'map';
 		},
+		/*
+		 * The key names the marks on the diagram, so it belongs beside the
+		 * diagram and nowhere else. The welcome card carries its own.
+		 */
+		get isDiagramKeyHidden() {
+			return getContext().screen !== 'map';
+		},
 		get railLabel() {
 			const context = getContext();
 			return activeLayout( context )
@@ -650,6 +689,21 @@ store( 'core-ai/map', {
 		get isStoryNotSelected() {
 			const context = getContext();
 			return context.storyId !== context.story;
+		},
+		/*
+		 * Two flows are one story: an agent writes code, then WordPress judges
+		 * it. The handoff is offered only once this flow has settled, so it
+		 * never competes with the path still drawing.
+		 */
+		get isStoryNextHidden() {
+			const context = getContext();
+			const layout = activeLayout( context );
+			return ! (
+				layout &&
+				layout.next === context.nextStoryId &&
+				context.screen === 'map' &&
+				context.flowPhase === 'settled'
+			);
 		},
 		get isTakeawayHidden() {
 			const context = getContext();
@@ -760,9 +814,18 @@ store( 'core-ai/map', {
 			if ( slot < 0 ) {
 				return '';
 			}
-			const shelfIndex = ( layout.shelfStart || 0 ) + slot;
-			const shelfX =
-				context.shelfX?.[ shelfIndex ] ?? context.shelfX?.[ 0 ] ?? 0;
+			/*
+			 * A shelf that has to fit inside the boundary band gets its own
+			 * columns; every other shelf runs on the shared pitch.
+			 */
+			const columns = layout.shelfXs?.length
+				? layout.shelfXs
+				: context.shelfX || [];
+			const shelfIndex = Math.min(
+				( layout.shelfStart || 0 ) + slot,
+				Math.max( columns.length - 1, 0 )
+			);
+			const shelfX = columns[ shelfIndex ] ?? columns[ 0 ] ?? 0;
 			return `translate(${ shelfX - neutral[ 0 ] }px, ${
 				layout.shelfY - neutral[ 1 ]
 			}px)`;
@@ -814,6 +877,37 @@ store( 'core-ai/map', {
 					! hasLayoutMember( layout, context.cardId ) &&
 					! isLayoutSidecar( layout, context.cardId ) &&
 					layout.park?.includes( context.cardId )
+			);
+		},
+		/*
+		 * Five parked cards will not fit the shared shelf pitch inside the
+		 * boundary band, so that one shelf gets narrower cards as well as
+		 * narrower columns.
+		 */
+		get isCardParkedTight() {
+			const context = getContext();
+			return Boolean(
+				this.isCardParked && activeLayout( context )?.shelfXs?.length
+			);
+		},
+		get isCardQuiet() {
+			const context = getContext();
+			return Boolean(
+				isRecomposed( context ) &&
+					isLayoutQuiet( activeLayout( context ), context.cardId )
+			);
+		},
+		/*
+		 * An actor belongs to the flow that names it. With a flow selected the
+		 * cast is exactly its participants; the rest leave rather than crowd
+		 * the edges of a diagram they take no part in.
+		 */
+		get isActorHidden() {
+			const context = getContext();
+			return Boolean(
+				context.screen !== 'attract' &&
+					activeLayout( context ) &&
+					! isParticipant( context, context.cardId )
 			);
 		},
 		get isPreviewMember() {
@@ -876,21 +970,32 @@ store( 'core-ai/map', {
 		 * Highlighted means tappable, and dimmed means it is not part of this
 		 * flow. Disabling the parked cards is what makes that promise true
 		 * rather than merely visual: a card that cannot answer is a card the
-		 * visitor cannot press.
+		 * visitor cannot press. A quiet card is the one the flow is about, so it
+		 * still answers and still presses.
 		 */
 		get isCardNotTappable() {
 			const context = getContext();
+			const layout = activeLayout( context );
 			return (
-				Boolean( activeLayout( context ) ) &&
-				! isParticipant( context, context.cardId )
+				Boolean( layout ) &&
+				! isParticipant( context, context.cardId ) &&
+				! isLayoutQuiet( layout, context.cardId )
 			);
 		},
+		/*
+		 * The cue is the visible half of "this card answers", so it follows the
+		 * same rule as the button being enabled. A quiet card is pressable, so
+		 * it is cued too: a card the visitor may open should never have to be
+		 * discovered by trying it.
+		 */
 		get isTapCueHidden() {
 			const context = getContext();
+			const layout = activeLayout( context );
 			return ! (
 				context.screen === 'map' &&
-				Boolean( activeLayout( context ) ) &&
-				isParticipant( context, context.cardId )
+				Boolean( layout ) &&
+				( isParticipant( context, context.cardId ) ||
+					isLayoutQuiet( layout, context.cardId ) )
 			);
 		},
 		get cardActionLabel() {
@@ -918,6 +1023,20 @@ store( 'core-ai/map', {
 					context.storyTitles?.[ context.story ] || ''
 				);
 			}
+			/*
+			 * A quiet card is the subject of the flow, not a step in it, and it
+			 * stays pressable. "Not part of this flow" is the sentence for a
+			 * card that cannot answer, so saying it here would contradict the
+			 * button it is attached to.
+			 */
+			if ( isLayoutQuiet( activeLayout( context ), context.cardId ) ) {
+				return format(
+					strings.cardQuiet ||
+						'%1$s — what “%2$s” is about. Open its details.',
+					name,
+					context.storyTitles?.[ context.story ] || ''
+				);
+			}
 			if ( activeLayout( context ) ) {
 				return format(
 					strings.cardInactive || '%1$s — not part of this flow.',
@@ -937,9 +1056,15 @@ store( 'core-ai/map', {
 				return true;
 			}
 			const layout = activeLayout( context );
+			/*
+			 * Every card that takes part shows what it holds — a sidecar as
+			 * much as a numbered step, because standing beside the path is
+			 * exactly what a sidecar has to explain about itself.
+			 */
 			return Boolean(
 				context.screen === 'map' &&
-					Number( layout?.members?.[ context.cardId ] || 0 ) > 0 &&
+					layout &&
+					isParticipant( context, context.cardId ) &&
 					! layout.noStrip?.includes( context.cardId )
 			);
 		},
@@ -967,16 +1092,53 @@ store( 'core-ai/map', {
 		get isShelfHidden() {
 			return ! isRecomposed( getContext() );
 		},
+		/*
+		 * The shelf usually holds what the flow left behind. In the
+		 * agent-learning flow it holds the two components no skill covers,
+		 * which is a different sentence and gets a different heading.
+		 */
+		get shelfLabel() {
+			const context = getContext();
+			return (
+				activeLayout( context )?.shelfLabel ||
+				context.labels?.shelfLabel ||
+				''
+			);
+		},
+		/*
+		 * Far enough above the shelf to clear the boundary rule that runs
+		 * between them: a caption struck through by a dashed line reads as
+		 * neither.
+		 */
 		get shelfTop() {
 			const layout = activeLayout( getContext() );
-			return `${ layout ? layout.shelfY - 22 : 490 }px`;
+			return `${ layout ? layout.shelfY - 34 : 606 }px`;
 		},
 		get shelfLeft() {
 			const context = getContext();
 			const layout = activeLayout( context );
+			if ( ! layout ) {
+				return `${ context.shelfX?.[ 0 ] ?? 236 }px`;
+			}
+			const columns = layout.shelfXs?.length
+				? layout.shelfXs
+				: context.shelfX || [];
 			return `${
-				layout ? context.shelfX?.[ layout.shelfStart || 0 ] ?? 250 : 250
+				columns[ layout.shelfStart || 0 ] ?? columns[ 0 ] ?? 236
 			}px`;
+		},
+		/*
+		 * The evaluation row and the shelf are the same strip of canvas. When
+		 * the shelf takes it, the label that names it stands down rather than
+		 * captioning a row of parked cards it does not describe.
+		 */
+		get isRuntimeZoneHidden() {
+			const context = getContext();
+			return Boolean(
+				context.screen !== 'map' ||
+					( isRecomposed( context ) &&
+						activeLayout( context ).shelfY >= 600 )
+			);
 		},
 
 		get isPathVisible() {
@@ -1045,10 +1207,18 @@ store( 'core-ai/map', {
 			);
 		},
 
+		/*
+		 * The provider layer is transient: it exists inside the request path
+		 * that routes through it. A flow that does not route through it leaves
+		 * it out entirely rather than parking a dimmed card in open canvas.
+		 */
 		get isProviderPluginHidden() {
 			const context = getContext();
 			if ( [ 'map', 'inspect' ].includes( context.screen ) ) {
-				return false;
+				return Boolean(
+					activeLayout( context ) &&
+						! isParticipant( context, 'provider-plugin' )
+				);
 			}
 			return ! (
 				context.screen === 'attract' &&
@@ -1213,6 +1383,26 @@ store( 'core-ai/map', {
 				context,
 				context.storyId,
 				{ replayed: isCurrent }
+			);
+			resetSchedulers.get( root )?.();
+			focusFirstStep( root );
+		},
+		selectNextStory() {
+			const context = getContext();
+			const nextStoryId = context.nextStoryId || '';
+			if ( ! nextStoryId || ! context.layout?.[ nextStoryId ] ) {
+				return;
+			}
+			const root = getRoot( getElement().ref );
+			context.screen = 'map';
+			context.inspect = '';
+			context.story = nextStoryId;
+			context.suggestion =
+				Math.floor( ( context.suggestion || 0 ) / 2 ) * 2;
+			runFlow( root, context );
+			context.announcement = describeFlowSelection(
+				context,
+				nextStoryId
 			);
 			resetSchedulers.get( root )?.();
 			focusFirstStep( root );

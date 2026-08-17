@@ -286,8 +286,8 @@ describe( 'Core AI map render contract', () => {
 				y: Number.parseFloat(
 					providerPlugin.style.getPropertyValue( '--cai-y' )
 				),
-				width: 200,
-				height: 104,
+				width: 180,
+				height: 148,
 			} ) ),
 		];
 		const overlaps = [];
@@ -317,31 +317,38 @@ describe( 'Core AI map render contract', () => {
 		expect( context.layout[ 'uses-ai' ].members ).toEqual( {
 			plugin: 1,
 			client: 2,
-			provider: 0,
+			provider: 4,
 		} );
 		expect( context.layout[ 'uses-ai' ].sidecars ).toEqual( [
 			'connectors',
 		] );
 		expect( context.layout[ 'uses-ai' ].providerPlugin ).toMatchObject( {
 			step: 3,
-			position: [ 824, 214 ],
-			restPosition: [ 824, 332 ],
+			position: [ 844, 192 ],
+			restPosition: [ 844, 332 ],
 		} );
 		expect( context.layout[ 'uses-ai' ].edges ).toEqual( [
 			'M504 266 L556 266',
-			'M792 266 L824 266',
-			'M1024 266 L1180 266',
+			'M792 266 L840 266',
+			'M1024 266 L1146 266',
 		] );
-		expect( context.layout[ 'uses-ai' ].sidecarEdges ).toEqual( [
-			'M924 360 L924 318',
+		// Connectors reaches the request path on a dashed support line, and
+		// its state strip reads above the card so it stays inside the band.
+		expect( context.layout[ 'uses-ai' ].support ).toEqual( [
+			'M908 434 L908 346',
 		] );
-		expect( context.layout[ 'uses-ai' ].sidecarRest ).toEqual( [
-			'M924 332 C954 318 1012 320 1030 308',
+		expect( context.layout[ 'uses-ai' ].place.connectors ).toEqual( [
+			790, 440,
 		] );
+		expect( context.layout[ 'uses-ai' ].strips.connectors ).toEqual( [
+			0, -70,
+		] );
+		expect( context.layout[ 'uses-ai' ].shelfY ).toBe( 640 );
+		expect( context.shelfX ).toEqual( [ 236, 414, 592, 770, 948, 1126 ] );
 		expect( context.layout[ 'uses-ai' ].rest ).toEqual( [
 			'M504 234 L556 234',
-			'M792 234 C810 234 806 384 824 384',
-			'M1024 384 C1080 384 1094 390 1150 390',
+			'M792 234 C818 234 818 406 840 406',
+			'M1024 406 C1080 406 1094 390 1146 390',
 		] );
 
 		const [ connectorsX, connectorsY ] = context.neutral.connectors;
@@ -355,9 +362,9 @@ describe( 'Core AI map render contract', () => {
 		};
 		const providerPluginRect = {
 			left: providerPluginX,
-			right: providerPluginX + 200,
+			right: providerPluginX + 180,
 			top: providerPluginY,
-			bottom: providerPluginY + 104,
+			bottom: providerPluginY + 148,
 		};
 		expect(
 			providerPluginRect.right <= connectorsRect.left ||
@@ -389,14 +396,34 @@ describe( 'Core AI map render contract', () => {
 			agent: 2,
 			task: 3,
 		} );
-		expect( context.layout.learns.place.agent ).toEqual( [ 24, 320 ] );
-		expect( context.layout.learns.place.task ).toEqual( [ 24, 490 ] );
-		expect( context.neutral.agent ).toEqual( [ 24, 376 ] );
-		expect( context.neutral.task ).toEqual( [ 24, 508 ] );
+		expect( context.layout.learns.place.agent ).toEqual( [ 24, 300 ] );
+		expect( context.layout.learns.place.task ).toEqual( [ 24, 462 ] );
+		expect( context.neutral.agent ).toEqual( [ 24, 360 ] );
+		expect( context.neutral.task ).toEqual( [ 24, 480 ] );
+		// The third step ends against the boundary rather than crossing it.
 		expect( context.layout.learns.edges ).toEqual( [
-			'M114 276 L114 314',
-			'M114 446 L114 484',
+			'M114 262 L114 296',
+			'M114 424 L114 458',
+			'M204 522 L228 522',
 		] );
+		expect( context.layout.learns.gate ).toBe( true );
+		expect( context.layout.learns.next ).toBe( 'tests' );
+		// The components the guidance is about stay on the canvas, quiet.
+		expect( context.layout.learns.quiet ).toEqual( [
+			'abilities',
+			'client',
+			'mcp',
+		] );
+		expect( context.layout.learns.park ).toEqual( [
+			'plugin',
+			'connectors',
+			'bench',
+		] );
+		expect( context.layout.learns.support ).toHaveLength( 3 );
+		expect( context.layout.tests.shelfXs ).toEqual( [
+			236, 394, 552, 710, 868,
+		] );
+		expect( context.layout.tests.shelfK ).toBe( 0.64 );
 		expect( context.previews[ 2 ].at ).toMatchObject( {
 			skills: [ 36, 150 ],
 			agent: [ 36, 272 ],
@@ -437,12 +464,12 @@ describe( 'Core AI map render contract', () => {
 		expect( markup ).toContain( 'WP-Bench' );
 		expect( markup ).toContain( 'Evidence, not vibes.' );
 		expect( markup ).toContain(
-			'Nothing is on by default: you enable one experiment at a time.'
+			'a site owner switches AI on, then enables one experiment at a time.'
 		);
 		expect( markup ).not.toContain( 'Evidence, not a leaderboard.' );
 		expect( markup ).not.toContain( 'Every feature is opt-in' );
 		expect( markup ).not.toContain( 'ships 19 August' );
-		expect( markup ).not.toContain( 'One flag, every client' );
+		expect( markup ).toContain( 'One flag, every client. New in 7.1.' );
 	} );
 
 	it( 'migrates untouched pre-booth v3.1.1 copy on the server', () => {
@@ -478,15 +505,19 @@ describe( 'Core AI map render contract', () => {
 		const markup = renderLegacyMarkup( 'connector-accuracy' );
 
 		// The JavaScript prompt API exists on 7.0; it is gated, not absent.
-		expect( markup ).toContain( 'administrator-gated' );
-		expect( markup ).not.toContain( 'Core’s client is PHP only' );
+		expect( markup ).toContain( 'administrator-only' );
+		expect( markup ).not.toContain( 'administrator-gated' );
 
-		// Speech and video are modalities; JSON is an output shape.
-		expect( markup ).toContain( 'Text, image, speech or video request' );
+		// The chain names the route, not a list of modalities.
+		expect( markup ).toContain( 'Capability request' );
+		expect( markup ).toContain( 'Model resolution' );
+		expect( markup ).not.toContain(
+			'Text, image, speech or video request'
+		);
 		expect( markup ).not.toContain( 'Text, image or JSON request' );
 
 		// Keys resolve env → constant → database, unencrypted by default.
-		expect( markup ).toContain( 'environment variable first' );
+		expect( markup ).toContain( 'an environment variable is read first' );
 		expect( markup ).toContain( 'unencrypted by default' );
 		expect( markup ).toContain( 'credentials Connectors resolved' );
 		expect( markup ).not.toContain( 'using the stored credentials' );
@@ -680,7 +711,7 @@ describe( 'Core AI map render contract', () => {
 		} );
 
 		expect( context.storySteps ).toEqual( {
-			'uses-ai': '1 → 2 → 3',
+			'uses-ai': '1 → 2 → 3 → 4',
 			'uses-wp': '1 → 2 → 3',
 			learns: '1 → 2 → 3',
 			tests: '1 → 2',
@@ -853,7 +884,7 @@ describe( 'Core AI map render contract', () => {
 
 		// Both carry the name, so heading navigation never lands on a blank h1.
 		expect( persistent.textContent.trim() ).toBe(
-			'What is WordPress Core AI?'
+			'Four ways WordPress and AI meet'
 		);
 		expect( welcome.textContent.trim() ).toBe(
 			persistent.textContent.trim()
@@ -887,8 +918,8 @@ describe( 'Core AI map render contract', () => {
 				heading.textContent.trim()
 			)
 		).toEqual( [
-			'What is WordPress Core AI?',
-			'What is WordPress Core AI?',
+			'Four ways WordPress and AI meet',
+			'Four ways WordPress and AI meet',
 		] );
 	} );
 
@@ -898,7 +929,7 @@ describe( 'Core AI map render contract', () => {
 		const welcome = container.querySelector( '.core-ai-map__attract' );
 
 		expect( welcome.querySelector( 'h1' ).textContent.trim() ).toBe(
-			'What is WordPress Core AI?'
+			'Four ways WordPress and AI meet'
 		);
 		expect(
 			welcome.querySelector( '.core-ai-map__intro' ).textContent
@@ -911,12 +942,10 @@ describe( 'Core AI map render contract', () => {
 				instruction: item.querySelector( 'strong' ).textContent,
 			} ) )
 		).toEqual( [
-			{ number: '1', instruction: 'Choose a flow' },
-			{ number: '2', instruction: 'Follow the numbered path' },
-			{
-				number: '3',
-				instruction: 'Tap a highlighted component to see its role',
-			},
+			{ number: '1', instruction: 'WordPress uses AI' },
+			{ number: '2', instruction: 'AI uses WordPress' },
+			{ number: '3', instruction: 'An agent learns WordPress' },
+			{ number: '4', instruction: 'WordPress tests the result' },
 		] );
 		expect(
 			Array.from(
@@ -924,12 +953,12 @@ describe( 'Core AI map render contract', () => {
 			).map( ( item ) => item.textContent.replace( /\s+/g, ' ' ).trim() )
 		).toEqual( [
 			'Solid arrow: active request or work',
-			'Dashed line: configuration or supporting information',
+			'Dashed line: configuration or reference',
 			'Dimmed component: not part of this flow',
 		] );
 		expect(
 			welcome.querySelector( '.core-ai-map__prompt' ).textContent
-		).toContain( 'Explore the first flow' );
+		).toContain( 'Trace the first flow' );
 		expect(
 			welcome
 				.querySelector( '.core-ai-map__attract-browse' )

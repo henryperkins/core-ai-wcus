@@ -10,7 +10,7 @@ describe( 'editor copy normalization', () => {
 				'title',
 				'How do WordPress and AI work together?'
 			)
-		).toBe( 'What is WordPress Core AI?' );
+		).toBe( 'Four ways WordPress and AI meet' );
 		expect(
 			withCurrentDefault(
 				currentMetadata,
@@ -18,6 +18,13 @@ describe( 'editor copy normalization', () => {
 				'Choose a flow, follow the numbered path, then tap a highlighted component to understand its role.'
 			)
 		).toContain( 'set of open building blocks' );
+		expect(
+			withCurrentDefault(
+				currentMetadata,
+				'prompt',
+				'Explore the first flow'
+			)
+		).toBe( 'Trace the first flow' );
 		expect(
 			withCurrentDefault(
 				currentMetadata,
@@ -89,7 +96,7 @@ describe( 'editor copy normalization', () => {
 			}
 		);
 		expect( stories.find( ( item ) => item.id === 'learns' ).copy ).toBe(
-			'Agent Skills attaches current WordPress guidance to a coding agent, which then starts the task. All of this happens outside the site — nothing inside WordPress runs.'
+			'Agent Skills attaches current WordPress guidance to a coding agent, which writes code for this site. All of this happens outside the site — nothing inside WordPress runs.'
 		);
 		expect( panels.find( ( item ) => item.id === 'bench' ) ).toMatchObject(
 			{
@@ -116,8 +123,9 @@ describe( 'editor copy normalization', () => {
 		);
 
 		expect( actors.find( ( item ) => item.id === 'task' ) ).toMatchObject( {
-			name: 'A WordPress task',
-			tagline: 'Plugin or theme work',
+			name: 'Code for this site',
+			tagline: 'A plugin, block, or ability registration',
+			badge: 'Still outside',
 		} );
 		expect( panels.find( ( item ) => item.id === 'mcp' ) ).toMatchObject( {
 			badge: 'WordPress plugin · not in Core',

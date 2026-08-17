@@ -29,34 +29,48 @@ $neutral = array(
 	'plugin'     => array( 268, 160 ),
 	'client'     => array( 556, 160 ),
 	'connectors' => array( 912, 160 ),
-	'mcp'        => array( 268, 400 ),
+	// The adapter straddles the boundary rule at x=240 because that is what it
+	// is: translation at the edge of the site, half outside and half in.
+	'mcp'        => array( 216, 400 ),
 	'abilities'  => array( 556, 400 ),
 	'bench'      => array( 556, 672 ),
-	'assistant'  => array( 24, 112 ),
-	'skills'     => array( 24, 244 ),
-	'agent'      => array( 24, 376 ),
+	'assistant'  => array( 24, 120 ),
+	'skills'     => array( 24, 240 ),
+	'agent'      => array( 24, 360 ),
 	'provider'   => array( 1150, 330 ),
-	'task'       => array( 24, 508 ),
+	'task'       => array( 24, 480 ),
 	'provider-plugin' => array( 912, 400 ),
 );
 
 /**
- * Horizontal slots on the "Also part of the ecosystem" shelf, in park order.
+ * Horizontal slots on the shelf, in park order.
+ *
+ * The shelf sits under the WordPress band at y=640, so its columns start at the
+ * boundary rule and stop before the right-hand one.
  */
-$shelf_x = array( 250, 436, 622, 808, 994, 1170 );
+$shelf_x = array( 236, 414, 592, 770, 948, 1126 );
 
 /**
  * Per-story composition.
  *
  * members  Block/actor id => step number in the workflow.
  * sidecars Blocks shown beside, but not inside, the numbered runtime path.
+ * quiet    Cards the flow is about rather than made of: parked in place at
+ *          shelf scale, unnumbered, still openable for their own detail.
  * providerPlugin Transient provider-specific WordPress plugin layer.
  * place    Where each member slides to.
  * park     Non-members, in shelf order.
  * shelfY   Shelf row for this story.
+ * shelfXs  Column overrides when the shared pitch does not fit this row.
+ * shelfK   Scale override for parked cards.
+ * shelfLabel Heading over the shelf when "also part of the ecosystem" is wrong.
  * strips   Role-strip offset overrides (defaults to below the card).
  * edges    Connector paths while recomposed.
  * rest     Connector paths when recomposition is turned off (v1 behavior).
+ * support  Dashed configuration or reference paths beside the numbered run.
+ * supportRest Those same paths when recomposition is turned off.
+ * gate     Marks the boundary a flow stops at rather than crosses.
+ * next     The flow this one hands off to, offered once it has settled.
  * dur      Travel duration of the spark on each path.
  * crosses  Boundary rules this story genuinely crosses.
  */
@@ -65,27 +79,32 @@ $story_layout = array(
 		'members' => array(
 			'plugin'   => 1,
 			'client'   => 2,
-			'provider' => 0,
+			'provider' => 4,
 		),
 		'sidecars' => array( 'connectors' ),
 		'providerPlugin' => array(
 			'step'         => 3,
-			'position'     => array( 824, 214 ),
-			'restPosition' => array( 824, 332 ),
+			'position'     => array( 844, 192 ),
+			'restPosition' => array( 844, 332 ),
 		),
 		'place'   => array(
 			'plugin'     => array( 268, 192 ),
 			'client'     => array( 556, 192 ),
-			'connectors' => array( 836, 360 ),
-			'provider'   => array( 1180, 206 ),
+			'connectors' => array( 790, 440 ),
+			'provider'   => array( 1150, 206 ),
 		),
 		'park'    => array( 'mcp', 'abilities', 'bench' ),
-		'shelfY'  => 512,
-		'shelfStart' => 3,
-		'edges'   => array( 'M504 266 L556 266', 'M792 266 L824 266', 'M1024 266 L1180 266' ),
-		'rest'    => array( 'M504 234 L556 234', 'M792 234 C810 234 806 384 824 384', 'M1024 384 C1080 384 1094 390 1150 390' ),
-		'sidecarEdges' => array( 'M924 360 L924 318' ),
-		'sidecarRest' => array( 'M924 332 C954 318 1012 320 1030 308' ),
+		'shelfY'  => 640,
+		'shelfStart' => 0,
+		// Connectors sits low, so its state strip reads above the card instead
+		// of spilling past the WordPress band into the evaluation row.
+		'strips'  => array(
+			'connectors' => array( 0, -70 ),
+		),
+		'edges'   => array( 'M504 266 L556 266', 'M792 266 L840 266', 'M1024 266 L1146 266' ),
+		'rest'    => array( 'M504 234 L556 234', 'M792 234 C818 234 818 406 840 406', 'M1024 406 C1080 406 1094 390 1146 390' ),
+		'support' => array( 'M908 434 L908 346' ),
+		'supportRest' => array( 'M1030 312 C1030 334 966 318 934 328' ),
 		'dur'     => array( '1.5s', '1.9s', '1.7s' ),
 		'crosses' => array( 'right' ),
 	),
@@ -96,22 +115,18 @@ $story_layout = array(
 			'abilities' => 3,
 		),
 		'place'   => array(
-			'assistant' => array( 24, 156 ),
+			'assistant' => array( 24, 120 ),
 			'mcp'       => array( 122, 318 ),
 			'abilities' => array( 556, 318 ),
-			'skills'    => array( 1150, 112 ),
-			'agent'     => array( 1150, 462 ),
-			'provider'  => array( 1150, 330 ),
-			'task'      => array( 1150, 594 ),
 		),
 		'park'    => array( 'plugin', 'client', 'connectors', 'bench' ),
-		'shelfY'  => 512,
+		'shelfY'  => 640,
 		'strips'  => array(
 			'mcp'       => array( 0, -57 ),
 			'abilities' => array( 0, -82 ),
 		),
-		'edges'   => array( 'M114 262 L114 392 L118 392', 'M358 392 L556 392' ),
-		'rest'    => array( 'M114 276 C114 342 162 372 230 395', 'M358 474 L556 474' ),
+		'edges'   => array( 'M114 248 L114 392 L118 392', 'M358 392 L556 392' ),
+		'rest'    => array( 'M114 248 C114 320 158 374 212 395', 'M452 474 L556 474' ),
 		'dur'     => array( '2.1s', '1.9s' ),
 		'crosses' => array( 'left' ),
 		'tokens'  => true,
@@ -122,20 +137,39 @@ $story_layout = array(
 			'agent'  => 2,
 			'task'   => 3,
 		),
+		/*
+		 * The three cards the guidance is actually about stay on the canvas,
+		 * quiet and unnumbered: they are the subject of the instructions, not
+		 * steps in the path. Only the two components no skill covers are
+		 * parked on the shelf.
+		 */
+		'quiet'   => array( 'abilities', 'client', 'mcp' ),
 		'place'   => array(
-			'skills' => array( 24, 150 ),
-			'agent'  => array( 24, 320 ),
-			'task'   => array( 24, 490 ),
-			'assistant' => array( 1150, 112 ),
-			'provider'  => array( 1150, 330 ),
+			'skills'    => array( 24, 140 ),
+			'agent'     => array( 24, 300 ),
+			'task'      => array( 24, 462 ),
+			'abilities' => array( 292, 150 ),
+			'client'    => array( 292, 262 ),
+			'mcp'       => array( 292, 374 ),
 		),
-		'park'    => array( 'plugin', 'client', 'connectors', 'mcp', 'abilities', 'bench' ),
-		'shelfY'  => 512,
-		// Actor cards are 120px tall in v3.1.1, leaving a 50px breathing gap
-		// between each step of this outside-WordPress workflow.
-		'edges'   => array( 'M114 276 L114 314', 'M114 446 L114 484' ),
-		'rest'    => array( 'M114 278 L114 312', 'M114 448 L114 482' ),
-		'dur'     => array( '1.4s', '1.4s' ),
+		'park'    => array( 'plugin', 'connectors', 'bench' ),
+		'shelfY'  => 640,
+		'shelfLabel' => __( 'No skill covers these yet', 'core-ai-map' ),
+		'edges'   => array( 'M114 262 L114 296', 'M114 424 L114 458', 'M204 522 L228 522' ),
+		'rest'    => array( 'M114 276 L114 310', 'M114 446 L114 470', 'M204 540 L228 540' ),
+		'support' => array(
+			'M206 200 L288 200',
+			'M206 206 C 244 206, 250 312, 288 312',
+			'M206 212 C 240 212, 244 424, 288 424',
+		),
+		'supportRest' => array(
+			'M206 300 L288 300',
+			'M206 306 C 244 306, 250 412, 288 412',
+			'M206 312 C 240 312, 244 524, 288 524',
+		),
+		'gate'    => true,
+		'next'    => 'tests',
+		'dur'     => array( '1.4s', '1.4s', '1s' ),
 		'crosses' => array(),
 		'zone'    => 'outside',
 	),
@@ -145,18 +179,19 @@ $story_layout = array(
 			'bench' => 2,
 		),
 		'place'   => array(
-			'agent' => array( 24, 318 ),
-			'bench' => array( 556, 678 ),
-			'assistant' => array( 1150, 252 ),
-			'skills'    => array( 1150, 384 ),
-			'provider'  => array( 1150, 516 ),
-			'task'      => array( 1150, 648 ),
+			'agent' => array( 24, 298 ),
+			'bench' => array( 556, 652 ),
 		),
 		'park'    => array( 'plugin', 'client', 'connectors', 'mcp', 'abilities' ),
 		'noStrip' => array( 'bench' ),
 		'shelfY'  => 140,
-		'edges'   => array( 'M114 422 L114 450 Q114 470 134 470 L440 470 Q460 470 460 490 L460 732 Q460 752 480 752 L546 752' ),
-		'rest'    => array( 'M114 402 C114 630 176 748 336 748 L546 748' ),
+		// This shelf is the only one inside the boundary band, so it gets its
+		// own tighter columns — at the shared pitch the last card crosses the
+		// rule.
+		'shelfXs' => array( 236, 394, 552, 710, 868 ),
+		'shelfK'  => 0.64,
+		'edges'   => array( 'M114 422 L114 450 Q114 470 134 470 L440 470 Q460 470 460 490 L460 706 Q460 726 480 726 L546 726' ),
+		'rest'    => array( 'M114 402 C114 620 176 722 336 722 L546 722' ),
 		'dur'     => array( '2.8s' ),
 		'crosses' => array( 'left', 'bottom' ),
 	),
@@ -348,11 +383,16 @@ if ( isset( $block ) && is_object( $block ) && isset( $block->block_type->attrib
  * site author changed deliberately.
  */
 $legacy_scalar_defaults = array(
-	'title'        => array( 'How do WordPress and AI work together?' ),
+	'title'        => array(
+		'How do WordPress and AI work together?',
+		'What is WordPress Core AI?',
+	),
 	'intro'        => array(
 		'Choose a flow, follow the numbered path, then tap a highlighted component to understand its role.',
 		'See WordPress call AI, let authorized agents call WordPress, and test what they build.',
+		"WordPress Core AI is a set of open building blocks that let WordPress use AI services and work with outside assistants—without tying WordPress to one provider.\n\nExplore four flows to see what happens inside WordPress, what happens outside it, and how the projects connect.",
 	),
+	'prompt'       => array( 'Explore the first flow' ),
 	'reviewedDate' => array( 'Reviewed 12 Aug 2026' ),
 );
 
@@ -749,6 +789,166 @@ foreach ( $canonical_panel_destinations as $panel_id => $destination ) {
 	}
 }
 
+/*
+ * The v3.2 boundary pass renames the code an agent writes, tells the
+ * agent-learning flow what its guidance is actually about, and corrects the
+ * client, connector, and bench claims a visitor could check against a real
+ * install. Replace only the exact v3.2.2 values so authored copy still wins.
+ */
+$actors = $migrate_legacy_defaults(
+	$actors,
+	$actor_defaults,
+	array(
+		'task' => array(
+			'name'    => 'A WordPress task',
+			'tagline' => 'Plugin or theme work',
+			'badge'   => 'Not WordPress',
+		),
+	)
+);
+
+$stories = $migrate_legacy_defaults(
+	$stories,
+	$story_defaults,
+	array(
+		'learns' => array(
+			'copy'     => 'Agent Skills attaches current WordPress guidance to a coding agent, which then starts the task. All of this happens outside the site — nothing inside WordPress runs.',
+			'takeaway' => 'Agent Skills changes the information available to the coding agent. Nothing runs on the WordPress site during this flow.',
+		),
+	)
+);
+
+$panels = $migrate_legacy_defaults(
+	$panels,
+	$panel_defaults,
+	array(
+		'client'          => array(
+			'connect' => array(
+				array( 'label' => 'Text, image, speech or video request' ),
+				array(
+					'label'  => 'AI Client',
+					'accent' => true,
+				),
+				array( 'label' => 'Normalized result' ),
+			),
+			'notes'   => array(
+				array(
+					'heading' => 'Under the hood',
+					'text'    => 'A WordPress wrapper around the provider-agnostic PHP AI Client, which handles provider communication, model selection, and normalized results. Consuming plugins never integrate a provider directly. There is a JavaScript prompt API too, but it is administrator-gated and can send any prompt to any configured provider — so for editor features, register a REST endpoint scoped to that one feature. Check support before showing any AI interface — the checks are free, and a 7.0 site may have no provider configured at all.',
+				),
+				array(
+					'heading' => 'Calling back into WordPress',
+					'text'    => 'A request can name registered abilities the model is allowed to call. When it calls one, WordPress runs that ability — permission check and all — and folds the result back into the same request. This is where the two halves of the map meet: WordPress asking AI for something can end with WordPress doing the work itself.',
+				),
+			),
+		),
+		'connectors'      => array(
+			'notes' => array(
+				array(
+					'heading' => 'Providers',
+					'text'    => 'Provider plugins register with the AI Client. Connectors auto-discovers them, and one button installs and activates the plugin before asking for its key. Keys are read from an environment variable first, then a wp-config constant, then the database — where they sit unencrypted by default. The map stays vendor-neutral: no provider owns a position on the canvas.',
+				),
+				array(
+					'heading' => 'Under the hood',
+					'text'    => 'Introduced in WordPress 7.0 as a standardized framework for registering and managing connections to external services. AI providers are the first users of it, not the only intended ones — the framework is built for outside connections generally.',
+				),
+			),
+		),
+		'plugin'          => array(
+			'lede' => 'Where the foundations become things people can use: alt text, summaries, titles, editorial notes, image generation. Nothing is on by default: you enable one experiment at a time.',
+		),
+		'mcp'             => array(
+			'lede' => 'Translation at the edge of the site. It exposes the abilities their authors marked public to authorized outside assistants — as MCP resources and prompts automatically, and as individual tools on a custom server — and translates their calls back into WordPress work.',
+		),
+		'bench'           => array(
+			'connect' => array(
+				array( 'label' => 'Task' ),
+				array( 'label' => 'Sandbox' ),
+				array( 'label' => 'Lint and runtime checks' ),
+				array(
+					'label'  => 'Evidence',
+					'accent' => true,
+				),
+			),
+			'notes'   => array(
+				array(
+					'heading' => 'Under the hood',
+					'text'    => 'One suite, one dimension: code generation tasks graded by static checks and runtime assertions in a real WordPress environment. WordPress itself runs the assertions. Passing is all-or-nothing: a partially correct result still fails. Run --check-reference-solution first to prove the grader accepts the canonical solution, then --check-exploits to prove trivial stubs fail.',
+				),
+			),
+		),
+		'skills'          => array(
+			'roles' => array(
+				'learns' => array(
+					'receives' => 'A selection of WordPress guidance — checklists, references, procedures.',
+					'does'     => 'Supplies those instructions to the coding agent before it writes the requested code.',
+					'returns'  => 'An agent that follows current WordPress practice.',
+					'lesson'   => 'The guidance affects the agent’s work outside the site; it does not execute on a live WordPress installation.',
+				),
+			),
+		),
+		'assistant'       => array(
+			'lede'  => 'A program outside WordPress — a chat assistant, an editor, an agent — that speaks MCP. It holds no privileges of its own — it acts as a WordPress user it was given credentials for, and never gets more reach than that user has.',
+			'roles' => array(
+				'uses-wp' => array(
+					'receives' => 'A person’s instruction, outside WordPress.',
+					'does'     => 'Decides a WordPress action is needed and issues an MCP tool call.',
+					'returns'  => 'Whatever WordPress allows back — nothing more.',
+					'lesson'   => 'The assistant is a client, not an authority. It asks; it does not decide.',
+				),
+			),
+		),
+		'agent'           => array(
+			'roles' => array(
+				'learns' => array(
+					'receives' => 'The attached guidance, plus the task it was asked to do.',
+					'does'     => 'Writes plugin or theme code, outside the site.',
+					'returns'  => 'Code a person still has to review and install.',
+					'lesson'   => 'Nothing here touches a running site. The agent produces text, not changes.',
+				),
+				'tests'  => array(
+					'receives' => 'One task and its requirements, as a single message.',
+					'does'     => 'Writes PHP. It gets no conversation, no retry, and no sight of the assertions.',
+					'returns'  => 'Whatever it wrote, parsed out of the reply and passed on unrepaired.',
+					'lesson'   => 'Every model gets exactly the same task, so a difference in the result is a difference in the model.',
+				),
+			),
+		),
+		'task'            => array(
+			'badge' => 'Not WordPress',
+			'title' => 'A WordPress task',
+			'lede'  => 'The actual work someone wants done: a plugin, a theme, a fix. On this map it stands for the job itself, not for any code running on a site.',
+			'roles' => array(
+				'learns' => array(
+					'receives' => 'The agent’s attention, once the guidance is attached.',
+					'does'     => 'Stands for the real work — a plugin, a theme, a fix.',
+					'returns'  => 'Finished code, still outside WordPress.',
+					'lesson'   => 'The site is not involved until a person installs what the agent wrote.',
+				),
+			),
+		),
+		'provider-plugin' => array(
+			'lede'  => 'A provider-specific integration installed as a WordPress plugin. It speaks one external service’s protocol using the credentials Connectors resolved for it.',
+			'roles' => array(
+				'uses-ai' => array(
+					'receives' => 'The routed request from the AI Client.',
+					'does'     => 'Speaks one external service’s protocol, using the credentials Connectors resolved.',
+					'returns'  => 'That service’s reply, handed back to the AI Client.',
+					'lesson'   => 'The provider-specific part is a plugin. Swapping providers does not change the feature that asked.',
+				),
+			),
+		),
+	)
+);
+
+/**
+ * Where the welcome screen's QR code points.
+ *
+ * Product-owned like the panel destinations above: it is the one address that
+ * outlives the booth, so it is not editable kiosk copy.
+ */
+$feedback_url = 'https://docs.google.com/forms/d/e/1FAIpQLSfs2LeNn7M_L66d57sXLnD1bAh28vgEoQfTx90AYkuFsVT4gA/viewform';
+
 $mcp_badge = __( 'WordPress plugin · not in Core', 'core-ai-map' );
 
 if ( isset( $blocks['mcp'] ) ) {
@@ -838,6 +1038,7 @@ $label_defaults = array(
 	'railActiveLabel'   => __( 'Choose another flow', 'core-ai-map' ),
 	'browseLabel'       => __( 'Browse all components', 'core-ai-map' ),
 	'browseDescription' => __( 'Every component on one canvas, with no flow selected.', 'core-ai-map' ),
+	'shelfLabel'        => __( 'Also part of the ecosystem', 'core-ai-map' ),
 	'takeawayHeading'   => __( 'What this flow shows', 'core-ai-map' ),
 	'roleHeading'       => __( 'Its role in this flow', 'core-ai-map' ),
 	'lessonHeading'     => __( 'Why that matters', 'core-ai-map' ),
@@ -861,6 +1062,8 @@ $guidance_defaults = array(
 	'cardAction'       => __( '%1$s — view its role in “%2$s.”', 'core-ai-map' ),
 	/* translators: 1: step number. 2: component name. 3: the title of the selected flow. */
 	'cardActionStep'   => __( 'Step %1$s: %2$s — view its role in “%3$s.”', 'core-ai-map' ),
+	/* translators: 1: component name. 2: the title of the selected flow. */
+	'cardQuiet'        => __( '%1$s — what “%2$s” is about. Open its details.', 'core-ai-map' ),
 	/* translators: %1$s: component name. */
 	'cardInactive'     => __( '%1$s — not part of this flow.', 'core-ai-map' ),
 	/* translators: %1$s: component name. */
@@ -995,6 +1198,7 @@ $asset_urls         = array(
 	CORE_AI_MAP_URL . 'assets/icon.svg',
 	CORE_AI_MAP_URL . 'assets/icon-192.png',
 	CORE_AI_MAP_URL . 'assets/icon-512.png',
+	CORE_AI_MAP_URL . 'assets/qr/feedback.svg',
 );
 
 // Webpack fingerprints the locally bundled fonts. Include the emitted names
@@ -1260,10 +1464,6 @@ $role_strip = static function ( $id ) use ( $suggestions ) {
 					<span class="core-ai-map__meter-value">wp-core-v1</span>
 				</div>
 				<div class="core-ai-map__meter">
-					<span class="core-ai-map__meter-label">tests</span>
-					<span class="core-ai-map__meter-value">185</span>
-				</div>
-				<div class="core-ai-map__meter">
 					<span class="core-ai-map__meter-label">pass</span>
 					<span class="core-ai-map__meter-value">boolean</span>
 				</div>
@@ -1277,26 +1477,53 @@ $role_strip = static function ( $id ) use ( $suggestions ) {
 };
 
 /**
- * Render the same visible interaction key on the welcome and map surfaces.
- * The samples are decorative; the adjacent text carries the meaning.
+ * Render the visible interaction key on the welcome and map surfaces.
+ *
+ * The samples are decorative; the adjacent text carries the meaning. The
+ * welcome copy names the mark before the meaning, because nothing is drawn yet
+ * to point at. Beside the diagram the mark is already on screen, so the key
+ * carries a title and drops the naming half.
  *
  * @param string $variant Legend placement variant.
  */
 $render_legend = static function ( $variant ) {
+	$is_map = 'map' === $variant;
 	?>
-	<div class="core-ai-map__legend core-ai-map__legend--<?php echo esc_attr( $variant ); ?>" aria-label="<?php esc_attr_e( 'How to read the map', 'core-ai-map' ); ?>">
+	<div
+		class="core-ai-map__legend core-ai-map__legend--<?php echo esc_attr( $variant ); ?>"
+		aria-label="<?php esc_attr_e( 'How to read the map', 'core-ai-map' ); ?>"
+		<?php if ( $is_map ) : ?>
+			data-wp-bind--hidden="state.isDiagramKeyHidden"
+			hidden
+		<?php endif; ?>
+	>
+		<?php if ( $is_map ) : ?>
+			<p class="core-ai-map__legend-heading"><?php esc_html_e( 'Reading the diagram', 'core-ai-map' ); ?></p>
+		<?php endif; ?>
 		<ul role="list">
 			<li class="core-ai-map__legend-item">
 				<span class="core-ai-map__legend-sample core-ai-map__legend-sample--solid" aria-hidden="true"></span>
-				<span><strong><?php esc_html_e( 'Solid arrow:', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'active request or work', 'core-ai-map' ); ?></span>
+				<?php if ( $is_map ) : ?>
+					<span><?php esc_html_e( 'Active request or work', 'core-ai-map' ); ?></span>
+				<?php else : ?>
+					<span><strong><?php esc_html_e( 'Solid arrow:', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'active request or work', 'core-ai-map' ); ?></span>
+				<?php endif; ?>
 			</li>
 			<li class="core-ai-map__legend-item">
 				<span class="core-ai-map__legend-sample core-ai-map__legend-sample--dashed" aria-hidden="true"></span>
-				<span><strong><?php esc_html_e( 'Dashed line:', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'configuration or supporting information', 'core-ai-map' ); ?></span>
+				<?php if ( $is_map ) : ?>
+					<span><?php esc_html_e( 'Configuration or support', 'core-ai-map' ); ?></span>
+				<?php else : ?>
+					<span><strong><?php esc_html_e( 'Dashed line:', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'configuration or reference', 'core-ai-map' ); ?></span>
+				<?php endif; ?>
 			</li>
 			<li class="core-ai-map__legend-item">
 				<span class="core-ai-map__legend-sample core-ai-map__legend-sample--dimmed" aria-hidden="true"></span>
-				<span><strong><?php esc_html_e( 'Dimmed component:', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'not part of this flow', 'core-ai-map' ); ?></span>
+				<?php if ( $is_map ) : ?>
+					<span><?php esc_html_e( 'Not part of this flow', 'core-ai-map' ); ?></span>
+				<?php else : ?>
+					<span><strong><?php esc_html_e( 'Dimmed component:', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'not part of this flow', 'core-ai-map' ); ?></span>
+				<?php endif; ?>
 			</li>
 		</ul>
 	</div>
@@ -1456,17 +1683,26 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				<?php esc_html_e( 'Outside · assistants', 'core-ai-map' ); ?>
 			</p>
 			<p class="core-ai-map__zone core-ai-map__zone--inside"><?php esc_html_e( 'Inside WordPress', 'core-ai-map' ); ?></p>
+			<?php
+			/*
+			 * Naming the drawing convention is what turns three bands and two
+			 * dashed rules into something a visitor can read deliberately: this
+			 * is a boundary diagram, and the line down the middle is the point.
+			 */
+			?>
+			<span class="core-ai-map__boundary-view"><?php esc_html_e( 'Boundary view', 'core-ai-map' ); ?></span>
 			<p class="core-ai-map__zone core-ai-map__zone--providers"><?php esc_html_e( 'Outside · AI providers', 'core-ai-map' ); ?></p>
 			<?php $render_legend( 'map' ); ?>
-			<p class="core-ai-map__zone core-ai-map__zone--runtime"><?php esc_html_e( 'Below the runtime · evaluation', 'core-ai-map' ); ?></p>
+			<p class="core-ai-map__zone core-ai-map__zone--runtime" data-wp-bind--hidden="state.isRuntimeZoneHidden"><?php esc_html_e( 'Below the runtime · evaluation', 'core-ai-map' ); ?></p>
 
 			<p
 				class="core-ai-map__shelf-label"
+				data-wp-text="state.shelfLabel"
 				data-wp-bind--hidden="state.isShelfHidden"
 				data-wp-style--left="state.shelfLeft"
 				data-wp-style--top="state.shelfTop"
 			>
-				<?php esc_html_e( 'Also part of the ecosystem', 'core-ai-map' ); ?>
+				<?php echo esc_html( $labels['shelfLabel'] ); ?>
 			</p>
 
 			<svg class="core-ai-map__wires" viewBox="0 0 1366 1024" aria-hidden="true" focusable="false">
@@ -1497,7 +1733,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					<path d="M504 234 L556 234"></path>
 					<path d="M792 234 L912 234"></path>
 					<path d="M674 308 L674 400"></path>
-					<path d="M358 474 L556 474"></path>
+					<path d="M452 474 L556 474"></path>
 				</g>
 
 				<!-- Attract previews keep literal paths so hydration never writes SVG d. -->
@@ -1565,9 +1801,17 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					<?php endforeach; ?>
 				</g>
 
+				<?php
+				/*
+				 * Support paths are the dashed half of the key: configuration
+				 * and reference, drawn beside the numbered run rather than in
+				 * it. Connectors reaches the request path this way, and the
+				 * skills stack reaches the three components it teaches.
+				 */
+				?>
 				<?php foreach ( $story_layout as $story_id => $story_paths ) : ?>
-					<?php foreach ( array( 'edges' => 'sidecarEdges', 'rest' => 'sidecarRest' ) as $variant => $sidecar_key ) : ?>
-						<?php foreach ( $story_paths[ $sidecar_key ] ?? array() as $path ) : ?>
+					<?php foreach ( array( 'edges' => 'support', 'rest' => 'supportRest' ) as $variant => $support_key ) : ?>
+						<?php foreach ( $story_paths[ $support_key ] ?? array() as $path ) : ?>
 							<path
 								class="core-ai-map__config-path"
 								d="<?php echo esc_attr( $path ); ?>"
@@ -1577,6 +1821,24 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							></path>
 						<?php endforeach; ?>
 					<?php endforeach; ?>
+				<?php endforeach; ?>
+
+				<?php
+				/*
+				 * A flow that stops at the boundary says so on the boundary.
+				 * The agent-learning flow ends against this stop; nothing about
+				 * it crosses into WordPress until a person installs the code.
+				 */
+				?>
+				<?php foreach ( $story_layout as $story_id => $story_paths ) : ?>
+					<?php if ( empty( $story_paths['gate'] ) ) : ?>
+						<?php continue; ?>
+					<?php endif; ?>
+					<path
+						class="core-ai-map__gate"
+						d="M240 500 L240 544"
+						data-core-ai-gate="<?php echo esc_attr( $story_id ); ?>"
+					></path>
 				<?php endforeach; ?>
 			</svg>
 
@@ -1618,11 +1880,23 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				hidden
 			>
 				<span class="core-ai-map__learns-label core-ai-map__learns-label--skills"><?php esc_html_e( 'attaches guidance', 'core-ai-map' ); ?></span>
-				<span class="core-ai-map__learns-label core-ai-map__learns-label--task"><?php esc_html_e( 'starts the work', 'core-ai-map' ); ?></span>
+				<span class="core-ai-map__learns-label core-ai-map__learns-label--task"><?php esc_html_e( 'writes the code', 'core-ai-map' ); ?></span>
+				<?php
+				/*
+				 * The third step of this flow ends against the boundary rather
+				 * than crossing it, so the boundary is labelled with the only
+				 * thing that does cross: a person.
+				 */
+				?>
+				<div class="core-ai-map__learns-install">
+					<span><?php esc_html_e( 'A person reviews and installs', 'core-ai-map' ); ?></span>
+					<small><?php esc_html_e( 'The agent cannot cross this line. Only an install does.', 'core-ai-map' ); ?></small>
+				</div>
+				<p class="core-ai-map__learns-subject"><?php esc_html_e( 'What the guidance is about', 'core-ai-map' ); ?></p>
 				<div class="core-ai-map__learns-site">
 					<small><?php esc_html_e( 'Inside WordPress', 'core-ai-map' ); ?></small>
 					<strong><?php esc_html_e( 'Nothing here runs', 'core-ai-map' ); ?></strong>
-					<p><?php esc_html_e( 'The guidance travels with the agent. The site is not involved until a person installs what the agent wrote.', 'core-ai-map' ); ?></p>
+					<p><?php esc_html_e( 'A skill is a folder of instructions that lives with the agent — in its configuration, or committed beside a project. It is read, never executed. The site is not involved until a person installs what the agent wrote.', 'core-ai-map' ); ?></p>
 				</div>
 			</div>
 
@@ -1638,6 +1912,15 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						class="core-ai-map__actor core-ai-map__actor--<?php echo esc_attr( $card_id ); ?><?php echo esc_attr( $actor_initial_class ); ?>"
 						style="<?php echo esc_attr( $card_style( $card_id ) . ( $is_preview_member ? '' : ' opacity: 0.2;' ) ); ?>"
 						<?php echo wp_interactivity_data_wp_context( array( 'cardId' => $card_id ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+						<?php
+						/*
+						 * An actor has no shelf to be parked on: it belongs to
+						 * the flow that names it and to no other. Rather than
+						 * dim four cast members into a column nobody reads, a
+						 * flow leaves the stage to the actors it uses.
+						 */
+						?>
+						data-wp-bind--hidden="state.isActorHidden"
 						data-wp-style--opacity="state.cardOpacity"
 						data-wp-style--transform="state.cardTransform"
 						data-wp-class--is-active="state.isCardActive"
@@ -1691,7 +1974,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							<span class="core-ai-map__step" data-wp-text="state.cardStep" aria-hidden="true"><?php echo esc_html( (string) ( $initial_preview['providerPlugin']['step'] ?? '' ) ); ?></span>
 							<span class="core-ai-map__provider-plugin-badge"><?php esc_html_e( 'WordPress plugin', 'core-ai-map' ); ?></span>
 							<strong><?php esc_html_e( 'AI provider plugin', 'core-ai-map' ); ?></strong>
-							<small><?php esc_html_e( 'Provider-specific integration', 'core-ai-map' ); ?></small>
+							<small><?php esc_html_e( 'Speaks one service’s protocol', 'core-ai-map' ); ?></small>
 							<span class="core-ai-map__tap-cue" data-wp-bind--hidden="state.isTapCueHidden" aria-hidden="true" hidden><?php echo esc_html( $labels['tapCue'] ); ?></span>
 						</button>
 					</div>
@@ -1711,6 +1994,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						data-wp-style--transform="state.cardTransform"
 						data-wp-class--is-active="state.isCardActive"
 						data-wp-class--is-parked="state.isCardParked"
+						data-wp-class--is-parked-tight="state.isCardParkedTight"
+						data-wp-class--is-quiet="state.isCardQuiet"
 						data-wp-class--is-sidecar="state.isCardSidecar"
 						data-wp-class--is-preview-member="state.isPreviewMember"
 						data-wp-class--is-preview-sidecar="state.isPreviewSidecar"
@@ -1740,9 +2025,6 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								</span>
 								<span class="core-ai-map__tap-cue" data-wp-bind--hidden="state.isTapCueHidden" aria-hidden="true" hidden><?php echo esc_html( $labels['tapCue'] ); ?></span>
 							</button>
-							<?php if ( 'connectors' === $card_id ) : ?>
-								<span class="core-ai-map__sidecar-label"><?php esc_html_e( 'Setup · discovery · credentials', 'core-ai-map' ); ?></span>
-							<?php endif; ?>
 						</div>
 					</div>
 				<?php endif; ?>
@@ -1806,6 +2088,26 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						<?php endif; ?>
 					</div>
 					<div class="core-ai-map__story-actions">
+						<?php
+						/*
+						 * Two of these flows are one story: an agent writes
+						 * code, and then WordPress decides whether it works.
+						 * The handoff is offered once the flow has settled, so
+						 * it never competes with the path still drawing.
+						 */
+						?>
+						<?php if ( ! empty( $story_layout[ $story_id ]['next'] ) && isset( $stories[ $story_layout[ $story_id ]['next'] ] ) ) : ?>
+							<button
+								class="core-ai-map__story-next"
+								type="button"
+								<?php echo wp_interactivity_data_wp_context( array( 'nextStoryId' => $story_layout[ $story_id ]['next'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+								data-wp-bind--hidden="state.isStoryNextHidden"
+								data-wp-on--click="actions.selectNextStory"
+								hidden
+							>
+								<?php echo esc_html( (string) ( $stories[ $story_id ]['nextLabel'] ?? '' ) ); ?><span aria-hidden="true">&rarr;</span>
+							</button>
+						<?php endif; ?>
 						<?php if ( 'tests' === $story_id ) : ?>
 							<button class="core-ai-map__run-loop-link" type="button" data-wp-on--click="actions.openBench">
 								<?php esc_html_e( 'See the run loop', 'core-ai-map' ); ?><span aria-hidden="true">&rarr;</span>
@@ -1873,10 +2175,20 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					<p class="core-ai-map__intro"><?php echo esc_html( $intro_paragraph ); ?></p>
 				<?php endforeach; ?>
 			</div>
+			<?php
+			/*
+			 * The welcome names the four flows rather than the three gestures
+			 * that reach them. What a visitor needs before they choose is what
+			 * there is to choose between; the gestures are on the map itself,
+			 * one instruction at a time.
+			 */
+			?>
 			<ol class="core-ai-map__welcome-steps" role="list">
-				<li><span>1</span><strong><?php esc_html_e( 'Choose a flow', 'core-ai-map' ); ?></strong></li>
-				<li><span>2</span><strong><?php esc_html_e( 'Follow the numbered path', 'core-ai-map' ); ?></strong></li>
-				<li><span>3</span><strong><?php esc_html_e( 'Tap a highlighted component to see its role', 'core-ai-map' ); ?></strong></li>
+				<?php $welcome_step = 0; ?>
+				<?php foreach ( $stories as $story ) : ?>
+					<?php ++$welcome_step; ?>
+					<li><span><?php echo esc_html( (string) $welcome_step ); ?></span><strong><?php echo esc_html( $story['title'] ?? '' ); ?></strong></li>
+				<?php endforeach; ?>
 			</ol>
 			<?php $render_legend( 'welcome' ); ?>
 			<div class="core-ai-map__attract-actions">
@@ -1905,6 +2217,34 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				<?php endforeach; ?>
 			</div>
 		</div>
+
+		<?php
+		/*
+		 * A booth is staffed for a day; the questions it raises outlast it.
+		 * The welcome screen carries one destination a visitor can take away
+		 * on their own device, and it is the only one on this screen — the
+		 * per-component QR codes stay inside the panels they belong to.
+		 */
+		?>
+		<aside
+			class="core-ai-map__feedback"
+			aria-labelledby="<?php echo esc_attr( $instance_id . '-feedback-title' ); ?>"
+			data-wp-bind--hidden="state.isNotAttract"
+		>
+			<p class="core-ai-map__feedback-eyebrow"><?php esc_html_e( 'Ask us', 'core-ai-map' ); ?></p>
+			<p class="core-ai-map__feedback-title" id="<?php echo esc_attr( $instance_id . '-feedback-title' ); ?>"><?php esc_html_e( 'Have a question?', 'core-ai-map' ); ?></p>
+			<img
+				class="core-ai-map__feedback-qr"
+				src="<?php echo esc_url( CORE_AI_MAP_URL . 'assets/qr/feedback.svg' ); ?>"
+				alt="<?php
+					/* translators: %s: full destination URL. */
+					echo esc_attr( sprintf( __( 'QR code for the Core AI question form: %s', 'core-ai-map' ), $feedback_url ) );
+				?>"
+				width="132"
+				height="132"
+			>
+			<p class="core-ai-map__feedback-note"><?php esc_html_e( 'Anything about WordPress, Core AI, or a problem you’re hitting with AI. Scan now, ask later.', 'core-ai-map' ); ?></p>
+		</aside>
 
 		<aside
 			id="<?php echo esc_attr( $instance_id . '-about' ); ?>"
@@ -2090,8 +2430,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								<li><b>A</b><span><strong><?php esc_html_e( 'Two segments, lowercase.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'The name is public API. Renaming it later breaks every caller.', 'core-ai-map' ); ?></span></li>
 								<li><b>B</b><span><strong><?php esc_html_e( 'This is the part an agent reads.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'It picks the ability from these two lines alone. If the description needs an “and”, it is two abilities.', 'core-ai-map' ); ?></span></li>
 								<li><b>C</b><span><strong><?php esc_html_e( 'Checked on every call.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'An editor button, a REST client and an outside assistant all pass through the same gate.', 'core-ai-map' ); ?></span></li>
-								<li><b>D</b><span><strong><?php esc_html_e( 'One public default, per-channel control. New in 7.1.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'Public seeds outside channels such as REST, MCP adapters, and agents; each channel can still be turned off independently.', 'core-ai-map' ); ?></span></li>
-								<li><b>E</b><span><strong><?php esc_html_e( 'Hints to clients about behavior — and the verb core requires.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'Read-only tells a client this ability changes nothing; over REST it also makes GET the only way to call it. What it never does is decide who may call it.', 'core-ai-map' ); ?></span></li>
+								<li><b>D</b><span><strong><?php esc_html_e( 'One flag, every client. New in 7.1.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'Public says this ability is meant for the outside — REST, MCP adapters, agents. Leave it out and it stays private; a channel can still be turned off on its own.', 'core-ai-map' ); ?></span></li>
+								<li><b>E</b><span><strong><?php esc_html_e( 'Hints to a client — and the verb core requires.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'Read-only tells a client this ability changes nothing; over REST it also makes GET the only way to call it, and the wrong method is refused. What annotations never decide is who may call it.', 'core-ai-map' ); ?></span></li>
 							</ul>
 							<p class="core-ai-map__details-warning"><strong><?php esc_html_e( 'Validation is not sanitization.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'The schema checks types and required fields. It does not clean input, and it does not fill in the defaults you wrote. Whatever arrives is raw.', 'core-ai-map' ); ?></p>
 						</div>
@@ -2142,7 +2482,13 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					<?php endif; ?>
 
 					<?php foreach ( $panel['notes'] ?? array() as $note ) : ?>
-						<?php if ( (string) ( $note['heading'] ?? '' ) !== (string) $labels['technicalHeading'] ) : ?>
+						<?php
+						/*
+						 * A context panel prints no section heading of its own,
+						 * so its notes have to carry theirs.
+						 */
+						?>
+						<?php if ( $is_context_only || (string) ( $note['heading'] ?? '' ) !== (string) $labels['technicalHeading'] ) : ?>
 							<h4 class="core-ai-map__details-heading"><?php echo esc_html( $note['heading'] ?? '' ); ?></h4>
 						<?php endif; ?>
 						<p class="core-ai-map__details-note"><?php echo esc_html( $note['text'] ?? '' ); ?></p>
@@ -2164,10 +2510,11 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				'kicker'  => __( 'Stage 01 · outside the site', 'core-ai-map' ),
 				'title'   => __( 'One task, one message', 'core-ai-map' ),
 				'body'    => __( 'A prompt and its requirements, handed to the model as a single message. Every model gets exactly the same text, so a difference in the result is a difference in the model.', 'core-ai-map' ),
+				'note'    => __( 'A baseline run sends no system prompt either — the model gets the task text and nothing else. Comparing a skill is the exception: the skill goes in as a system message, and every model runs the same task both ways.', 'core-ai-map' ),
 				'rows'    => array(
 					array( __( 'prompt', 'core-ai-map' ), __( 'Write the code that does this. One task, one message.', 'core-ai-map' ) ),
 					array( __( 'requirements', 'core-ai-map' ), __( 'Named functions and hooks, and the shape of what they return.', 'core-ai-map' ) ),
-					array( __( 'never sent', 'core-ai-map' ), __( 'No conversation, no follow-up, no hint about the assertions.', 'core-ai-map' ) ),
+					array( __( 'never sent', 'core-ai-map' ), __( 'No conversation, no follow-up, no hint about the assertions. No system prompt either, unless the run is measuring a skill.', 'core-ai-map' ) ),
 				),
 			),
 			'model' => array(
@@ -2178,6 +2525,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				'kicker'  => __( 'Stage 02 · outside the site', 'core-ai-map' ),
 				'title'   => __( 'Whatever the model wrote', 'core-ai-map' ),
 				'body'    => __( 'The harness takes the reply and parses the PHP out of it. If the answer does not parse, that is the answer — nothing is repaired on the way in.', 'core-ai-map' ),
+				'note'    => __( 'Only a reply that opens or closes with a code fence gets unwrapped. A model that says hello first has its greeting run as PHP — a scoring artifact that belongs to the harness, not the model.', 'core-ai-map' ),
 				'rows'    => array(
 					array( __( 'reply', 'core-ai-map' ), __( 'Whatever the model wrote, in full.', 'core-ai-map' ) ),
 					array( __( 'parsed out', 'core-ai-map' ), __( 'The PHP the harness could find in it.', 'core-ai-map' ) ),
@@ -2200,7 +2548,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				),
 				'kicker'  => __( 'Stage 03 · inside WordPress', 'core-ai-map' ),
 				'title'   => __( 'A real WordPress, thrown away after', 'core-ai-map' ),
-				'body'    => __( 'The code runs inside a WordPress that exists only for this one test. That makes the result a fact about WordPress rather than a fact about a fixture.', 'core-ai-map' ),
+				'body'    => __( 'The code runs inside a WordPress that exists only for this one test. That is what makes the result a fact about WordPress rather than a fact about a fixture.', 'core-ai-map' ),
+				'note'    => __( 'Sandbox means the container, not the language. The submitted code is evaluated inside that WordPress with nothing sandboxing it further — safe to run because the whole install is disposable.', 'core-ai-map' ),
 				'rows'    => array(
 					array( __( 'the install', 'core-ai-map' ), __( 'A real WordPress 7.0, created for this one test.', 'core-ai-map' ) ),
 					array( __( 'the run', 'core-ai-map' ), __( 'Setup, then the model’s code, then the assertions, then teardown.', 'core-ai-map' ) ),
@@ -2211,7 +2560,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				'number'  => '04',
 				'badge'   => __( 'Inside WordPress', 'core-ai-map' ),
 				'label'   => __( 'WordPress checks it', 'core-ai-map' ),
-				'summary' => __( 'WordPress code inspects WordPress state', 'core-ai-map' ),
+				'summary' => __( 'The assertions are WordPress code inspecting WordPress state', 'core-ai-map' ),
 				'flow'    => array(
 					array(
 						'label'  => __( 'every assertion', 'core-ai-map' ),
@@ -2222,7 +2571,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				'kicker'  => __( 'Stage 04 · inside WordPress', 'core-ai-map' ),
 				'title'   => __( 'WordPress is the grader', 'core-ai-map' ),
 				'body'    => __( 'The assertions are WordPress code inspecting WordPress state — not a model judging another model’s answer. Passing is all or nothing.', 'core-ai-map' ),
-				'note'    => __( 'Two of three assertions is a fail. A number between 0 and 1 is a bug in the harness, not partial credit.', 'core-ai-map' ),
+				'note'    => __( 'Two of three assertions is a fail. The harness still records the fraction — 0.67 is a real number in the results, and it still earns nothing.', 'core-ai-map' ),
 				'rows'    => array(
 					array( __( '3 of 3', 'core-ai-map' ), __( 'Pass.', 'core-ai-map' ) ),
 					array( __( '2 of 3', 'core-ai-map' ), __( 'Fail. There is no partial credit.', 'core-ai-map' ) ),

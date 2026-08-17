@@ -4,7 +4,7 @@ Tags: core-ai, kiosk, interactive
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.2.3
+Stable tag: 3.2.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ One dynamic, server-rendered WordPress block that explains the building blocks c
 
 == Description ==
 
-Core AI Living Block Map 3.2.3 provides one full-width `core-ai/core-ai-map` block. Server markup is enhanced with the WordPress Interactivity API.
+Core AI Living Block Map 3.2.4 provides one full-width `core-ai/core-ai-map` block. Server markup is enhanced with the WordPress Interactivity API.
 
 The attract workflow uses assemble, path, signal, caption, and release phases. After engagement, motion settles; reduced-motion users retain the same story, path, state, and caption information.
 
@@ -93,6 +93,15 @@ Run these commands when building from source:
 `npm run plugin-zip`
 
 == Changelog ==
+
+= 3.2.4 =
+
+* Reworked the map as a boundary diagram: the shelf moved under the WordPress band, the MCP Adapter now straddles the boundary rule it translates across, and the canvas carries a "Boundary view" badge and a "Reading the diagram" key.
+* Rebuilt "An agent learns WordPress" around what its guidance is about. The Abilities API, AI Client, and MCP Adapter stay on the canvas as the subject of the skills; the flow ends against a boundary stop rather than an arrow, and offers "See how that code is tested" once it settles.
+* Renamed the third actor from "A WordPress task" to "Code for this site" and gave it the panel that explains why an install, not the agent, is what reaches WordPress.
+* Numbered the external AI service as step 4 of "WordPress uses AI", moved Connectors below the request path as a full card joined to it by a dashed support line, and gave the provider plugin the same height as the cards it sits between.
+* Cleared off-flow actors from the canvas instead of parking them at the edges, and gave the shelf that has to fit inside the boundary band its own columns.
+* Replaced the welcome screen's gesture list with the four flows themselves, and added one take-away QR code for questions the booth cannot answer in person.
 
 = 3.2.3 =
 

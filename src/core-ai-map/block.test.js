@@ -6,10 +6,10 @@ const metadata = JSON.parse(
 );
 const { attributes } = metadata;
 
-describe( 'Living Block Map v3.2.3 metadata', () => {
-	it( 'identifies the block as Living Block Map v3.2.3', () => {
+describe( 'Living Block Map v3.2.4 metadata', () => {
+	it( 'identifies the block as Living Block Map v3.2.4', () => {
 		expect( metadata.title ).toBe( 'Core AI Living Block Map' );
-		expect( metadata.version ).toBe( '3.2.3' );
+		expect( metadata.version ).toBe( '3.2.4' );
 	} );
 
 	it( 'sets the reviewed date used by the About panel', () => {
@@ -20,11 +20,13 @@ describe( 'Living Block Map v3.2.3 metadata', () => {
 	} );
 
 	it( 'opens with the approved orientation, instructions, and legend language', () => {
-		expect( attributes.title.default ).toBe( 'What is WordPress Core AI?' );
-		expect( attributes.intro.default ).toBe(
-			'WordPress Core AI is a set of open building blocks that let WordPress use AI services and work with outside assistants—without tying WordPress to one provider.\n\nExplore four flows to see what happens inside WordPress, what happens outside it, and how the projects connect.'
+		expect( attributes.title.default ).toBe(
+			'Four ways WordPress and AI meet'
 		);
-		expect( attributes.prompt.default ).toBe( 'Explore the first flow' );
+		expect( attributes.intro.default ).toBe(
+			'Core AI is a set of open building blocks: WordPress can call out to an AI service, and an outside assistant can call into WordPress. No single provider, no single assistant.\n\nEach flow traces one real request end to end, and shows who holds permission at every step. Pick one to begin, then tap any component for its role.'
+		);
+		expect( attributes.prompt.default ).toBe( 'Trace the first flow' );
 		expect( attributes.labels.default ).toMatchObject( {
 			railEmptyLabel: 'Choose a flow',
 			railActiveLabel: 'Choose another flow',
@@ -39,6 +41,9 @@ describe( 'Living Block Map v3.2.3 metadata', () => {
 		expect( attributes.guidance.default ).toMatchObject( {
 			cardActionStep: 'Step %1$s: %2$s — view its role in “%3$s.”',
 			cardInactive: '%1$s — not part of this flow.',
+			// A quiet card stays pressable, so it never borrows the sentence
+			// written for a card that cannot answer.
+			cardQuiet: '%1$s — what “%2$s” is about. Open its details.',
 		} );
 	} );
 
@@ -66,7 +71,8 @@ describe( 'Living Block Map v3.2.3 metadata', () => {
 				'A coding agent receives WordPress-specific guidance before writing code.',
 			outcome: 'A coding agent receives WordPress guidance',
 			takeaway:
-				'Agent Skills changes the information available to the coding agent. Nothing runs on the WordPress site during this flow.',
+				'The guidance is about the Core AI surfaces themselves — abilities, the AI Client, the MCP Adapter. It changes what the agent writes, never what the site runs: the code only reaches WordPress when a person installs it.',
+			nextLabel: 'See how that code is tested',
 		} );
 		expect( stories.tests ).toMatchObject( {
 			situation:
@@ -87,9 +93,9 @@ describe( 'Living Block Map v3.2.3 metadata', () => {
 		expect( actors ).toHaveLength( 5 );
 		expect( actors ).toContainEqual( {
 			id: 'task',
-			name: 'A WordPress task',
-			tagline: 'Plugin or theme work',
-			badge: 'Not WordPress',
+			name: 'Code for this site',
+			tagline: 'A plugin, block, or ability registration',
+			badge: 'Still outside',
 		} );
 	} );
 
@@ -99,7 +105,7 @@ describe( 'Living Block Map v3.2.3 metadata', () => {
 		);
 
 		expect( learns.copy ).toBe(
-			'Agent Skills attaches current WordPress guidance to a coding agent, which then starts the task. All of this happens outside the site — nothing inside WordPress runs.'
+			'Agent Skills attaches current WordPress guidance to a coding agent, which writes code for this site. All of this happens outside the site — nothing inside WordPress runs.'
 		);
 	} );
 
@@ -229,7 +235,10 @@ describe( 'Living Block Map v3.2.3 metadata', () => {
 			'A test bench, not part of any live request. It measures whether the code an agent writes for WordPress actually runs.'
 		);
 		expect( panel.notes[ 0 ].text ).toContain(
-			'code generation tasks graded by static checks and runtime assertions in a real WordPress environment'
+			'code generation tasks, graded by runtime assertions in a real WordPress environment'
+		);
+		expect( panel.notes[ 0 ].text ).toContain(
+			'Static checks sit alongside as a diagnostic'
 		);
 		expect( panel.notes[ 0 ].text ).toContain( 'check-reference-solution' );
 		expect( panel.notes[ 0 ].text ).toContain( 'check-exploits' );

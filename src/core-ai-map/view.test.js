@@ -24,29 +24,30 @@ const mapStore = store.mock.calls.find(
 
 const LAYOUT = {
 	'uses-ai': {
-		members: { plugin: 1, client: 2, provider: 0 },
+		members: { plugin: 1, client: 2, provider: 4 },
 		sidecars: [ 'connectors' ],
 		providerPlugin: {
 			step: 3,
-			position: [ 824, 214 ],
-			restPosition: [ 824, 332 ],
+			position: [ 844, 192 ],
+			restPosition: [ 844, 332 ],
 		},
 		place: {
 			plugin: [ 268, 192 ],
 			client: [ 556, 192 ],
-			connectors: [ 836, 360 ],
-			provider: [ 1180, 206 ],
+			connectors: [ 790, 440 ],
+			provider: [ 1150, 206 ],
 		},
 		park: [ 'mcp', 'abilities', 'bench' ],
-		shelfY: 512,
-		shelfStart: 3,
+		shelfY: 640,
+		shelfStart: 0,
+		strips: { connectors: [ 0, -70 ] },
 		edges: [
 			'M504 266 L556 266',
-			'M792 266 L824 266',
-			'M1024 266 L1180 266',
+			'M792 266 L840 266',
+			'M1024 266 L1146 266',
 		],
-		sidecarEdges: [ 'M924 360 L924 318' ],
-		sidecarRest: [ 'M924 332 C954 318 1012 320 1030 308' ],
+		support: [ 'M908 434 L908 346' ],
+		supportRest: [ 'M1030 312 C1030 334 966 318 934 328' ],
 		rest: [
 			'M504 234 L556 234',
 			'M792 234 C810 234 806 384 824 384',
@@ -58,22 +59,59 @@ const LAYOUT = {
 	'uses-wp': {
 		members: { assistant: 1, mcp: 2, abilities: 3 },
 		place: {
-			assistant: [ 24, 156 ],
+			assistant: [ 24, 120 ],
 			mcp: [ 122, 318 ],
 			abilities: [ 556, 318 ],
-			skills: [ 1150, 112 ],
-			agent: [ 1150, 462 ],
-			provider: [ 1150, 330 ],
-			task: [ 1150, 594 ],
 		},
 		park: [ 'plugin', 'client', 'connectors', 'bench' ],
-		shelfY: 512,
+		shelfY: 640,
 		strips: { mcp: [ 0, -58 ], abilities: [ 0, -58 ] },
 		edges: [ 'M114 262 L114 392 L118 392', 'M358 392 L556 392' ],
 		rest: [ 'M114 276 L230 395', 'M358 474 L556 474' ],
 		dur: [ '2.1s', '1.9s' ],
 		crosses: [ 'left' ],
 		tokens: true,
+	},
+	learns: {
+		members: { skills: 1, agent: 2, task: 3 },
+		quiet: [ 'abilities', 'client', 'mcp' ],
+		place: {
+			skills: [ 24, 140 ],
+			agent: [ 24, 300 ],
+			task: [ 24, 462 ],
+			abilities: [ 292, 150 ],
+			client: [ 292, 262 ],
+			mcp: [ 292, 374 ],
+		},
+		park: [ 'plugin', 'connectors', 'bench' ],
+		shelfY: 640,
+		shelfLabel: 'No skill covers these yet',
+		edges: [
+			'M114 262 L114 296',
+			'M114 424 L114 458',
+			'M204 522 L228 522',
+		],
+		rest: [ 'M114 276 L114 310', 'M114 446 L114 470', 'M204 540 L228 540' ],
+		support: [ 'M206 200 L288 200' ],
+		supportRest: [ 'M206 300 L288 300' ],
+		gate: true,
+		next: 'tests',
+		dur: [ '1.4s', '1.4s', '1s' ],
+		crosses: [],
+		zone: 'outside',
+	},
+	tests: {
+		members: { agent: 1, bench: 2 },
+		place: { agent: [ 24, 298 ], bench: [ 556, 652 ] },
+		park: [ 'plugin', 'client', 'connectors', 'mcp', 'abilities' ],
+		noStrip: [ 'bench' ],
+		shelfY: 140,
+		shelfXs: [ 236, 394, 552, 710, 868 ],
+		shelfK: 0.64,
+		edges: [ 'M114 422 L546 726' ],
+		rest: [ 'M114 402 L546 722' ],
+		dur: [ '2.8s' ],
+		crosses: [ 'left', 'bottom' ],
 	},
 };
 
@@ -149,7 +187,7 @@ describe( 'Core AI Living Block Map', () => {
 			pendingTakeawayStory: '',
 			recompose: true,
 			shapes: true,
-			storyIds: [ 'uses-ai', 'uses-wp' ],
+			storyIds: [ 'uses-ai', 'uses-wp', 'learns', 'tests' ],
 			storyCopy: {
 				'uses-ai': 'A plugin asks the AI Client for a capability.',
 				'uses-wp':
@@ -159,6 +197,8 @@ describe( 'Core AI Living Block Map', () => {
 			storyTitles: {
 				'uses-ai': 'WordPress uses AI',
 				'uses-wp': 'AI uses WordPress',
+				learns: 'An agent learns WordPress',
+				tests: 'WordPress tests the result',
 			},
 			storyTakeaways: {
 				'uses-ai':
@@ -176,8 +216,10 @@ describe( 'Core AI Living Block Map', () => {
 				'uses-wp': 'An assistant requests a WordPress action',
 			},
 			storySteps: {
-				'uses-ai': '1 → 2 → 3',
+				'uses-ai': '1 → 2 → 3 → 4',
 				'uses-wp': '1 → 2 → 3',
+				learns: '1 → 2 → 3',
+				tests: '1 → 2',
 			},
 			participants: {
 				'uses-ai': [
@@ -188,6 +230,8 @@ describe( 'Core AI Living Block Map', () => {
 					'provider-plugin',
 				],
 				'uses-wp': [ 'assistant', 'mcp', 'abilities' ],
+				learns: [ 'skills', 'agent', 'task' ],
+				tests: [ 'agent', 'bench' ],
 			},
 			cardTitles: {
 				plugin: 'AI Plugin',
@@ -205,12 +249,14 @@ describe( 'Core AI Living Block Map', () => {
 				cardAction: '%1$s — view its role in “%2$s.”',
 				cardActionStep: 'Step %1$s: %2$s — view its role in “%3$s.”',
 				cardActionBrowse: '%1$s — open its details.',
+				cardQuiet: '%1$s — what “%2$s” is about. Open its details.',
 				cardInactive: '%1$s — not part of this flow.',
 			},
 			labels: {
 				railEmptyLabel: 'Choose a flow',
 				railActiveLabel: 'Choose another flow',
 				takeawayHeading: 'What this flow shows',
+				shelfLabel: 'Also part of the ecosystem',
 			},
 			announcements: {
 				flowSelected: '%1$s.',
@@ -224,20 +270,20 @@ describe( 'Core AI Living Block Map', () => {
 				plugin: [ 268, 160 ],
 				client: [ 556, 160 ],
 				connectors: [ 912, 160 ],
-				mcp: [ 122, 400 ],
+				mcp: [ 216, 400 ],
 				abilities: [ 556, 400 ],
 				bench: [ 556, 672 ],
-				assistant: [ 24, 112 ],
-				skills: [ 24, 244 ],
-				agent: [ 24, 376 ],
+				assistant: [ 24, 120 ],
+				skills: [ 24, 240 ],
+				agent: [ 24, 360 ],
 				provider: [ 1150, 330 ],
-				task: [ 24, 508 ],
+				task: [ 24, 480 ],
 				'provider-plugin': [ 912, 400 ],
 			},
 			loose: {
 				plugin: [ -38, 26, -1.4 ],
 			},
-			shelfX: [ 250, 436, 622, 808, 994, 1170 ],
+			shelfX: [ 236, 414, 592, 770, 948, 1126 ],
 			layout: LAYOUT,
 			suggestions: [
 				{ label: 'Alt text', text: 'Two people reviewing a site' },
@@ -313,7 +359,8 @@ describe( 'Core AI Living Block Map', () => {
 				</g>
 				<path class="core-ai-map__config-path" data-core-ai-story="uses-ai" data-core-ai-variant="edges" hidden></path>
 				<path class="core-ai-map__config-path" data-core-ai-story="uses-ai" data-core-ai-variant="rest" hidden></path>
-			</svg>`
+					<path class="core-ai-map__gate" data-core-ai-gate="learns"></path>
+				</svg>`
 		);
 		context.screen = 'map';
 		context.story = 'uses-ai';
@@ -358,16 +405,39 @@ describe( 'Core AI Living Block Map', () => {
 				)
 				.classList.contains( 'is-visible' )
 		).toBe( false );
+		/*
+		 * `hidden` is an HTMLElement property, so these SVG nodes are only
+		 * really hidden when the attribute itself moves.
+		 */
 		expect(
-			wires.querySelector(
-				'.core-ai-map__config-path[data-core-ai-variant="rest"]'
-			).hidden
+			wires
+				.querySelector(
+					'.core-ai-map__config-path[data-core-ai-variant="rest"]'
+				)
+				.hasAttribute( 'hidden' )
 		).toBe( false );
 		expect(
-			wires.querySelector(
-				'.core-ai-map__config-path[data-core-ai-variant="edges"]'
-			).hidden
+			wires
+				.querySelector(
+					'.core-ai-map__config-path[data-core-ai-variant="edges"]'
+				)
+				.hasAttribute( 'hidden' )
 		).toBe( true );
+		// The stop on the boundary belongs to one flow and shows only there.
+		expect(
+			wires
+				.querySelector( '.core-ai-map__gate' )
+				.classList.contains( 'is-visible' )
+		).toBe( false );
+
+		context.story = 'learns';
+		effects.at( -1 )();
+		expect(
+			wires
+				.querySelector( '.core-ai-map__gate' )
+				.classList.contains( 'is-visible' )
+		).toBe( true );
+		context.story = 'uses-ai';
 
 		context.screen = 'attract';
 		context.story = '';
@@ -380,10 +450,14 @@ describe( 'Core AI Living Block Map', () => {
 			wires.querySelector( '.core-ai-map__hairlines' ).classList
 		).toContain( 'is-hidden' );
 		expect(
-			wires.querySelector( '[data-core-ai-preview="0"]' ).hidden
+			wires
+				.querySelector( '[data-core-ai-preview="0"]' )
+				.hasAttribute( 'hidden' )
 		).toBe( true );
 		expect(
-			wires.querySelector( '[data-core-ai-preview="1"]' ).hidden
+			wires
+				.querySelector( '[data-core-ai-preview="1"]' )
+				.hasAttribute( 'hidden' )
 		).toBe( false );
 		expect(
 			wires
@@ -396,9 +470,11 @@ describe( 'Core AI Living Block Map', () => {
 				.classList.contains( 'is-live' )
 		).toBe( true );
 		expect(
-			wires.querySelector(
-				'.core-ai-map__config-path[data-core-ai-variant="rest"]'
-			).hidden
+			wires
+				.querySelector(
+					'.core-ai-map__config-path[data-core-ai-variant="rest"]'
+				)
+				.hasAttribute( 'hidden' )
 		).toBe( true );
 	} );
 
@@ -461,7 +537,7 @@ describe( 'Core AI Living Block Map', () => {
 		context.screen = 'map';
 		context.story = 'uses-ai';
 		expect( mapStore.state.guidance ).toBe(
-			'Follow 1 → 2 → 3. Highlighted components take part in this flow. Tap one to learn what it contributes.'
+			'Follow 1 → 2 → 3 → 4. Highlighted components take part in this flow. Tap one to learn what it contributes.'
 		);
 		expect( mapStore.state.isGuidanceHidden ).toBe( false );
 		expect( mapStore.state.railLabel ).toBe( 'Choose another flow' );
@@ -645,26 +721,44 @@ describe( 'Core AI Living Block Map', () => {
 		expect( mapStore.state.cardOpacity ).toBe( '1' );
 	} );
 
-	it( 'keeps off-flow actors and the provider plugin visible, dimmed, and inert', () => {
+	/*
+	 * An actor belongs to the flow that names it. With a flow selected the cast
+	 * is exactly its participants; the transient provider layer still has a
+	 * resting place on the canvas, so it stays and reads as unavailable.
+	 */
+	it( 'clears off-flow actors and the off-flow provider layer', () => {
 		context.screen = 'map';
 		context.story = 'uses-wp';
 
 		context.cardId = 'skills';
-		expect( mapStore.state.cardTransform ).toBe(
-			'translate(1126px, -132px)'
-		);
-		expect( mapStore.state.isCardOffstage ).toBe( false );
-		expect( mapStore.state.isCardDimmed ).toBe( true );
+		expect( mapStore.state.isActorHidden ).toBe( true );
 		expect( mapStore.state.isCardNotTappable ).toBe( true );
 		expect( mapStore.state.cardActionLabel ).toBe(
 			'Agent Skills — not part of this flow.'
 		);
 
+		context.cardId = 'assistant';
+		expect( mapStore.state.isActorHidden ).toBe( false );
+
+		context.screen = 'attract';
+		context.cardId = 'skills';
+		expect( mapStore.state.isActorHidden ).toBe( false );
+		context.screen = 'map';
+
+		/*
+		 * The provider layer only exists inside a request path that routes
+		 * through it, so a flow that does not leaves it out rather than
+		 * parking a dimmed card in open canvas.
+		 */
 		context.cardId = 'provider-plugin';
-		expect( mapStore.state.isProviderPluginHidden ).toBe( false );
-		expect( mapStore.state.providerPluginTransform ).toBe( '' );
-		expect( mapStore.state.isCardDimmed ).toBe( true );
+		expect( mapStore.state.isProviderPluginHidden ).toBe( true );
 		expect( mapStore.state.isCardNotTappable ).toBe( true );
+
+		context.story = 'uses-ai';
+		expect( mapStore.state.isProviderPluginHidden ).toBe( false );
+
+		context.story = '';
+		expect( mapStore.state.isProviderPluginHidden ).toBe( false );
 	} );
 
 	it( 'keeps Connectors as an unnumbered configuration sidecar', () => {
@@ -673,37 +767,105 @@ describe( 'Core AI Living Block Map', () => {
 
 		context.cardId = 'connectors';
 		expect( mapStore.state.cardTransform ).toBe(
-			'translate(-76px, 200px)'
+			'translate(-122px, 280px)'
 		);
 		expect( mapStore.state.isCardSidecar ).toBe( true );
 		expect( mapStore.state.isCardActive ).toBe( true );
 		expect( mapStore.state.isCardParked ).toBe( false );
 		expect( mapStore.state.isCardOffstage ).toBe( false );
-		expect( mapStore.state.isStripLive ).toBe( false );
+		// A sidecar takes part, so it shows what it holds — above the card,
+		// because it sits low enough that below would leave the band.
+		expect( mapStore.state.isStripLive ).toBe( true );
+		expect( mapStore.state.stripTop ).toBe( '-70px' );
 		expect( mapStore.state.cardStep ).toBe( '' );
 
 		context.cardId = 'provider';
-		expect( mapStore.state.cardTransform ).toBe(
-			'translate(30px, -124px)'
-		);
+		expect( mapStore.state.cardTransform ).toBe( 'translate(0px, -124px)' );
 		expect( mapStore.state.isCardOffstage ).toBe( false );
 		expect( mapStore.state.isCardActive ).toBe( true );
-		expect( mapStore.state.cardStep ).toBe( '' );
+		expect( mapStore.state.cardStep ).toBe( '4' );
 
 		expect( mapStore.state.isProviderPluginHidden ).toBe( false );
 		expect( mapStore.state.providerPluginTransform ).toBe(
-			'translate(-88px, -186px)'
+			'translate(-68px, -208px)'
 		);
 
-		// uses-ai starts its compact shelf in slot 3, leaving space around the
-		// active workflow while using the full 176px card width.
+		// The shelf runs under the WordPress band, starting at the boundary.
 		context.cardId = 'mcp';
-		expect( mapStore.state.cardTransform ).toBe(
-			'translate(686px, 112px)'
-		);
+		expect( mapStore.state.cardTransform ).toBe( 'translate(20px, 240px)' );
 		expect( mapStore.state.isCardParked ).toBe( true );
+		expect( mapStore.state.isCardParkedTight ).toBe( false );
 		expect( mapStore.state.isCardActive ).toBe( false );
 		expect( mapStore.state.cardStep ).toBe( '' );
+		expect( mapStore.state.shelfLabel ).toBe(
+			'Also part of the ecosystem'
+		);
+		expect( mapStore.state.shelfLeft ).toBe( '236px' );
+		expect( mapStore.state.shelfTop ).toBe( '606px' );
+		expect( mapStore.state.isRuntimeZoneHidden ).toBe( true );
+	} );
+
+	/*
+	 * The agent-learning flow is about three components no step of it touches.
+	 * They stay on the canvas, unnumbered and openable, because what the
+	 * guidance covers is the lesson.
+	 */
+	it( 'keeps the components a flow is about quiet rather than parked', () => {
+		context.screen = 'map';
+		context.story = 'learns';
+
+		context.cardId = 'client';
+		expect( mapStore.state.isCardQuiet ).toBe( true );
+		expect( mapStore.state.isCardParked ).toBe( false );
+		expect( mapStore.state.isCardActive ).toBe( false );
+		expect( mapStore.state.isCardNotTappable ).toBe( false );
+		expect( mapStore.state.cardStep ).toBe( '' );
+		expect( mapStore.state.cardTransform ).toBe(
+			'translate(-264px, 102px)'
+		);
+		/*
+		 * A pressable card is cued and named as pressable. Telling a screen
+		 * reader it is "not part of this flow" while the button stays enabled
+		 * and uncued is the same card saying three different things.
+		 */
+		expect( mapStore.state.isTapCueHidden ).toBe( false );
+		expect( mapStore.state.cardActionLabel ).toBe(
+			'AI Client — what “An agent learns WordPress” is about. Open its details.'
+		);
+
+		context.cardId = 'bench';
+		expect( mapStore.state.isCardQuiet ).toBe( false );
+		expect( mapStore.state.isCardParked ).toBe( true );
+		expect( mapStore.state.isCardNotTappable ).toBe( true );
+		expect( mapStore.state.isTapCueHidden ).toBe( true );
+		expect( mapStore.state.cardActionLabel ).toBe(
+			'WP-Bench — not part of this flow.'
+		);
+		expect( mapStore.state.shelfLabel ).toBe( 'No skill covers these yet' );
+	} );
+
+	/*
+	 * Five parked cards do not fit the shared shelf pitch inside the boundary
+	 * band, so that one shelf gets its own columns and narrower cards.
+	 */
+	it( 'gives the shelf inside the boundary band its own columns', () => {
+		context.screen = 'map';
+		context.story = 'tests';
+
+		context.cardId = 'plugin';
+		expect( mapStore.state.isCardParked ).toBe( true );
+		expect( mapStore.state.isCardParkedTight ).toBe( true );
+		expect( mapStore.state.cardTransform ).toBe(
+			'translate(-32px, -20px)'
+		);
+
+		context.cardId = 'abilities';
+		expect( mapStore.state.cardTransform ).toBe(
+			'translate(312px, -260px)'
+		);
+		expect( mapStore.state.shelfLeft ).toBe( '236px' );
+		expect( mapStore.state.shelfTop ).toBe( '106px' );
+		expect( mapStore.state.isRuntimeZoneHidden ).toBe( false );
 	} );
 
 	it( 'teaches the same provider path in the attract preview', () => {
@@ -749,7 +911,7 @@ describe( 'Core AI Living Block Map', () => {
 		expect( mapStore.state.isCardDimmed ).toBe( false );
 		expect( mapStore.state.isCardOffstage ).toBe( false );
 		expect( mapStore.state.providerPluginTransform ).toBe(
-			'translate(-88px, -68px)'
+			'translate(-68px, -68px)'
 		);
 
 		// Recomposition off falls back to the resting connector paths.
@@ -1014,6 +1176,38 @@ describe( 'Core AI Living Block Map', () => {
 			root.querySelector(
 				'.core-ai-map__block--plugin .core-ai-map__block-body'
 			)
+		);
+	} );
+
+	/*
+	 * Two flows are one story: an agent writes code, then WordPress judges it.
+	 * The handoff waits for the path to settle so it never competes with it.
+	 */
+	it( 'hands off to the flow this one leads into once it has settled', () => {
+		const handoff = document.createElement( 'button' );
+		root.append( handoff );
+		currentElement = handoff;
+
+		context.screen = 'map';
+		context.story = 'learns';
+		context.nextStoryId = 'tests';
+
+		context.flowPhase = 'transition';
+		expect( mapStore.state.isStoryNextHidden ).toBe( true );
+
+		context.flowPhase = 'settled';
+		expect( mapStore.state.isStoryNextHidden ).toBe( false );
+
+		context.story = 'uses-ai';
+		expect( mapStore.state.isStoryNextHidden ).toBe( true );
+
+		context.story = 'learns';
+		mapStore.actions.selectNextStory();
+		jest.advanceTimersByTime( 80 );
+
+		expect( context.story ).toBe( 'tests' );
+		expect( context.announcement ).toContain(
+			'WordPress tests the result'
 		);
 	} );
 
