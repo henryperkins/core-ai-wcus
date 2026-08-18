@@ -25,6 +25,7 @@ import {
 	oversizedRuntimeAsset,
 	requiredRuntimeDirectories,
 	validatePagesAssetBudget,
+	writeOversizedAssetPlaceholder,
 } from '../../scripts/build-cloudflare-playground.mjs';
 
 const projectDirectory = resolve(
@@ -266,7 +267,7 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 	const outputDirectory = join( temporaryDirectory, 'output' );
 	const pluginZipPath = join( temporaryDirectory, 'fixture-plugin.zip' );
 	const pluginContents = createPluginZipFixture( {
-		headerVersion: '3.2.3',
+		headerVersion: '3.2.5',
 	} );
 	await createStaticSourceFixture( sourceDirectory );
 	await writeFile( pluginZipPath, pluginContents );
@@ -348,7 +349,7 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 	);
 	assert.deepEqual(
 		await readFile(
-			join( outputDirectory, 'kiosk-blueprint', 'core-ai-map-3.2.3.zip' )
+			join( outputDirectory, 'kiosk-blueprint', 'core-ai-map-3.2.5.zip' )
 		),
 		pluginContents
 	);
@@ -366,12 +367,12 @@ test( 'build emits the Pages rewrite for the literal remote.html endpoint', asyn
 		)
 	);
 	assert.deepEqual( deploymentManifest.pluginArtifact, {
-		path: 'kiosk-blueprint/core-ai-map-3.2.3.zip',
+		path: 'kiosk-blueprint/core-ai-map-3.2.5.zip',
 		bytes: pluginContents.byteLength,
 		sha256: createHash( 'sha256' ).update( pluginContents ).digest( 'hex' ),
 	} );
 	assert.equal( deploymentManifest.sourceCommit, 'source-commit-fixture' );
-	assert.equal( deploymentManifest.pluginVersion, '3.2.3' );
+	assert.equal( deploymentManifest.pluginVersion, '3.2.5' );
 	assert.equal( deploymentManifest.builtAt, '2026-08-13T12:34:56.000Z' );
 
 	const webManifest = JSON.parse(
@@ -426,7 +427,7 @@ test( 'rejects a stale plug-in ZIP before replacing existing build output', asyn
 			sourceCommit: 'source-commit-fixture',
 			builtAt: '2026-08-13T12:34:56.000Z',
 		} ),
-		/plug-in header version 3\.1\.2 does not match expected 3\.2\.3/i
+		/plug-in header version 3\.1\.2 does not match expected 3\.2\.5/i
 	);
 	assert.equal(
 		await readFile( sentinelPath, 'utf8' ),
@@ -470,6 +471,37 @@ test( 'drops the runtime archive that exceeds the Pages per-asset ceiling', asyn
 			`${ requiredRuntimeDirectories[ 0 ] }/wp-includes/kept.css`
 		),
 		'the rest of the fallback tree must still ship'
+	);
+} );
+
+test( 'stands an empty archive where the oversized one would have been', async ( t ) => {
+	const temporaryDirectory = await mkdtemp(
+		join( projectDirectory, '.tmp-oversized-placeholder-' )
+	);
+	t.after( () => rm( temporaryDirectory, { recursive: true, force: true } ) );
+
+	await writeOversizedAssetPlaceholder( temporaryDirectory );
+
+	const contents = await readFile(
+		join(
+			temporaryDirectory,
+			requiredRuntimeDirectories[ 0 ],
+			oversizedRuntimeAsset
+		)
+	);
+
+	// Cloudflare Pages rewrites an unmatched path to the SPA shell and returns
+	// it as 200 text/html, so an absent archive reaches PHP as HTML and kills
+	// the boot with `Could not unzip file`. A real, empty ZIP must be present.
+	assert.deepEqual(
+		[ ...contents.subarray( 0, 4 ) ],
+		[ 0x50, 0x4b, 0x05, 0x06 ],
+		'the placeholder must be a ZIP end-of-central-directory record'
+	);
+	assert.equal(
+		contents.byteLength,
+		22,
+		'the placeholder must be an empty archive, not a truncated one'
 	);
 } );
 

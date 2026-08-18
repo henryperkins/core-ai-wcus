@@ -1,10 +1,52 @@
 # Core AI Living Block Map
 
-Version and design: **3.2.3**. Core AI Living Block Map is one dynamic,
+Version and design: **3.2.5**. Core AI Living Block Map is one dynamic,
 server-rendered `core-ai/core-ai-map` block for explaining how WordPress and AI
 building blocks fit together on a kiosk. Its server markup is enhanced by the
 WordPress Interactivity API. The repository also contains a reproducible,
 self-hosted WordPress Playground artifact for static-hosted demonstrations.
+
+## 3.2.5 release notes
+
+This release reframes welcome around what WordPress Core AI is and teaches the
+Choose → Follow → Open interaction. Browse begins at AI Client, every inspector
+names both location and Core status, and feedback now lives in About beside a
+visible, saveable destination. About also explains the exhibit architecture
+and reports offline-cache and wake-lock state.
+
+WP-Bench begins at stage 01 with Previous/Next navigation, and hydration gates
+initial actions. The reduced-motion preview remains still while a compact list
+keeps all four flows discoverable. Inactivity presents a ten-second extension
+warning before returning to welcome and pauses while About is open.
+
+Hydrated Apply, progress, offline-cache, and wake-lock labels now retain their
+translations. The release also narrows walkthrough focus to real card
+controls, removes obsolete WP-Bench stage metadata, preserves the disabled
+cache state after cleanup failures, strengthens the reset-extension button
+border, and advances the worker cache namespace with the release identity.
+
+## 3.2.4 release notes
+
+This release makes the map read as the boundary diagram it always was. The
+shelf of components a flow is not using moved under the WordPress band, the MCP
+Adapter now straddles the boundary rule it translates across, and the canvas
+names its own convention with a "Boundary view" badge and a "Reading the
+diagram" key.
+
+"An agent learns WordPress" was rebuilt around what its guidance is actually
+about. The Abilities API, AI Client, and MCP Adapter stay on the canvas as the
+subject of the skills rather than being parked, the flow ends against a
+boundary stop rather than an arrow, and it offers the flow it leads into once
+it has settled. The third actor is now "Code for this site" and carries the
+panel explaining why an install, not the agent, is what reaches WordPress.
+
+"WordPress uses AI" numbers the external AI service as its fourth step, moves
+Connectors below the request path as a full card joined to it by a dashed
+support line, and gives the provider plugin the same height as the two Core
+cards it sits between. Off-flow actors now leave the canvas instead of being
+parked at its edges. The welcome screen lists the four flows in place of the
+three gestures that reach them, and carries one take-away QR code for questions
+the booth cannot answer in person.
 
 ## 3.2.3 release notes
 
@@ -90,6 +132,10 @@ authored size shrinks by the same factor. At the 1024 x 768 compatibility size
 that factor is 0.7496, and the rendered figures are what a finger actually
 meets:
 
+Phone-sized viewports stop at that compatibility scale and expose the unchanged
+1024 x 768 canvas through two-axis touch scrolling. This is a map-verification
+view, not a mobile reflow; the iPad kiosk fitting behavior is unchanged.
+
 | Control | Authored | Rendered at 1024 x 768 |
 | --- | --- | --- |
 | Story rail buttons | 68 px | 51 px |
@@ -165,7 +211,7 @@ channel's static fallback tree. It validates Cloudflare Pages Free's 20,000-file
 and 25 MiB-per-asset limits, removes upstream Google Fonts and analytics, and
 uses a local Blueprint and plugin ZIP. `npm run plugin-zip` creates the local
 `core-ai-map.zip`; the Pages build copies those exact bytes to the release URL
-`/kiosk-blueprint/core-ai-map-3.2.3.zip`. It also emits a deployment manifest
+`/kiosk-blueprint/core-ai-map-3.2.5.zip`. It also emits a deployment manifest
 with that path, its byte count, and its SHA-256, plus a Pages rewrite that keeps
 the Playground runtime's literal `/remote.html` endpoint from being redirected
 to Cloudflare's extensionless route. The build owns the accessible outer
@@ -190,27 +236,46 @@ publish an artifact or deploy Pages; manual publication from a verified
 
 ### Agent-run browser policy
 
-Any agent step that requires a real browser must use the globally configured
-`browser_run` MCP service. If that service is unavailable, stop and ask for
-Codex to be restarted or reloaded. Never install or launch Playwright,
-Puppeteer, Selenium, Cypress, Chrome, Chromium, Edge, Firefox, WebKit, or
-`headless_shell` locally for an agent-run browser task.
+Any agent step that requires a real browser must use the OAuth-gated
+`browser_run` MCP service at
+`https://browser-run-mcp.lfd.workers.dev/mcp`. Its source and deployment notes
+live in [browser-run-mcp](https://github.com/henryperkins/browser-run-mcp).
+Configure and authenticate it once with:
 
-Use `quick_*` for one-page rendering, accessibility output, screenshots, PDFs,
-Markdown, scraping, JSON, or links; `browser_*` for navigation and multi-step
-interaction; `crawl_*` for multi-page crawling; and `artifact_*` to retrieve
-private evidence. In stateful workflows, use `browser_snapshot` or other
-accessibility output to locate and verify controls, take screenshots only for
-claims that need visual evidence, and call `browser_close` in a final cleanup
-step whether the workflow passes or fails.
+```bash
+curl --fail --silent --show-error https://browser-run-mcp.lfd.workers.dev/health
+codex mcp add browser_run --url https://browser-run-mcp.lfd.workers.dev/mcp
+codex mcp list
+codex mcp get browser_run
+```
+
+The `add` command opens the OAuth page; enter the Browser Run passphrase and
+approve it. If the endpoint is already registered but `codex mcp list` reports
+`Not logged in`, run `codex mcp login browser_run`. Start a new Codex session
+after login because an existing session does not dynamically reload its MCP
+tool catalog. If the service is unavailable, check the health endpoint,
+`codex mcp list`, the configured endpoint, and OAuth before starting another
+new session. If it remains unavailable, record that blocker and stop the
+browser portion. Never install or launch Playwright, Puppeteer, Selenium,
+Cypress, Chrome, Chromium, Edge, Firefox, WebKit, or `headless_shell` locally
+for an agent-run browser task.
+
+Use `qa_markdown`, `qa_accessibility_tree`, `qa_screenshot`, `qa_pdf`, or the
+other `qa_*` Quick Actions for one-page work; `browser_*` for navigation and
+multi-step interaction; and `qa_crawl_start`, `qa_crawl_results`, and
+`qa_crawl_cancel` for multi-page crawling. In stateful workflows, use
+`browser_snapshot` or other accessibility output to locate and verify controls,
+take screenshots only for claims that need visual evidence, and call
+`browser_close` in a final cleanup step whether the workflow passes or fails.
 
 Browser Run cannot reach localhost or private-network URLs. An agent browser
 gate therefore requires a publicly reachable HTTPS preview of the exact
 artifact under test. If no preview URL exists, record that single blocker and
 stop the browser portion; do not fall back to a locally served artifact or a
-local browser. Browser Run evidence is private for 14 days. Record returned run
-IDs and artifact references in the release evidence, but do not commit
-screenshot/PDF bodies or credentials.
+local browser. Quick Action screenshots and PDFs may be returned inline or as
+unguessable `/files/` URLs from the configured R2 store; those URLs expire after
+seven days. Record relevant observations and returned evidence URLs in the
+release evidence, but do not commit screenshot/PDF bodies or credentials.
 
 ### Verify the accessible loader with Browser Run
 
@@ -233,9 +298,9 @@ Use one stateful Browser Run workflow against a cache-busted preview URL:
    kiosk loader to be absent and the Playground root to be accessible.
 4. Collect `browser_console_messages` and `browser_network_requests`; reject
    console or page errors, failed requests, and HTTP errors.
-5. Call `browser_close` in the workflow's final cleanup step, then use
-   `artifact_manifest` or `artifact_list`/`artifact_get` to record the run ID
-   and relevant private artifact references.
+5. Call `browser_close` in the workflow's final cleanup step. Record the
+   cache-busted preview URL, timestamp, relevant observations, and any evidence
+   URLs returned directly by screenshot or PDF tools.
 
 Treat the result as `ok: true` only when it satisfies the same approved-copy,
 loader-handoff, and error assertions retained in
@@ -257,7 +322,7 @@ $dist = (Resolve-Path -LiteralPath 'dist-playground').Path
 $manifestPath = Join-Path $dist 'deployment-manifest.json'
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $artifactRelative = [string] $manifest.pluginArtifact.path
-$expectedArtifact = 'kiosk-blueprint/core-ai-map-3.2.3.zip'
+$expectedArtifact = 'kiosk-blueprint/core-ai-map-3.2.5.zip'
 
 if ($artifactRelative -ne $expectedArtifact) {
     throw "Expected $expectedArtifact; manifest has $artifactRelative."
@@ -326,13 +391,13 @@ foreach ($hostName in $hosts) {
 
     $remoteBlueprint = Invoke-RestMethod `
         -Uri "$hostName/kiosk-blueprint/blueprint.json?probe=$probe"
-    if ($remoteBlueprint.plugins.Count -ne 1 -or $remoteBlueprint.plugins[0].source -ne './core-ai-map-3.2.3.zip') {
+    if ($remoteBlueprint.plugins.Count -ne 1 -or $remoteBlueprint.plugins[0].source -ne './core-ai-map-3.2.5.zip') {
         throw "Blueprint plugin source mismatch on $hostName."
     }
 
     $originName = ([Uri] $hostName).Host
     $downloadPath = [IO.Path]::GetFullPath(
-        (Join-Path ([IO.Path]::GetTempPath()) "core-ai-map-${originName}-3.2.3-${PID}.zip")
+        (Join-Path ([IO.Path]::GetTempPath()) "core-ai-map-${originName}-3.2.5-${PID}.zip")
     )
     if (Test-Path -LiteralPath $downloadPath) {
         throw "Refusing to overwrite existing verification file: $downloadPath"
@@ -400,9 +465,9 @@ system, touch, foreground-timing, power, or network evidence.
 
 Record the hostname, deployed commit, manifest SHA-256, cold/warm times,
 60-second reset result, reduced-motion result, device/browser versions, and
-operator initials. Append any separate Browser Run run IDs and artifact
-references to the same release record. These physical-device gates cannot be
-replaced by repository automation or Browser Run.
+operator initials. Append any separate Browser Run timestamp, observations, and
+returned evidence URLs to the same release record. These physical-device gates
+cannot be replaced by repository automation or Browser Run.
 
 ## What visitors see
 
@@ -425,6 +490,14 @@ AI Client and a provider plugin to an external AI service. Connectors appears
 beside that path as the site-owner surface for provider discovery,
 configuration, and credentials; it is not presented as the request executor.
 
+“AI uses WordPress” follows one illustrative booking-availability request: an
+outside assistant acts as a WordPress user, the MCP Adapter plugin translates the
+call to `bookings/get-availability`, and Core's Abilities API validates input and
+permission before returning available times or a refusal. The booking action is
+registered by site or plugin code; it is not supplied by Core. Its three
+participating inspectors can be followed as an optional assistant → adapter → Core
+sequence.
+
 The **Abilities API** inspector includes its dedicated tabs. **WP-Bench** has a
 five-stage run loop that follows the work from task and sandbox through checks
 to evidence; it is a test bench, not a live request path. The MCP Adapter is
@@ -436,9 +509,9 @@ card.
 
 ## Canonical QR destinations
 
-Seven committed SVG QR assets live under `assets/qr/`; they are generated
-locally and their destinations are fixed, selectable text in the inspector.
-There are no arbitrary editable QR-image or URL fields.
+Eight committed SVG QR assets live under `assets/qr/`; they are generated
+locally and their destinations are fixed, selectable text in the inspector or
+About. There are no arbitrary editable QR-image or URL fields.
 
 - Abilities: <https://developer.wordpress.org/apis/abilities-api/>
 - AI Client: <https://developer.wordpress.org/reference/functions/wp_ai_client_prompt/>
@@ -447,6 +520,7 @@ There are no arbitrary editable QR-image or URL fields.
 - MCP Adapter: <https://github.com/WordPress/mcp-adapter>
 - WP-Bench: <https://github.com/WordPress/wp-bench>
 - Agent Skills: <https://github.com/WordPress/agent-skills>
+- Questions: <https://docs.google.com/forms/d/e/1FAIpQLSfs2LeNn7M_L66d57sXLnD1bAh28vgEoQfTx90AYkuFsVT4gA/viewform>
 
 For existing serialized blocks, canonical cards, actors, stories, and panels
 are merged with the current defaults by `id`, so this release can supply its
@@ -484,7 +558,7 @@ npm run build
 npm run plugin-zip
 ```
 
-`npm run generate:qr` deterministically refreshes the seven committed local
+`npm run generate:qr` deterministically refreshes the eight committed local
 SVGs. `build/` remains committed so the ZIP is installable without a build step.
 
 Local unit, lint, and build results prove local source and package state only.

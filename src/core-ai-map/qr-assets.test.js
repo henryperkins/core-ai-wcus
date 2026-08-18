@@ -16,6 +16,8 @@ const expectedQrs = {
 	mcp: 'https://github.com/WordPress/mcp-adapter',
 	bench: 'https://github.com/WordPress/wp-bench',
 	skills: 'https://github.com/WordPress/agent-skills',
+	feedback:
+		'https://docs.google.com/forms/d/e/1FAIpQLSfs2LeNn7M_L66d57sXLnD1bAh28vgEoQfTx90AYkuFsVT4gA/viewform',
 };
 
 const qrOptions = {
@@ -29,7 +31,7 @@ const qrOptions = {
 };
 
 describe( 'Living Block Map QR assets', () => {
-	test( 'commits seven deterministic SVG QR codes with a four-module quiet zone', async () => {
+	test( 'commits eight deterministic SVG QR codes with a four-module quiet zone', async () => {
 		const expectedFiles = Object.keys( expectedQrs )
 			.map( ( key ) => `${ key }.svg` )
 			.sort();

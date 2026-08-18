@@ -7,6 +7,8 @@ import {
 
 const STAGE_WIDTH = 1366;
 const STAGE_HEIGHT = 1024;
+const PHONE_MAX_SHORT_SIDE = 600;
+const PHONE_INSPECTION_SCALE = 1024 / STAGE_WIDTH;
 const FLOW_SETTLE_DELAY = 2900;
 const ATTRACT_TIMELINE = {
 	drawing: 560,
@@ -100,11 +102,27 @@ const isLayoutSidecar = ( layout, id ) =>
 	Boolean( layout?.sidecars?.includes( id ) );
 
 /**
+ * Whether a card is the subject of a flow rather than a step in it.
+ *
+ * The agent-learning flow is about three components no step of it touches. They
+ * stay on the canvas, unnumbered and at shelf scale, because "here is what the
+ * guidance covers" is the lesson — parking them would say the opposite.
+ *
+ * @param {Object} layout Story layout.
+ * @param {string} id     Card id.
+ * @return {boolean} True when the card is quiet in this flow.
+ */
+const isLayoutQuiet = ( layout, id ) =>
+	Boolean( layout?.quiet?.includes( id ) );
+
+/**
  * Whether a card takes part in the selected flow.
  *
  * Participation is the single rule the interface is built on: a participating
- * card is highlighted, tappable, cued, and carries a role. Everything else is
- * parked, quiet, and inert until the visitor picks a different flow.
+ * card is highlighted, tappable, cued, and carries a role. Parked cards are
+ * inert until the visitor picks a different flow. Quiet cards are the one
+ * exception — they take no step, but they stay tappable and cued, because the
+ * flow is about them.
  *
  * @param {Object} context Element context.
  * @param {string} id      Card id.
@@ -137,6 +155,49 @@ const format = ( template, ...values ) =>
 			carry.replaceAll( `%${ index + 1 }$s`, value ),
 		String( template || '' )
 	);
+
+const label = ( context, key, fallback ) => context.labels?.[ key ] || fallback;
+
+const describeDetailsOpen = ( context, cardId ) => {
+	const name = context.cardTitles?.[ cardId ] || cardId;
+	const storyTitle = context.storyTitles?.[ context.story ] || '';
+	const walkthrough = context.walkthroughs?.[ context.story ] || [];
+	const walkthroughIndex = walkthrough.indexOf( cardId );
+
+	if ( storyTitle && walkthroughIndex >= 0 ) {
+		return format(
+			context.announcements?.detailsStep ||
+				'Step %1$s of %2$s: %3$s. Its role in %4$s is open.',
+			String( walkthroughIndex + 1 ),
+			String( walkthrough.length ),
+			name,
+			storyTitle
+		);
+	}
+
+	return storyTitle
+		? format(
+				context.announcements?.detailsInFlow ||
+					'%1$s details open in %2$s.',
+				name,
+				storyTitle
+		  )
+		: format(
+				context.announcements?.detailsBrowse || '%1$s details open.',
+				name
+		  );
+};
+
+const findCardTrigger = ( root, cardId ) => {
+	const panelSuffix = `-panel-${ cardId }`;
+	return [
+		...( root?.querySelectorAll(
+			'.core-ai-map__block-body[aria-controls], .core-ai-map__actor-body[aria-controls], .core-ai-map__provider-plugin-body[aria-controls]'
+		) || [] ),
+	].find( ( control ) =>
+		control.getAttribute( 'aria-controls' )?.endsWith( panelSuffix )
+	);
+};
 
 const previewList = ( context ) => {
 	if ( Array.isArray( context.previews ) && context.previews.length ) {
@@ -257,7 +318,13 @@ const syncSvgState = ( root, context ) => {
 	root.querySelectorAll( '[data-core-ai-preview]' ).forEach( ( preview ) => {
 		const previewId = preview.dataset.coreAiPreview;
 		const hidden = isPreviewHidden( context, previewId );
-		preview.hidden = hidden;
+		/*
+		 * `hidden` is an HTMLElement property; assigning it to an SVG node
+		 * sets a JavaScript expando and leaves the attribute — and therefore
+		 * the rendering — exactly as the server left it. Toggle the attribute
+		 * so these groups actually appear and disappear.
+		 */
+		preview.toggleAttribute( 'hidden', hidden );
 		preview.querySelectorAll( 'path' ).forEach( ( path ) => {
 			path.classList.toggle(
 				'is-live',
@@ -289,7 +356,17 @@ const syncSvgState = ( root, context ) => {
 		'.core-ai-map__config-path[data-core-ai-story]'
 	).forEach( ( path ) => {
 		const { coreAiStory: storyId, coreAiVariant: variant } = path.dataset;
-		path.hidden = isProviderConfigPathHidden( context, storyId, variant );
+		path.toggleAttribute(
+			'hidden',
+			isProviderConfigPathHidden( context, storyId, variant )
+		);
+	} );
+	root.querySelectorAll( '[data-core-ai-gate]' ).forEach( ( gate ) => {
+		gate.classList.toggle(
+			'is-visible',
+			context.screen === 'map' &&
+				context.story === gate.dataset.coreAiGate
+		);
 	} );
 	root.querySelectorAll( '[data-core-ai-bench-flow]' ).forEach( ( flow ) => {
 		flow.classList.toggle( 'is-live', Boolean( context.benchPathsLive ) );
@@ -313,6 +390,13 @@ const focusWithin = ( root, selector, delay = 40 ) => {
 					?.focus( { preventScroll: true } ),
 			delay
 		);
+	}
+};
+
+const resetDetailsScroll = ( root ) => {
+	const details = root?.querySelector( '.core-ai-map__details' );
+	if ( details ) {
+		details.scrollTop = 0;
 	}
 };
 
@@ -448,6 +532,7 @@ const setAttractState = ( context ) => {
 	context.storyMotionPhase = 'settled';
 	context.pendingTakeawayStory = '';
 	context.benchPathsLive = false;
+	context.resetWarning = false;
 	context.suggestion = Math.floor( ( context.suggestion || 0 ) / 2 ) * 2;
 	setPreviewPhase( context, 'assembling' );
 	context.announcement =
@@ -465,52 +550,51 @@ const startAttractCycle = ( root, context ) => {
 			return;
 		}
 
-		setPreviewPhase(
-			context,
-			reducedMotion( root ) ? 'settled' : 'assembling'
-		);
-		if ( ! reducedMotion( root ) ) {
-			addTimer(
-				attractTimers,
-				root,
-				() => {
-					if ( context.screen === 'attract' ) {
-						setPreviewPhase( context, 'drawing' );
-					}
-				},
-				ATTRACT_TIMELINE.drawing
-			);
-			addTimer(
-				attractTimers,
-				root,
-				() => {
-					if ( context.screen === 'attract' ) {
-						setPreviewPhase( context, 'signalling' );
-					}
-				},
-				ATTRACT_TIMELINE.signalling
-			);
-			addTimer(
-				attractTimers,
-				root,
-				() => {
-					if ( context.screen === 'attract' ) {
-						setPreviewPhase( context, 'settled' );
-					}
-				},
-				ATTRACT_TIMELINE.settled
-			);
-			addTimer(
-				attractTimers,
-				root,
-				() => {
-					if ( context.screen === 'attract' ) {
-						setPreviewPhase( context, 'releasing' );
-					}
-				},
-				ATTRACT_TIMELINE.releasing
-			);
+		const motionReduced = reducedMotion( root );
+		setPreviewPhase( context, motionReduced ? 'settled' : 'assembling' );
+		if ( motionReduced ) {
+			return;
 		}
+		addTimer(
+			attractTimers,
+			root,
+			() => {
+				if ( context.screen === 'attract' ) {
+					setPreviewPhase( context, 'drawing' );
+				}
+			},
+			ATTRACT_TIMELINE.drawing
+		);
+		addTimer(
+			attractTimers,
+			root,
+			() => {
+				if ( context.screen === 'attract' ) {
+					setPreviewPhase( context, 'signalling' );
+				}
+			},
+			ATTRACT_TIMELINE.signalling
+		);
+		addTimer(
+			attractTimers,
+			root,
+			() => {
+				if ( context.screen === 'attract' ) {
+					setPreviewPhase( context, 'settled' );
+				}
+			},
+			ATTRACT_TIMELINE.settled
+		);
+		addTimer(
+			attractTimers,
+			root,
+			() => {
+				if ( context.screen === 'attract' ) {
+					setPreviewPhase( context, 'releasing' );
+				}
+			},
+			ATTRACT_TIMELINE.releasing
+		);
 
 		addTimer(
 			attractTimers,
@@ -523,10 +607,7 @@ const startAttractCycle = ( root, context ) => {
 				context.previewIndex = previews.length
 					? ( context.previewIndex + 1 ) % previews.length
 					: 0;
-				setPreviewPhase(
-					context,
-					reducedMotion( root ) ? 'settled' : 'assembling'
-				);
+				setPreviewPhase( context, 'assembling' );
 			},
 			ATTRACT_TIMELINE.next
 		);
@@ -582,6 +663,25 @@ const runFlow = ( root, context, { bench = false } = {} ) => {
 	);
 };
 
+const selectBenchStageByOffset = ( context, offset ) => {
+	const stages = context.benchOrder || [];
+	const current = stages.indexOf( context.benchStage );
+	const next = Math.min(
+		Math.max( current + offset, 0 ),
+		Math.max( stages.length - 1, 0 )
+	);
+	if ( current < 0 || next === current || ! stages[ next ] ) {
+		return;
+	}
+	context.benchStage = stages[ next ];
+	context.announcement = `WP-Bench stage ${ String( next + 1 ).padStart(
+		2,
+		'0'
+	) } selected: ${
+		context.benchTitles?.[ context.benchStage ] || context.benchStage
+	}.`;
+};
+
 store( 'core-ai/map', {
 	state: {
 		get isAttract() {
@@ -617,7 +717,7 @@ store( 'core-ai/map', {
 			return getContext().screen !== 'bench';
 		},
 		get isCanvasHidden() {
-			return getContext().screen !== 'map';
+			return ! [ 'map', 'inspect' ].includes( getContext().screen );
 		},
 		get isCanvasInert() {
 			return getContext().screen !== 'map';
@@ -627,6 +727,14 @@ store( 'core-ai/map', {
 		},
 		get isRailHidden() {
 			return getContext().screen !== 'map';
+		},
+		/*
+		 * The key names the marks on the diagram, so it belongs beside the
+		 * diagram and nowhere else. The welcome card carries its own.
+		 */
+		get isDiagramKeyHidden() {
+			const context = getContext();
+			return context.screen !== 'map' || ! activeLayout( context );
 		},
 		get railLabel() {
 			const context = getContext();
@@ -640,6 +748,22 @@ store( 'core-ai/map', {
 		get isOnline() {
 			return ! getContext().isOffline;
 		},
+		get isReady() {
+			return Boolean( getContext().ready );
+		},
+		get isNotReady() {
+			return ! this.isReady;
+		},
+		get isResetWarningHidden() {
+			const context = getContext();
+			return context.screen === 'about' || ! context.resetWarning;
+		},
+		get offlineCacheStatus() {
+			return getContext().offlineCacheStatus || '';
+		},
+		get wakeLockStatus() {
+			return getContext().wakeLockStatus || '';
+		},
 
 		get isStorySelected() {
 			const context = getContext();
@@ -650,6 +774,21 @@ store( 'core-ai/map', {
 		get isStoryNotSelected() {
 			const context = getContext();
 			return context.storyId !== context.story;
+		},
+		/*
+		 * Two flows are one story: an agent writes code, then WordPress judges
+		 * it. The handoff is offered only once this flow has settled, so it
+		 * never competes with the path still drawing.
+		 */
+		get isStoryNextHidden() {
+			const context = getContext();
+			const layout = activeLayout( context );
+			return ! (
+				layout &&
+				layout.next === context.nextStoryId &&
+				context.screen === 'map' &&
+				context.flowPhase === 'settled'
+			);
 		},
 		get isTakeawayHidden() {
 			const context = getContext();
@@ -760,9 +899,18 @@ store( 'core-ai/map', {
 			if ( slot < 0 ) {
 				return '';
 			}
-			const shelfIndex = ( layout.shelfStart || 0 ) + slot;
-			const shelfX =
-				context.shelfX?.[ shelfIndex ] ?? context.shelfX?.[ 0 ] ?? 0;
+			/*
+			 * A shelf that has to fit inside the boundary band gets its own
+			 * columns; every other shelf runs on the shared pitch.
+			 */
+			const columns = layout.shelfXs?.length
+				? layout.shelfXs
+				: context.shelfX || [];
+			const shelfIndex = Math.min(
+				( layout.shelfStart || 0 ) + slot,
+				Math.max( columns.length - 1, 0 )
+			);
+			const shelfX = columns[ shelfIndex ] ?? columns[ 0 ] ?? 0;
 			return `translate(${ shelfX - neutral[ 0 ] }px, ${
 				layout.shelfY - neutral[ 1 ]
 			}px)`;
@@ -816,6 +964,37 @@ store( 'core-ai/map', {
 					layout.park?.includes( context.cardId )
 			);
 		},
+		/*
+		 * Five parked cards will not fit the shared shelf pitch inside the
+		 * boundary band, so that one shelf gets narrower cards as well as
+		 * narrower columns.
+		 */
+		get isCardParkedTight() {
+			const context = getContext();
+			return Boolean(
+				this.isCardParked && activeLayout( context )?.shelfXs?.length
+			);
+		},
+		get isCardQuiet() {
+			const context = getContext();
+			return Boolean(
+				isRecomposed( context ) &&
+					isLayoutQuiet( activeLayout( context ), context.cardId )
+			);
+		},
+		/*
+		 * An actor belongs to the flow that names it. With a flow selected the
+		 * cast is exactly its participants; the rest leave rather than crowd
+		 * the edges of a diagram they take no part in.
+		 */
+		get isActorHidden() {
+			const context = getContext();
+			return Boolean(
+				context.screen !== 'attract' &&
+					activeLayout( context ) &&
+					! isParticipant( context, context.cardId )
+			);
+		},
 		get isPreviewMember() {
 			const context = getContext();
 			const preview = activePreview( context );
@@ -860,9 +1039,6 @@ store( 'core-ai/map', {
 				layout && ! isParticipant( context, context.cardId )
 			);
 		},
-		get isCardOffstage() {
-			return false;
-		},
 		get isCardInspected() {
 			const context = getContext();
 			return context.cardId === context.inspect;
@@ -876,21 +1052,32 @@ store( 'core-ai/map', {
 		 * Highlighted means tappable, and dimmed means it is not part of this
 		 * flow. Disabling the parked cards is what makes that promise true
 		 * rather than merely visual: a card that cannot answer is a card the
-		 * visitor cannot press.
+		 * visitor cannot press. A quiet card is the one the flow is about, so it
+		 * still answers and still presses.
 		 */
 		get isCardNotTappable() {
 			const context = getContext();
+			const layout = activeLayout( context );
 			return (
-				Boolean( activeLayout( context ) ) &&
-				! isParticipant( context, context.cardId )
+				Boolean( layout ) &&
+				! isParticipant( context, context.cardId ) &&
+				! isLayoutQuiet( layout, context.cardId )
 			);
 		},
+		/*
+		 * The cue is the visible half of "this card answers", so it follows the
+		 * same rule as the button being enabled. A quiet card is pressable, so
+		 * it is cued too: a card the visitor may open should never have to be
+		 * discovered by trying it.
+		 */
 		get isTapCueHidden() {
 			const context = getContext();
+			const layout = activeLayout( context );
 			return ! (
 				context.screen === 'map' &&
-				Boolean( activeLayout( context ) ) &&
-				isParticipant( context, context.cardId )
+				Boolean( layout ) &&
+				( isParticipant( context, context.cardId ) ||
+					isLayoutQuiet( layout, context.cardId ) )
 			);
 		},
 		get cardActionLabel() {
@@ -918,6 +1105,20 @@ store( 'core-ai/map', {
 					context.storyTitles?.[ context.story ] || ''
 				);
 			}
+			/*
+			 * A quiet card is the subject of the flow, not a step in it, and it
+			 * stays pressable. "Not part of this flow" is the sentence for a
+			 * card that cannot answer, so saying it here would contradict the
+			 * button it is attached to.
+			 */
+			if ( isLayoutQuiet( activeLayout( context ), context.cardId ) ) {
+				return format(
+					strings.cardQuiet ||
+						'%1$s — what “%2$s” is about. Open its details.',
+					name,
+					context.storyTitles?.[ context.story ] || ''
+				);
+			}
 			if ( activeLayout( context ) ) {
 				return format(
 					strings.cardInactive || '%1$s — not part of this flow.',
@@ -937,9 +1138,15 @@ store( 'core-ai/map', {
 				return true;
 			}
 			const layout = activeLayout( context );
+			/*
+			 * Every card that takes part shows what it holds — a sidecar as
+			 * much as a numbered step, because standing beside the path is
+			 * exactly what a sidecar has to explain about itself.
+			 */
 			return Boolean(
 				context.screen === 'map' &&
-					Number( layout?.members?.[ context.cardId ] || 0 ) > 0 &&
+					layout &&
+					isParticipant( context, context.cardId ) &&
 					! layout.noStrip?.includes( context.cardId )
 			);
 		},
@@ -967,16 +1174,53 @@ store( 'core-ai/map', {
 		get isShelfHidden() {
 			return ! isRecomposed( getContext() );
 		},
+		/*
+		 * The shelf usually holds what the flow left behind. In the
+		 * agent-learning flow it holds the two components no skill covers,
+		 * which is a different sentence and gets a different heading.
+		 */
+		get shelfLabel() {
+			const context = getContext();
+			return (
+				activeLayout( context )?.shelfLabel ||
+				context.labels?.shelfLabel ||
+				''
+			);
+		},
+		/*
+		 * Far enough above the shelf to clear the boundary rule that runs
+		 * between them: a caption struck through by a dashed line reads as
+		 * neither.
+		 */
 		get shelfTop() {
 			const layout = activeLayout( getContext() );
-			return `${ layout ? layout.shelfY - 22 : 490 }px`;
+			return `${ layout ? layout.shelfY - 34 : 606 }px`;
 		},
 		get shelfLeft() {
 			const context = getContext();
 			const layout = activeLayout( context );
+			if ( ! layout ) {
+				return `${ context.shelfX?.[ 0 ] ?? 236 }px`;
+			}
+			const columns = layout.shelfXs?.length
+				? layout.shelfXs
+				: context.shelfX || [];
 			return `${
-				layout ? context.shelfX?.[ layout.shelfStart || 0 ] ?? 250 : 250
+				columns[ layout.shelfStart || 0 ] ?? columns[ 0 ] ?? 236
 			}px`;
+		},
+		/*
+		 * The evaluation row and the shelf are the same strip of canvas. When
+		 * the shelf takes it, the label that names it stands down rather than
+		 * captioning a row of parked cards it does not describe.
+		 */
+		get isRuntimeZoneHidden() {
+			const context = getContext();
+			return Boolean(
+				context.screen !== 'map' ||
+					( isRecomposed( context ) &&
+						activeLayout( context ).shelfY >= 600 )
+			);
 		},
 
 		get isPathVisible() {
@@ -1045,10 +1289,18 @@ store( 'core-ai/map', {
 			);
 		},
 
+		/*
+		 * The provider layer is transient: it exists inside the request path
+		 * that routes through it. A flow that does not route through it leaves
+		 * it out entirely rather than parking a dimmed card in open canvas.
+		 */
 		get isProviderPluginHidden() {
 			const context = getContext();
 			if ( [ 'map', 'inspect' ].includes( context.screen ) ) {
-				return false;
+				return Boolean(
+					activeLayout( context ) &&
+						! isParticipant( context, 'provider-plugin' )
+				);
 			}
 			return ! (
 				context.screen === 'attract' &&
@@ -1119,6 +1371,12 @@ store( 'core-ai/map', {
 		get isSuggestionApplied() {
 			return getContext().suggestion % 2 === 1;
 		},
+		get suggestionActionLabel() {
+			const context = getContext();
+			return this.isSuggestionApplied
+				? context.labels?.appliedLabel || 'Applied'
+				: context.labels?.applyLabel || 'Apply';
+		},
 		get isSuggestionNotApplied() {
 			return ! this.isSuggestionApplied;
 		},
@@ -1139,6 +1397,28 @@ store( 'core-ai/map', {
 		},
 		get isBenchStageNotSelected() {
 			return ! this.isBenchStageSelected;
+		},
+		get isPreviousBenchStageDisabled() {
+			const context = getContext();
+			return (
+				( context.benchOrder || [] ).indexOf( context.benchStage ) <= 0
+			);
+		},
+		get isNextBenchStageDisabled() {
+			const context = getContext();
+			const stages = context.benchOrder || [];
+			return stages.indexOf( context.benchStage ) >= stages.length - 1;
+		},
+		get benchProgressLabel() {
+			const context = getContext();
+			const stages = context.benchOrder || [];
+			const current =
+				Math.max( stages.indexOf( context.benchStage ), 0 ) + 1;
+			return format(
+				context.labels?.benchProgress || 'Stage %1$s of %2$s',
+				String( current ).padStart( 2, '0' ),
+				String( stages.length ).padStart( 2, '0' )
+			);
 		},
 		get benchPathsLive() {
 			return Boolean( getContext().benchPathsLive );
@@ -1188,9 +1468,12 @@ store( 'core-ai/map', {
 			context.pendingTakeawayStory = '';
 			context.announcement =
 				context.announcements?.browse ||
-				'Every component is on the canvas with no flow selected. Tap any component to learn what it is and where it belongs.';
+				'All components are on the canvas with no flow selected. Start with AI Client, then compare what ships in Core, what is installed, and what stays outside WordPress.';
 			resetSchedulers.get( root )?.();
-			focusWithin( root, '.core-ai-map__block-body:not([disabled])' );
+			focusWithin(
+				root,
+				'.core-ai-map__block--client .core-ai-map__block-body:not([disabled])'
+			);
 		},
 		selectStory() {
 			const context = getContext();
@@ -1213,6 +1496,26 @@ store( 'core-ai/map', {
 				context,
 				context.storyId,
 				{ replayed: isCurrent }
+			);
+			resetSchedulers.get( root )?.();
+			focusFirstStep( root );
+		},
+		selectNextStory() {
+			const context = getContext();
+			const nextStoryId = context.nextStoryId || '';
+			if ( ! nextStoryId || ! context.layout?.[ nextStoryId ] ) {
+				return;
+			}
+			const root = getRoot( getElement().ref );
+			context.screen = 'map';
+			context.inspect = '';
+			context.story = nextStoryId;
+			context.suggestion =
+				Math.floor( ( context.suggestion || 0 ) / 2 ) * 2;
+			runFlow( root, context );
+			context.announcement = describeFlowSelection(
+				context,
+				nextStoryId
 			);
 			resetSchedulers.get( root )?.();
 			focusFirstStep( root );
@@ -1253,22 +1556,41 @@ store( 'core-ai/map', {
 			if ( context.inspect === 'abilities' ) {
 				context.abilitiesTab = 'overview';
 			}
-			const name =
-				context.cardTitles?.[ context.cardId ] || context.cardId;
-			const storyTitle = context.storyTitles?.[ context.story ] || '';
-			context.announcement = storyTitle
-				? format(
-						context.announcements?.detailsInFlow ||
-							'%1$s details open in %2$s.',
-						name,
-						storyTitle
-				  )
-				: format(
-						context.announcements?.detailsBrowse ||
-							'%1$s details open.',
-						name
-				  );
+			context.announcement = describeDetailsOpen(
+				context,
+				context.cardId
+			);
 			resetSchedulers.get( root )?.();
+			resetDetailsScroll( root );
+			focusWithin( root, '.core-ai-map__details-close', 80 );
+		},
+		inspectNextCard() {
+			const context = getContext();
+			const walkthrough = context.walkthroughs?.[ context.story ] || [];
+			const currentIndex = walkthrough.indexOf( context.inspect );
+			const nextCardId = context.nextCardId || '';
+
+			if (
+				currentIndex < 0 ||
+				walkthrough[ currentIndex + 1 ] !== nextCardId
+			) {
+				return;
+			}
+
+			const { ref } = getElement();
+			const root = getRoot( ref );
+			ref?.blur?.();
+			const nextTrigger = findCardTrigger( root, nextCardId );
+			if ( root && nextTrigger ) {
+				lastCardTriggers.set( root, nextTrigger );
+			}
+			context.inspect = nextCardId;
+			if ( nextCardId === 'abilities' ) {
+				context.abilitiesTab = 'overview';
+			}
+			context.announcement = describeDetailsOpen( context, nextCardId );
+			resetSchedulers.get( root )?.();
+			resetDetailsScroll( root );
 			focusWithin( root, '.core-ai-map__details-close', 80 );
 		},
 		openAbout() {
@@ -1300,6 +1622,9 @@ store( 'core-ai/map', {
 				.filter( Boolean )
 				.join( ' ' );
 			resetSchedulers.get( root )?.();
+			if ( context.screen === 'attract' ) {
+				attractSchedulers.get( root )?.();
+			}
 			focusElement( root ? lastAboutTriggers.get( root ) : undefined );
 		},
 		closeInspect() {
@@ -1350,9 +1675,10 @@ store( 'core-ai/map', {
 			}
 			context.screen = 'bench';
 			context.inspect = '';
-			context.benchStage = 'sandbox';
+			context.benchStage = 'task';
 			runFlow( root, context, { bench: true } );
-			context.announcement = 'WP-Bench run loop open. Sandbox selected.';
+			context.announcement =
+				'WP-Bench run loop open. Stage 01, One task, one message, selected.';
 			resetSchedulers.get( root )?.();
 			focusWithin( root, '.core-ai-map__bench-heading button' );
 		},
@@ -1365,17 +1691,33 @@ store( 'core-ai/map', {
 		},
 		selectBenchStage() {
 			const context = getContext();
-			context.benchStage = context.stageId || 'sandbox';
+			context.benchStage = context.stageId || 'task';
 			context.announcement = `WP-Bench stage selected: ${
 				context.benchTitles?.[ context.benchStage ] ||
 				context.benchStage
 			}.`;
 		},
+		selectPreviousBenchStage() {
+			selectBenchStageByOffset( getContext(), -1 );
+		},
+		selectNextBenchStage() {
+			selectBenchStageByOffset( getContext(), 1 );
+		},
 		applySuggestion() {
 			const context = getContext();
+			if ( context.suggestion % 2 === 1 ) {
+				return;
+			}
 			context.suggestion = Math.floor( context.suggestion / 2 ) * 2 + 1;
 			context.announcement =
 				'A person chose Apply. The AI Plugin suggestion is now applied.';
+		},
+		keepExploring() {
+			const context = getContext();
+			const root = getRoot( getElement().ref );
+			context.resetWarning = false;
+			context.announcement = 'Keep exploring. Reset postponed.';
+			resetSchedulers.get( root )?.();
 		},
 		reset() {
 			const context = getContext();
@@ -1397,6 +1739,8 @@ store( 'core-ai/map', {
 				if ( ! root ) {
 					return undefined;
 				}
+				context.ready = true;
+				context.resetWarning = false;
 				root.classList.add( 'is-ready' );
 				document.body.classList.add( 'core-ai-kiosk-active' );
 				const restorePage = isolateKioskPage( root );
@@ -1405,6 +1749,8 @@ store( 'core-ai/map', {
 					10
 				);
 				let resetTimer;
+				let resetWarningTimer;
+				let cacheStatusTimer;
 				let wakeLock;
 				let servedFromOfflineCache = Boolean(
 					document.querySelector(
@@ -1413,11 +1759,27 @@ store( 'core-ai/map', {
 				);
 
 				const fitStage = () => {
-					const scale = Math.min(
-						root.clientWidth / STAGE_WIDTH,
-						root.clientHeight / STAGE_HEIGHT
-					);
+					const viewportWidth = root.clientWidth;
+					const viewportHeight = root.clientHeight;
+					const hasViewport =
+						Number.isFinite( viewportWidth ) &&
+						Number.isFinite( viewportHeight ) &&
+						viewportWidth > 0 &&
+						viewportHeight > 0;
+					if ( ! hasViewport ) {
+						return;
+					}
+					const isPhone =
+						Math.min( viewportWidth, viewportHeight ) <=
+						PHONE_MAX_SHORT_SIDE;
+					const scale = isPhone
+						? PHONE_INSPECTION_SCALE
+						: Math.min(
+								viewportWidth / STAGE_WIDTH,
+								viewportHeight / STAGE_HEIGHT
+						  );
 					if ( Number.isFinite( scale ) && scale > 0 ) {
+						root.classList.toggle( 'is-phone-inspection', isPhone );
 						root.style.setProperty(
 							'--cai-scale',
 							String( scale )
@@ -1427,10 +1789,11 @@ store( 'core-ai/map', {
 				const resetForInactivity = () => {
 					if (
 						document.visibilityState === 'visible' &&
-						context.screen !== 'attract'
+						! [ 'attract', 'about' ].includes( context.screen )
 					) {
 						clearTimers( flowTimers, root );
 						setAttractState( context );
+						context.resetWarning = false;
 						context.announcement =
 							'The map reset after a period of inactivity.';
 						attractSchedulers.get( root )?.();
@@ -1443,17 +1806,26 @@ store( 'core-ai/map', {
 				};
 				const scheduleReset = () => {
 					window.clearTimeout( resetTimer );
-					if ( context.screen === 'attract' ) {
+					window.clearTimeout( resetWarningTimer );
+					context.resetWarning = false;
+					if ( [ 'attract', 'about' ].includes( context.screen ) ) {
 						return;
 					}
 					const base = Number.isFinite( timeout ) ? timeout : 60000;
-					const deep =
-						context.screen === 'inspect' ||
-						context.screen === 'bench';
-					resetTimer = window.setTimeout(
-						resetForInactivity,
-						base + ( deep ? 30000 : 0 )
+					resetWarningTimer = window.setTimeout(
+						() => {
+							if (
+								document.visibilityState === 'visible' &&
+								context.screen !== 'attract'
+							) {
+								context.resetWarning = true;
+								context.announcement =
+									'The exhibit will return to the welcome screen in 10 seconds. Continue exploring to stay here.';
+							}
+						},
+						Math.max( base - 10000, 0 )
 					);
+					resetTimer = window.setTimeout( resetForInactivity, base );
 				};
 				resetSchedulers.set( root, scheduleReset );
 
@@ -1466,28 +1838,61 @@ store( 'core-ai/map', {
 				};
 				const handleCacheResult = ( event ) => {
 					if ( event.data?.type === 'CORE_AI_MAP_CACHE_RESULT' ) {
-						root.dataset.offlineReady = event.data.ok
-							? 'true'
-							: 'false';
+						window.clearTimeout( cacheStatusTimer );
+						const ready = Boolean( event.data.ok );
+						root.dataset.offlineReady = ready ? 'true' : 'false';
+						context.offlineCacheStatus = ready
+							? label( context, 'offlineReady', 'Ready' )
+							: label(
+									context,
+									'offlineUnavailable',
+									'Unavailable'
+							  );
 					}
 				};
 				const requestWakeLock = async () => {
-					if (
-						'wakeLock' in navigator &&
-						document.visibilityState === 'visible'
-					) {
-						try {
-							wakeLock =
-								await navigator.wakeLock.request( 'screen' );
-						} catch {
-							wakeLock = undefined;
-						}
+					if ( ! ( 'wakeLock' in navigator ) ) {
+						context.wakeLockStatus = label(
+							context,
+							'wakeLockNotSupported',
+							'Not supported'
+						);
+						return;
+					}
+					if ( document.visibilityState !== 'visible' ) {
+						context.wakeLockStatus = label(
+							context,
+							'wakeLockPaused',
+							'Paused'
+						);
+						return;
+					}
+					try {
+						wakeLock = await navigator.wakeLock.request( 'screen' );
+						context.wakeLockStatus = label(
+							context,
+							'wakeLockActive',
+							'Active'
+						);
+					} catch {
+						wakeLock = undefined;
+						context.wakeLockStatus = label(
+							context,
+							'wakeLockUnavailable',
+							'Unavailable'
+						);
 					}
 				};
 				const handleVisibility = () => {
 					if ( document.visibilityState === 'visible' ) {
 						scheduleReset();
 						requestWakeLock();
+					} else {
+						context.wakeLockStatus = label(
+							context,
+							'wakeLockPaused',
+							'Paused'
+						);
 					}
 				};
 				const handleKeydown = ( event ) => {
@@ -1566,14 +1971,32 @@ store( 'core-ai/map', {
 						]
 							.filter( Boolean )
 							.join( ' ' );
+						if ( context.screen === 'attract' ) {
+							attractSchedulers.get( root )?.();
+						}
 						focusElement( lastAboutTriggers.get( root ) );
 					}
 				};
 				const syncServiceWorker = async () => {
+					if ( root.dataset.offlineEnabled !== 'true' ) {
+						context.offlineCacheStatus = label(
+							context,
+							'offlineNotEnabled',
+							'Not enabled'
+						);
+					}
 					if (
 						! ( 'serviceWorker' in navigator ) ||
 						! window.isSecureContext
 					) {
+						if ( root.dataset.offlineEnabled === 'true' ) {
+							root.dataset.offlineReady = 'false';
+							context.offlineCacheStatus = label(
+								context,
+								'offlineUnavailable',
+								'Unavailable'
+							);
+						}
 						return;
 					}
 					try {
@@ -1724,6 +2147,15 @@ store( 'core-ai/map', {
 						await document.fonts?.ready;
 						const worker =
 							readyRegistration.active || registration.active;
+						if ( ! worker ) {
+							root.dataset.offlineReady = 'false';
+							context.offlineCacheStatus = label(
+								context,
+								'offlineUnavailable',
+								'Unavailable'
+							);
+							return;
+						}
 						const configuredAssets = JSON.parse(
 							root.dataset.assetUrls || '[]'
 						);
@@ -1731,7 +2163,7 @@ store( 'core-ai/map', {
 							root.dataset.cachePage === 'true'
 								? getObservedStaticAssets()
 								: [];
-						worker?.postMessage( {
+						worker.postMessage( {
 							type: 'CACHE_CORE_AI_MAP',
 							pageUrl:
 								root.dataset.cachePage === 'true'
@@ -1744,14 +2176,35 @@ store( 'core-ai/map', {
 								] ),
 							],
 						} );
+						window.clearTimeout( cacheStatusTimer );
+						cacheStatusTimer = window.setTimeout( () => {
+							root.dataset.offlineReady = 'false';
+							context.offlineCacheStatus = label(
+								context,
+								'offlineUnavailable',
+								'Unavailable'
+							);
+						}, 15000 );
 					} catch {
-						// The server-rendered experience remains usable.
+						if ( root.dataset.offlineEnabled === 'true' ) {
+							root.dataset.offlineReady = 'false';
+							context.offlineCacheStatus = label(
+								context,
+								'offlineUnavailable',
+								'Unavailable'
+							);
+						}
 					}
 				};
 
 				root.addEventListener( 'pointerdown', scheduleReset, {
 					passive: true,
 				} );
+				root.addEventListener( 'scroll', scheduleReset, {
+					capture: true,
+					passive: true,
+				} );
+				root.addEventListener( 'focusin', scheduleReset );
 				window.addEventListener( 'keydown', handleKeydown );
 				window.addEventListener( 'online', updateNetworkStatus );
 				window.addEventListener( 'offline', updateNetworkStatus );
@@ -1777,11 +2230,15 @@ store( 'core-ai/map', {
 
 				return () => {
 					window.clearTimeout( resetTimer );
+					window.clearTimeout( resetWarningTimer );
+					window.clearTimeout( cacheStatusTimer );
 					clearTimers( flowTimers, root );
 					clearTimers( attractTimers, root );
 					resetSchedulers.delete( root );
 					attractSchedulers.delete( root );
 					root.removeEventListener( 'pointerdown', scheduleReset );
+					root.removeEventListener( 'scroll', scheduleReset, true );
+					root.removeEventListener( 'focusin', scheduleReset );
 					window.removeEventListener( 'keydown', handleKeydown );
 					window.removeEventListener( 'online', updateNetworkStatus );
 					window.removeEventListener(
@@ -1800,6 +2257,8 @@ store( 'core-ai/map', {
 					);
 					wakeLock?.release?.();
 					restorePage();
+					context.ready = false;
+					context.resetWarning = false;
 					root.classList.remove( 'is-ready' );
 					if ( ! document.querySelector( '.core-ai-map.is-ready' ) ) {
 						document.body.classList.remove(

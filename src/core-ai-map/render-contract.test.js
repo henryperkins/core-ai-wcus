@@ -4,6 +4,7 @@ const { spawnSync } = require( 'node:child_process' );
 
 const renderPath = join( __dirname, 'render.php' );
 const metadataPath = join( __dirname, 'block.json' );
+const styleSource = readFileSync( join( __dirname, 'style.scss' ), 'utf8' );
 
 const renderDefaultContext = () => {
 	const metadata = JSON.parse( readFileSync( metadataPath, 'utf8' ) );
@@ -169,6 +170,66 @@ const renderLegacyMarkup = ( profile = 'legacy' ) => {
 			}
 		);
 	}
+	if ( profile === 'uses-wp-v324' ) {
+		Object.assign(
+			attributes.stories.find( ( item ) => item.id === 'uses-wp' ),
+			{
+				copy: 'An authorized assistant calls in through the MCP Adapter, which translates the call into a WordPress ability. Permission still belongs to WordPress.',
+				situation:
+					'An outside assistant asks WordPress to perform an allowed action.',
+				takeaway:
+					'The assistant does not bypass WordPress. The MCP Adapter translates the request, and the selected ability still applies WordPress permissions.',
+				outcome: 'An assistant requests a WordPress action',
+			}
+		);
+		attributes.panels.find( ( item ) => item.id === 'assistant' ).roles = {
+			'uses-wp': {
+				receives: 'A person’s instruction, outside WordPress.',
+				does: 'Signs in as the WordPress user it was given credentials for, then issues an MCP tool call.',
+				returns:
+					'Whatever that user is allowed to get back — nothing more.',
+				lesson: 'The assistant is a client, not an authority. It asks; it does not decide.',
+			},
+		};
+		attributes.panels.find( ( item ) => item.id === 'mcp' ).roles = {
+			'uses-wp': {
+				receives:
+					'An MCP tool call from an authorized outside assistant.',
+				does: 'Translates the call into a WordPress ability and hands it to WordPress to run.',
+				returns:
+					'The ability’s typed result, translated back into MCP.',
+				lesson: 'The adapter is a translator at the edge of the site. It does not create the action, and it does not grant the permission.',
+			},
+		};
+		attributes.panels.find( ( item ) => item.id === 'abilities' ).roles = {
+			'uses-wp': {
+				receives:
+					'The translated request, naming the WordPress action and supplying its inputs.',
+				does: 'Validates the inputs, checks whether the current user is allowed to perform the action, then runs its registered callback.',
+				returns: 'A typed result, or a refusal.',
+				lesson: 'Connecting an outside assistant does not give it unrestricted access. WordPress still controls execution.',
+			},
+		};
+	}
+	if ( profile === 'uses-wp-custom' ) {
+		Object.assign(
+			attributes.stories.find( ( item ) => item.id === 'uses-wp' ),
+			{
+				copy: 'Custom inbound story.',
+				situation: 'Custom inbound situation.',
+				takeaway: 'Custom inbound takeaway.',
+				outcome: 'Custom inbound outcome',
+			}
+		);
+		attributes.panels.find( ( item ) => item.id === 'assistant' ).roles = {
+			'uses-wp': {
+				receives: 'Custom assistant input.',
+				does: 'Custom assistant work.',
+				returns: 'Custom assistant result.',
+				lesson: 'Custom assistant lesson.',
+			},
+		};
+	}
 	attributes.panels = attributes.panels.map( ( panel ) => ( {
 		...panel,
 		href: 'https://legacy.example/generic',
@@ -286,8 +347,8 @@ describe( 'Core AI map render contract', () => {
 				y: Number.parseFloat(
 					providerPlugin.style.getPropertyValue( '--cai-y' )
 				),
-				width: 200,
-				height: 104,
+				width: 180,
+				height: 148,
 			} ) ),
 		];
 		const overlaps = [];
@@ -317,31 +378,38 @@ describe( 'Core AI map render contract', () => {
 		expect( context.layout[ 'uses-ai' ].members ).toEqual( {
 			plugin: 1,
 			client: 2,
-			provider: 0,
+			provider: 4,
 		} );
 		expect( context.layout[ 'uses-ai' ].sidecars ).toEqual( [
 			'connectors',
 		] );
 		expect( context.layout[ 'uses-ai' ].providerPlugin ).toMatchObject( {
 			step: 3,
-			position: [ 824, 214 ],
-			restPosition: [ 824, 332 ],
+			position: [ 844, 192 ],
+			restPosition: [ 844, 332 ],
 		} );
 		expect( context.layout[ 'uses-ai' ].edges ).toEqual( [
 			'M504 266 L556 266',
-			'M792 266 L824 266',
-			'M1024 266 L1180 266',
+			'M792 266 L840 266',
+			'M1024 266 L1146 266',
 		] );
-		expect( context.layout[ 'uses-ai' ].sidecarEdges ).toEqual( [
-			'M924 360 L924 318',
+		// Connectors reaches the request path on a dashed support line, and
+		// its state strip reads above the card so it stays inside the band.
+		expect( context.layout[ 'uses-ai' ].support ).toEqual( [
+			'M908 434 L908 346',
 		] );
-		expect( context.layout[ 'uses-ai' ].sidecarRest ).toEqual( [
-			'M924 332 C954 318 1012 320 1030 308',
+		expect( context.layout[ 'uses-ai' ].place.connectors ).toEqual( [
+			790, 440,
 		] );
+		expect( context.layout[ 'uses-ai' ].strips.connectors ).toEqual( [
+			0, -70,
+		] );
+		expect( context.layout[ 'uses-ai' ].shelfY ).toBe( 640 );
+		expect( context.shelfX ).toEqual( [ 236, 414, 592, 770, 948, 1126 ] );
 		expect( context.layout[ 'uses-ai' ].rest ).toEqual( [
 			'M504 234 L556 234',
-			'M792 234 C810 234 806 384 824 384',
-			'M1024 384 C1080 384 1094 390 1150 390',
+			'M792 234 C818 234 818 406 840 406',
+			'M1024 406 C1080 406 1094 390 1146 390',
 		] );
 
 		const [ connectorsX, connectorsY ] = context.neutral.connectors;
@@ -355,9 +423,9 @@ describe( 'Core AI map render contract', () => {
 		};
 		const providerPluginRect = {
 			left: providerPluginX,
-			right: providerPluginX + 200,
+			right: providerPluginX + 180,
 			top: providerPluginY,
-			bottom: providerPluginY + 104,
+			bottom: providerPluginY + 148,
 		};
 		expect(
 			providerPluginRect.right <= connectorsRect.left ||
@@ -389,14 +457,34 @@ describe( 'Core AI map render contract', () => {
 			agent: 2,
 			task: 3,
 		} );
-		expect( context.layout.learns.place.agent ).toEqual( [ 24, 320 ] );
-		expect( context.layout.learns.place.task ).toEqual( [ 24, 490 ] );
-		expect( context.neutral.agent ).toEqual( [ 24, 376 ] );
-		expect( context.neutral.task ).toEqual( [ 24, 508 ] );
+		expect( context.layout.learns.place.agent ).toEqual( [ 24, 300 ] );
+		expect( context.layout.learns.place.task ).toEqual( [ 24, 462 ] );
+		expect( context.neutral.agent ).toEqual( [ 24, 360 ] );
+		expect( context.neutral.task ).toEqual( [ 24, 480 ] );
+		// The third step ends against the boundary rather than crossing it.
 		expect( context.layout.learns.edges ).toEqual( [
-			'M114 276 L114 314',
-			'M114 446 L114 484',
+			'M114 262 L114 296',
+			'M114 424 L114 458',
+			'M204 522 L228 522',
 		] );
+		expect( context.layout.learns.gate ).toBe( true );
+		expect( context.layout.learns.next ).toBe( 'tests' );
+		// The components the guidance is about stay on the canvas, quiet.
+		expect( context.layout.learns.quiet ).toEqual( [
+			'abilities',
+			'client',
+			'mcp',
+		] );
+		expect( context.layout.learns.park ).toEqual( [
+			'plugin',
+			'connectors',
+			'bench',
+		] );
+		expect( context.layout.learns.support ).toHaveLength( 3 );
+		expect( context.layout.tests.shelfXs ).toEqual( [
+			236, 394, 552, 710, 868,
+		] );
+		expect( context.layout.tests.shelfK ).toBe( 0.64 );
 		expect( context.previews[ 2 ].at ).toMatchObject( {
 			skills: [ 36, 150 ],
 			agent: [ 36, 272 ],
@@ -433,16 +521,16 @@ describe( 'Core AI map render contract', () => {
 		expect( markup ).not.toContain( 'Open adapter' );
 		expect(
 			markup.match( /WordPress plugin · not in Core/g )
-		).toHaveLength( 2 );
+		).toHaveLength( 3 );
 		expect( markup ).toContain( 'WP-Bench' );
 		expect( markup ).toContain( 'Evidence, not vibes.' );
 		expect( markup ).toContain(
-			'Nothing is on by default: you enable one experiment at a time.'
+			'a site owner switches AI on, then enables one experiment at a time.'
 		);
 		expect( markup ).not.toContain( 'Evidence, not a leaderboard.' );
 		expect( markup ).not.toContain( 'Every feature is opt-in' );
 		expect( markup ).not.toContain( 'ships 19 August' );
-		expect( markup ).not.toContain( 'One flag, every client' );
+		expect( markup ).toContain( 'One flag, every client. New in 7.1.' );
 	} );
 
 	it( 'migrates untouched pre-booth v3.1.1 copy on the server', () => {
@@ -478,15 +566,19 @@ describe( 'Core AI map render contract', () => {
 		const markup = renderLegacyMarkup( 'connector-accuracy' );
 
 		// The JavaScript prompt API exists on 7.0; it is gated, not absent.
-		expect( markup ).toContain( 'administrator-gated' );
-		expect( markup ).not.toContain( 'Core’s client is PHP only' );
+		expect( markup ).toContain( 'administrator-only' );
+		expect( markup ).not.toContain( 'administrator-gated' );
 
-		// Speech and video are modalities; JSON is an output shape.
-		expect( markup ).toContain( 'Text, image, speech or video request' );
+		// The chain names the route, not a list of modalities.
+		expect( markup ).toContain( 'Capability request' );
+		expect( markup ).toContain( 'Model resolution' );
+		expect( markup ).not.toContain(
+			'Text, image, speech or video request'
+		);
 		expect( markup ).not.toContain( 'Text, image or JSON request' );
 
 		// Keys resolve env → constant → database, unencrypted by default.
-		expect( markup ).toContain( 'environment variable first' );
+		expect( markup ).toContain( 'an environment variable is read first' );
 		expect( markup ).toContain( 'unencrypted by default' );
 		expect( markup ).toContain( 'credentials Connectors resolved' );
 		expect( markup ).not.toContain( 'using the stored credentials' );
@@ -514,9 +606,35 @@ describe( 'Core AI map render contract', () => {
 		);
 	} );
 
+	it( 'migrates only the exact former AI uses WordPress defaults', () => {
+		const migrated = renderLegacyMarkup( 'uses-wp-v324' );
+
+		expect( migrated ).toContain(
+			'A person asks an outside assistant to check which booking times are available on this WordPress site.'
+		);
+		expect( migrated ).toContain( 'bookings/get-availability' );
+		expect( migrated ).toContain(
+			'The MCP Adapter is a WordPress plugin, not part of Core.'
+		);
+		expect( migrated ).toContain(
+			'The Abilities API is the Core execution contract.'
+		);
+		expect( migrated ).not.toContain(
+			'An assistant requests a WordPress action'
+		);
+
+		const custom = renderLegacyMarkup( 'uses-wp-custom' );
+		expect( custom ).toContain( 'Custom inbound story.' );
+		expect( custom ).toContain( 'Custom inbound situation.' );
+		expect( custom ).toContain( 'Custom inbound takeaway.' );
+		expect( custom ).toContain( 'Custom inbound outcome' );
+		expect( custom ).toContain( 'Custom assistant lesson.' );
+	} );
+
 	it( 'keeps the WP-Bench process cues and complete evidence rationale', () => {
 		const container = document.createElement( 'div' );
 		container.innerHTML = renderLegacyMarkup();
+		const bench = container.querySelector( '.core-ai-map__bench' );
 
 		const stageSteps = ( stage ) =>
 			Array.from(
@@ -535,6 +653,33 @@ describe( 'Core AI map render contract', () => {
 			'every assertion',
 			'pass',
 		] );
+		expect( bench.hasAttribute( 'data-core-ai-initial-stage' ) ).toBe(
+			false
+		);
+		expect(
+			bench
+				.querySelector( '[data-core-ai-stage="task"]' )
+				.getAttribute( 'aria-pressed' )
+		).toBe( 'true' );
+		expect(
+			bench.querySelector( '[id$="-bench-panel-task"]' ).hidden
+		).toBe( false );
+		expect(
+			bench.querySelector( '.core-ai-map__bench-previous' ).textContent
+		).toContain( 'Previous' );
+		expect(
+			bench.querySelector( '.core-ai-map__bench-next' ).textContent
+		).toContain( 'Next' );
+		expect(
+			bench
+				.querySelector( '.core-ai-map__bench-previous' )
+				.getAttribute( 'data-wp-on--click' )
+		).toBe( 'actions.selectPreviousBenchStage' );
+		expect(
+			bench
+				.querySelector( '.core-ai-map__bench-next' )
+				.getAttribute( 'data-wp-on--click' )
+		).toBe( 'actions.selectNextBenchStage' );
 
 		const evidence = container.querySelector(
 			'[id$="-bench-panel-evidence"]'
@@ -587,9 +732,47 @@ describe( 'Core AI map render contract', () => {
 		expect( dialog.textContent ).toContain(
 			'Final work was human-reviewed and tested; the human contributor remains responsible for it.'
 		);
+		expect( dialog.textContent ).toContain(
+			'official WordPress Core AI artifact'
+		);
+		expect( dialog.textContent ).toContain(
+			'dynamic, server-rendered WordPress block'
+		);
+		const feedback = dialog.querySelector( '.core-ai-map__feedback' );
+		expect( feedback ).not.toBeNull();
+		expect( feedback.querySelector( 'img' ).src ).toContain(
+			'assets/qr/feedback.svg'
+		);
+		expect(
+			feedback.querySelector( '.core-ai-map__feedback-url' ).textContent
+		).toContain( 'https://docs.google.com/forms/' );
+		expect(
+			container.querySelector(
+				'.core-ai-map__attract + .core-ai-map__feedback'
+			)
+		).toBeNull();
 		expect(
 			dialog.querySelector( '.core-ai-map__about-reviewed' ).textContent
 		).toBe( 'Reviewed 14 Aug 2026' );
+	} );
+
+	it( 'keeps component details location-aware without overpromising depth', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup();
+		const details = container.querySelector( '.core-ai-map__details' );
+		const abilities = container.querySelector( '[id$="-panel-abilities"]' );
+		const assistant = container.querySelector( '[id$="-panel-assistant"]' );
+
+		expect( details.getAttribute( 'aria-label' ) ).toBe(
+			'Component details'
+		);
+		expect(
+			abilities.querySelector( '.core-ai-map__details-continuation' )
+				.textContent
+		).toContain( 'More details below' );
+		expect(
+			assistant.querySelector( '.core-ai-map__details-continuation' )
+		).toBeNull();
 	} );
 
 	it( 'keeps the About trigger in the colophon rather than the top bar', () => {
@@ -606,6 +789,84 @@ describe( 'Core AI map render contract', () => {
 		expect(
 			container.querySelector( '.core-ai-map__brand small' )
 		).toBeNull();
+	} );
+
+	it( 'gates enhancement controls and renders recovery before hydration', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup( 'current' );
+		for ( const selector of [
+			'.core-ai-map__prompt',
+			'.core-ai-map__attract-browse',
+			'.core-ai-map__about-trigger',
+		] ) {
+			const control = container.querySelector( selector );
+			expect( control.disabled ).toBe( true );
+			expect( control.getAttribute( 'data-wp-bind--disabled' ) ).toBe(
+				'state.isNotReady'
+			);
+		}
+
+		const readiness = container.querySelector( '.core-ai-map__readiness' );
+		expect( readiness.getAttribute( 'data-wp-bind--hidden' ) ).toBe(
+			'state.isReady'
+		);
+		expect( readiness.textContent ).toContain( 'Starting interactive map' );
+		expect( readiness.querySelector( 'a' ).textContent ).toBe(
+			'Reload this page'
+		);
+		expect( readiness.querySelector( 'a' ).href ).toBe(
+			'https://example.test/kiosk/'
+		);
+	} );
+
+	it( 'exposes operational status without adding another persistent float', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup( 'current' );
+		const about = container.querySelector( '.core-ai-map__about' );
+		const warning = container.querySelector(
+			'.core-ai-map__reset-warning'
+		);
+
+		expect(
+			container.querySelector( '.core-ai-map__offline' ).textContent
+		).toContain( 'Offline · exhibit still works' );
+		expect( about.textContent ).toContain( 'Offline cache:' );
+		expect( about.textContent ).toContain( 'Screen wake lock:' );
+		expect(
+			about.querySelector( '[data-wp-text="state.offlineCacheStatus"]' )
+		).not.toBeNull();
+		expect( warning.hidden ).toBe( true );
+		expect( warning.getAttribute( 'role' ) ).toBe( 'status' );
+		expect( warning.textContent ).toContain(
+			'Returning to welcome in 10 seconds'
+		);
+		expect(
+			warning
+				.querySelector( 'button' )
+				.getAttribute( 'data-wp-on--click' )
+		).toBe( 'actions.keepExploring' );
+		expect(
+			container.querySelectorAll( '.core-ai-map__feedback' )
+		).toHaveLength( 1 );
+	} );
+
+	it( 'seeds every hydrated action and operational label from PHP', () => {
+		const context = renderDefaultContext();
+
+		expect( context.labels ).toMatchObject( {
+			applyLabel: 'Apply',
+			appliedLabel: 'Applied',
+			benchProgress: 'Stage %1$s of %2$s',
+			offlinePreparing: 'Preparing',
+			offlineNotEnabled: 'Not enabled',
+			offlineReady: 'Ready',
+			offlineUnavailable: 'Unavailable',
+			wakeLockChecking: 'Checking',
+			wakeLockNotSupported: 'Not supported',
+			wakeLockPaused: 'Paused',
+			wakeLockActive: 'Active',
+			wakeLockUnavailable: 'Unavailable',
+		} );
 	} );
 
 	it( 'gives every participant in every flow a role to explain', () => {
@@ -669,18 +930,18 @@ describe( 'Core AI map render contract', () => {
 		expect( Object.values( context.storySituations ) ).toEqual(
 			expect.arrayContaining( [
 				'A feature inside WordPress needs an AI-generated result.',
-				'An outside assistant asks WordPress to perform an allowed action.',
+				'A person asks an outside assistant to check which booking times are available on this WordPress site.',
 			] )
 		);
 		expect( context.storyOutcomes ).toEqual( {
 			'uses-ai': 'WordPress requests an AI result',
-			'uses-wp': 'An assistant requests a WordPress action',
+			'uses-wp': 'An assistant checks booking availability in WordPress',
 			learns: 'A coding agent receives WordPress guidance',
 			tests: 'WordPress evaluates generated code',
 		} );
 
 		expect( context.storySteps ).toEqual( {
-			'uses-ai': '1 → 2 → 3',
+			'uses-ai': '1 → 2 → 3 → 4',
 			'uses-wp': '1 → 2 → 3',
 			learns: '1 → 2 → 3',
 			tests: '1 → 2',
@@ -911,12 +1172,9 @@ describe( 'Core AI map render contract', () => {
 				instruction: item.querySelector( 'strong' ).textContent,
 			} ) )
 		).toEqual( [
-			{ number: '1', instruction: 'Choose a flow' },
-			{ number: '2', instruction: 'Follow the numbered path' },
-			{
-				number: '3',
-				instruction: 'Tap a highlighted component to see its role',
-			},
+			{ number: '1', instruction: 'Start with one flow' },
+			{ number: '2', instruction: 'Follow its numbered path' },
+			{ number: '3', instruction: 'Open a highlighted component' },
 		] );
 		expect(
 			Array.from(
@@ -924,17 +1182,106 @@ describe( 'Core AI map render contract', () => {
 			).map( ( item ) => item.textContent.replace( /\s+/g, ' ' ).trim() )
 		).toEqual( [
 			'Solid arrow: active request or work',
-			'Dashed line: configuration or supporting information',
+			'Dashed line: configuration or reference',
 			'Dimmed component: not part of this flow',
 		] );
 		expect(
 			welcome.querySelector( '.core-ai-map__prompt' ).textContent
-		).toContain( 'Explore the first flow' );
+		).toContain( 'Start with WordPress uses AI' );
 		expect(
 			welcome
 				.querySelector( '.core-ai-map__attract-browse' )
 				.textContent.trim()
 		).toBe( 'Browse all components' );
+		const reducedMotionFlows = welcome.querySelector(
+			'.core-ai-map__reduced-motion-flows'
+		);
+		expect( reducedMotionFlows ).not.toBeNull();
+		expect(
+			Array.from( reducedMotionFlows.querySelectorAll( 'li' ) ).map(
+				( item ) => item.textContent.trim()
+			)
+		).toEqual( [
+			'WordPress uses AI',
+			'AI uses WordPress',
+			'An agent learns WordPress',
+			'WordPress tests the result',
+		] );
+		expect( styleSource ).toMatch(
+			/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.core-ai-map__reduced-motion-flows\s*\{[\s\S]*?display:\s*flex/
+		);
+	} );
+
+	it( 'makes the neutral map teach one location and status taxonomy', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup( 'current' );
+		const canvas = container.querySelector( '.core-ai-map__canvas' );
+		const cards = Array.from(
+			canvas.querySelectorAll(
+				':scope > .core-ai-map__actor, :scope > .core-ai-map__block, :scope > .core-ai-map__provider-plugin'
+			)
+		).map( ( card ) => JSON.parse( card.dataset.testContext ).cardId );
+
+		expect( canvas.textContent ).toContain( 'Outside WordPress' );
+		expect( canvas.textContent ).toContain( 'WordPress boundary' );
+		expect( canvas.textContent ).toContain(
+			'Evaluation · separate from live requests'
+		);
+		expect( cards ).toEqual( [
+			'assistant',
+			'skills',
+			'agent',
+			'task',
+			'mcp',
+			'plugin',
+			'client',
+			'provider-plugin',
+			'provider',
+			'connectors',
+			'abilities',
+			'bench',
+		] );
+
+		const expected = {
+			abilities: [ 'Inside WordPress', 'WordPress Core API · since 6.9' ],
+			client: [ 'Inside WordPress', 'WordPress Core API · since 7.0' ],
+			connectors: [
+				'Inside WordPress',
+				'WordPress Core API · since 7.0',
+			],
+			plugin: [ 'Inside WordPress', 'Experimental plugin · not in Core' ],
+			mcp: [ 'WordPress boundary', 'WordPress plugin · not in Core' ],
+			bench: [
+				'Evaluation · separate from live requests',
+				'Core AI project · not in Core',
+			],
+			skills: [ 'Outside WordPress', 'Core AI project · not in Core' ],
+			assistant: [
+				'Outside WordPress',
+				'External assistant · not WordPress',
+			],
+			agent: [
+				'Outside WordPress',
+				'External coding agent · not WordPress',
+			],
+			provider: [
+				'Outside WordPress',
+				'External AI service · not WordPress',
+			],
+			task: [ 'Outside WordPress', 'Code artifact · not installed' ],
+			'provider-plugin': [
+				'Inside WordPress',
+				'Provider plugin · not in Core',
+			],
+		};
+		for ( const [ id, values ] of Object.entries( expected ) ) {
+			const rows = Array.from(
+				container.querySelectorAll(
+					`[id$="-panel-${ id }"] .core-ai-map__details-meta dd`
+				)
+			).map( ( row ) => row.textContent.trim() );
+			expect( rows ).toEqual( values );
+		}
 	} );
 
 	it( 'labels the flow controls and premises in the open', () => {
@@ -965,7 +1312,7 @@ describe( 'Core AI map render contract', () => {
 			).map( ( outcome ) => outcome.textContent.trim() )
 		).toEqual( [
 			'WordPress requests an AI result',
-			'An assistant requests a WordPress action',
+			'An assistant checks booking availability in WordPress',
 			'A coding agent receives WordPress guidance',
 			'WordPress evaluates generated code',
 		] );
@@ -990,5 +1337,104 @@ describe( 'Core AI map render contract', () => {
 				'state.isTakeawayHidden'
 			);
 		}
+	} );
+
+	it( 'shows the complete AI uses WordPress transaction and optional walkthrough', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup( 'current' );
+
+		expect(
+			Array.from(
+				container.querySelectorAll( '.core-ai-map__token' )
+			).map( ( token ) => token.textContent.trim() )
+		).toEqual( [
+			'MCP call',
+			'Get availability',
+			'Available times or refusal',
+		] );
+
+		const expected = {
+			assistant: {
+				progress: 'Step 1 of 3',
+				action: 'Next: how the MCP Adapter translates it',
+				nextCardId: 'mcp',
+			},
+			mcp: {
+				progress: 'Step 2 of 3',
+				action: 'Next: where WordPress checks permission',
+				nextCardId: 'abilities',
+			},
+			abilities: {
+				progress: 'Step 3 of 3',
+				action: 'Return to AI uses WordPress',
+				nextCardId: undefined,
+			},
+		};
+
+		for ( const [ panelId, contract ] of Object.entries( expected ) ) {
+			const panel = container.querySelector(
+				`#core-ai-map-test-panel-${ panelId }`
+			);
+			const flowContext = Array.from(
+				panel.querySelectorAll( '.core-ai-map__details-context' )
+			).find(
+				( item ) =>
+					JSON.parse( item.dataset.testContext ).storyId === 'uses-wp'
+			);
+			const action = flowContext.querySelector(
+				'.core-ai-map__details-next'
+			);
+			const localContext = JSON.parse( flowContext.dataset.testContext );
+
+			expect(
+				flowContext
+					.querySelector( '.core-ai-map__details-progress' )
+					.textContent.trim()
+			).toBe( contract.progress );
+			expect( action.textContent.trim() ).toBe( contract.action );
+			expect( localContext.nextCardId ).toBe( contract.nextCardId );
+			expect( action.getAttribute( 'data-wp-on--click' ) ).toBe(
+				panelId === 'abilities'
+					? 'actions.closeInspect'
+					: 'actions.inspectNextCard'
+			);
+		}
+
+		const firstStoryHandoff = Array.from(
+			container.querySelectorAll( '.core-ai-map__story-flow' )
+		).find(
+			( flow ) =>
+				JSON.parse( flow.dataset.testContext ).storyId === 'uses-ai'
+		);
+		expect(
+			firstStoryHandoff.querySelector( '.core-ai-map__story-next' )
+				.textContent
+		).toContain( 'Now see AI use WordPress' );
+	} );
+
+	it( 'keeps the transaction result and walkthrough controls legible with or without motion', () => {
+		expect( styleSource ).toContain(
+			'animation: core-ai-map-token-result 2.8s'
+		);
+		expect( styleSource ).toContain(
+			'@keyframes core-ai-map-token-result'
+		);
+		expect( styleSource ).toMatch(
+			/&__token[\s\S]*&--result\s*\{[\s\S]*Available times or refusal|&__token[\s\S]*&--result\s*\{/
+		);
+		expect( styleSource ).toContain( '&__details-next {' );
+
+		const reducedMotion = styleSource.slice(
+			styleSource.indexOf( '@media (prefers-reduced-motion: reduce)' )
+		);
+		expect( reducedMotion ).toMatch(
+			/\.core-ai-map__token--call[\s\S]*opacity:\s*1/
+		);
+		expect( reducedMotion ).toMatch(
+			/\.core-ai-map__token--ability[\s\S]*opacity:\s*1/
+		);
+		expect( reducedMotion ).toMatch(
+			/\.core-ai-map__token--result[\s\S]*opacity:\s*1/
+		);
 	} );
 } );

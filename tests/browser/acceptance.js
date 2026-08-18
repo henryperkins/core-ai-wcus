@@ -339,7 +339,7 @@ async ( page ) => {
 	assertCardGeometry( attractGeometry, 'Attract composition' );
 
 	await page
-		.getByRole( 'button', { name: 'Explore the first flow' } )
+		.getByRole( 'button', { name: 'Start with WordPress uses AI' } )
 		.click();
 	await page.waitForTimeout( 120 );
 	assert(
@@ -877,7 +877,10 @@ async ( page ) => {
 	);
 	await storyButtons.nth( 0 ).click();
 	await page.waitForTimeout( 800 );
-	await assertNumberedTabOrder( [ '1', '2', '3' ], 'WordPress uses AI' );
+	await assertNumberedTabOrder(
+		[ '1', '2', '3', '4' ],
+		'WordPress uses AI'
+	);
 	const storyOne = await page.evaluate( () => {
 		const bounds = ( selector ) =>
 			document.querySelector( selector ).getBoundingClientRect().toJSON();
@@ -919,8 +922,8 @@ async ( page ) => {
 	} );
 	observations.storyOne = storyOne;
 	assert(
-		storyOne.steps.join( ',' ) === '1,2,3,,',
-		'Story 01 did not number only Plugin -> Client -> provider plugin.'
+		storyOne.steps.join( ',' ) === '1,2,3,,4',
+		'Story 01 did not number Plugin -> Client -> provider plugin -> service.'
 	);
 	assert(
 		storyOne.providerPlugin.right <= 1030 &&
@@ -952,21 +955,77 @@ async ( page ) => {
 			'.core-ai-map__provider-plugin-body'
 		);
 		return {
+			hidden: wrapper.hidden,
 			disabled: button.disabled,
-			opacity: getComputedStyle( wrapper ).opacity,
 			cueHidden: button.querySelector( '.core-ai-map__tap-cue' ).hidden,
 		};
 	} );
 	observations.offFlowProviderPlugin = offFlowProviderPlugin;
 	assert(
-		offFlowProviderPlugin.disabled &&
-			offFlowProviderPlugin.opacity === '0.4' &&
+		offFlowProviderPlugin.hidden &&
+			offFlowProviderPlugin.disabled &&
 			offFlowProviderPlugin.cueHidden,
-		`Off-flow provider plugin was not fully dimmed and inert: ${ JSON.stringify( offFlowProviderPlugin ) }`
+		`Off-flow provider plugin was still on the canvas: ${ JSON.stringify( offFlowProviderPlugin ) }`
 	);
 	const storyTwoGeometry = await measureCardGeometry();
 	observations.storyTwoGeometry = storyTwoGeometry;
 	assertCardGeometry( storyTwoGeometry, 'Story 02' );
+
+	await page
+		.locator( '.core-ai-map__actor--assistant .core-ai-map__actor-body' )
+		.click();
+	await page.waitForTimeout( 120 );
+	const walkthroughSteps = [];
+	for ( const actionName of [
+		'Next: how the MCP Adapter translates it',
+		'Next: where WordPress checks permission',
+	] ) {
+		walkthroughSteps.push(
+			await page
+				.locator( '.core-ai-map__details-context:not([hidden])' )
+				.locator( '.core-ai-map__details-progress' )
+				.textContent()
+		);
+		await page.getByRole( 'button', { name: actionName } ).click();
+		await page.waitForTimeout( 120 );
+	}
+	walkthroughSteps.push(
+		await page
+			.locator( '.core-ai-map__details-context:not([hidden])' )
+			.locator( '.core-ai-map__details-progress' )
+			.textContent()
+	);
+	await page
+		.getByRole( 'button', { name: 'Return to AI uses WordPress' } )
+		.click();
+	await page.waitForTimeout( 80 );
+	const walkthroughReturn = await page.evaluate( () => {
+		const map = document.querySelector( '.core-ai-map' );
+		return {
+			steps: [ ...map.querySelectorAll( '.core-ai-map__step' ) ]
+				.map( ( step ) => step.textContent.trim() )
+				.filter( Boolean ),
+			focusedAbilities: map.ownerDocument.activeElement?.closest(
+				'.core-ai-map__block--abilities'
+			)
+				? true
+				: false,
+		};
+	} );
+	observations.storyTwoWalkthrough = {
+		steps: walkthroughSteps,
+		returnState: walkthroughReturn,
+	};
+	assert(
+		walkthroughSteps.map( ( step ) => step?.trim() ).join( ',' ) ===
+			'Step 1 of 3,Step 2 of 3,Step 3 of 3',
+		`AI uses WordPress walkthrough order was wrong: ${ walkthroughSteps.join( ',' ) }`
+	);
+	assert(
+		walkthroughReturn.steps.join( ',' ) === '1,2,3' &&
+			walkthroughReturn.focusedAbilities,
+		'AI uses WordPress walkthrough did not return to its settled flow and final card.'
+	);
 
 	await storyButtons.nth( 2 ).click();
 	await page.waitForTimeout( 800 );
@@ -983,6 +1042,9 @@ async ( page ) => {
 			taskScrollHeight: task.scrollHeight,
 			taskClientHeight: task.clientHeight,
 			parkedCount: parked.length,
+			quietCount: document.querySelectorAll(
+				'.core-ai-map__block.is-quiet'
+			).length,
 			parkedWidths: parked.map(
 				( card ) => card.getBoundingClientRect().width
 			),
@@ -1010,8 +1072,12 @@ async ( page ) => {
 		'WordPress task copy overflowed its actor.'
 	);
 	assert(
-		storyThree.parkedCount === 6,
-		'Story 03 did not park six ecosystem cards.'
+		storyThree.parkedCount === 3,
+		'Story 03 did not park the three components no skill covers.'
+	);
+	assert(
+		storyThree.quietCount === 3,
+		'Story 03 did not keep the three components its guidance covers on the canvas.'
 	);
 	assert(
 		storyThree.parkedWidths.every( ( width ) => width === 176 ),
@@ -1069,10 +1135,10 @@ async ( page ) => {
 		.locator( '.core-ai-map__details-note' )
 		.textContent();
 	assert(
-		abilitiesCopy.includes( 'scheduled for WordPress 7.1 on August 19, 2026' ) &&
-			abilitiesCopy.includes( 'this exhibit runs WordPress 7.0' ) &&
+		abilitiesCopy.includes( 'arrive in WordPress 7.1 on August 19, 2026' ) &&
+			abilitiesCopy.includes( 'runs a 7.1 release candidate' ) &&
 			! abilitiesCopy.includes( 'ships 19' ),
-		'Abilities overview did not use scheduled 7.1 wording and the running 7.0 disclosure.'
+		'Abilities overview did not use shipped 7.1 wording and the release-candidate disclosure.'
 	);
 	await page
 		.locator( '[data-core-ai-abilities-tab="anatomy"]' )
@@ -1081,9 +1147,9 @@ async ( page ) => {
 		.locator( '.core-ai-map__ability-notes' )
 		.textContent();
 	assert(
-		anatomyCopy.includes( 'One public default, per-channel control' ) &&
-			! anatomyCopy.includes( 'One flag, every client' ),
-		'Abilities Anatomy did not explain the per-channel 7.1 control.'
+		anatomyCopy.includes( 'One flag, every client' ) &&
+			! anatomyCopy.includes( 'One public default, per-channel control' ),
+		'Abilities Anatomy did not explain the 7.1 public flag.'
 	);
 	const contrast = await page.evaluate( () => {
 		const luminance = ( color ) => {
@@ -1268,7 +1334,7 @@ async ( page ) => {
 	await page.emulateMedia( { reducedMotion: 'reduce' } );
 	await page.reload( { waitUntil: 'networkidle' } );
 	await page
-		.getByRole( 'button', { name: 'Explore the first flow' } )
+		.getByRole( 'button', { name: 'Start with WordPress uses AI' } )
 		.click();
 	await page.locator( '.core-ai-map__rail button' ).nth( 1 ).click();
 	await page.waitForTimeout( 80 );
@@ -1298,6 +1364,9 @@ async ( page ) => {
 			abilityOpacity: getComputedStyle(
 				document.querySelector( '.core-ai-map__token--ability' )
 			).opacity,
+			resultOpacity: getComputedStyle(
+				document.querySelector( '.core-ai-map__token--result' )
+			).opacity,
 			// The lesson cannot depend on having watched the movement.
 			takeaway: [
 				...document.querySelectorAll( '.core-ai-map__takeaway' ),
@@ -1316,7 +1385,8 @@ async ( page ) => {
 	} );
 	observations.reduced = reduced;
 	assert(
-		reduced.takeaway?.includes( 'does not bypass WordPress' ),
+		reduced.takeaway?.includes( 'not part of Core' ) &&
+			reduced.takeaway?.includes( 'available times' ),
 		`Reduced motion did not state the flow's takeaway: ${ reduced.takeaway }`
 	);
 	assert(
@@ -1332,8 +1402,10 @@ async ( page ) => {
 		'Reduced-motion paths were not settled.'
 	);
 	assert(
-		reduced.callOpacity === '0' && reduced.abilityOpacity === '1',
-		'Reduced-motion token endpoint was incorrect.'
+		reduced.callOpacity === '1' &&
+			reduced.abilityOpacity === '1' &&
+			reduced.resultOpacity === '1',
+		'Reduced-motion transaction did not keep its call, ability, and result visible.'
 	);
 
 	await page.emulateMedia( { reducedMotion: 'no-preference' } );

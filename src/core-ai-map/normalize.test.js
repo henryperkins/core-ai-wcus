@@ -14,10 +14,31 @@ describe( 'editor copy normalization', () => {
 		expect(
 			withCurrentDefault(
 				currentMetadata,
+				'title',
+				'Four ways WordPress and AI meet'
+			)
+		).toBe( 'What is WordPress Core AI?' );
+		expect(
+			withCurrentDefault(
+				currentMetadata,
 				'intro',
 				'Choose a flow, follow the numbered path, then tap a highlighted component to understand its role.'
 			)
 		).toContain( 'set of open building blocks' );
+		expect(
+			withCurrentDefault(
+				currentMetadata,
+				'prompt',
+				'Trace the first flow'
+			)
+		).toBe( 'Start with WordPress uses AI' );
+		expect(
+			withCurrentDefault(
+				currentMetadata,
+				'prompt',
+				'Explore the first flow'
+			)
+		).toBe( 'Start with WordPress uses AI' );
 		expect(
 			withCurrentDefault(
 				currentMetadata,
@@ -89,7 +110,7 @@ describe( 'editor copy normalization', () => {
 			}
 		);
 		expect( stories.find( ( item ) => item.id === 'learns' ).copy ).toBe(
-			'Agent Skills attaches current WordPress guidance to a coding agent, which then starts the task. All of this happens outside the site — nothing inside WordPress runs.'
+			'Agent Skills attaches current WordPress guidance to a coding agent, which writes code for this site. All of this happens outside the site — nothing inside WordPress runs.'
 		);
 		expect( panels.find( ( item ) => item.id === 'bench' ) ).toMatchObject(
 			{
@@ -116,8 +137,9 @@ describe( 'editor copy normalization', () => {
 		);
 
 		expect( actors.find( ( item ) => item.id === 'task' ) ).toMatchObject( {
-			name: 'A WordPress task',
-			tagline: 'Plugin or theme work',
+			name: 'Code for this site',
+			tagline: 'A plugin, block, or ability registration',
+			badge: 'Still outside',
 		} );
 		expect( panels.find( ( item ) => item.id === 'mcp' ) ).toMatchObject( {
 			badge: 'WordPress plugin · not in Core',
@@ -141,6 +163,82 @@ describe( 'editor copy normalization', () => {
 
 		expect( stories.find( ( item ) => item.id === 'tests' ).copy ).toBe(
 			'A custom kiosk explanation.'
+		);
+	} );
+
+	it( 'upgrades only exact former AI uses WordPress story and role defaults', () => {
+		const storyDefaults = currentMetadata.attributes.stories.default;
+		const panelDefaults = currentMetadata.attributes.panels.default;
+		const stories = withCurrentDefaults( currentMetadata, 'stories', [
+			{
+				...storyDefaults.find( ( item ) => item.id === 'uses-wp' ),
+				copy: 'An authorized assistant calls in through the MCP Adapter, which translates the call into a WordPress ability. Permission still belongs to WordPress.',
+				situation:
+					'An outside assistant asks WordPress to perform an allowed action.',
+				takeaway:
+					'The assistant does not bypass WordPress. The MCP Adapter translates the request, and the selected ability still applies WordPress permissions.',
+				outcome: 'An assistant requests a WordPress action',
+			},
+		] );
+		const panels = withCurrentDefaults( currentMetadata, 'panels', [
+			{
+				...panelDefaults.find( ( item ) => item.id === 'assistant' ),
+				roles: {
+					'uses-wp': {
+						receives: 'A person’s instruction, outside WordPress.',
+						does: 'Signs in as the WordPress user it was given credentials for, then issues an MCP tool call.',
+						returns:
+							'Whatever that user is allowed to get back — nothing more.',
+						lesson: 'The assistant is a client, not an authority. It asks; it does not decide.',
+					},
+				},
+			},
+			{
+				...panelDefaults.find( ( item ) => item.id === 'mcp' ),
+				roles: {
+					'uses-wp': {
+						receives:
+							'An MCP tool call from an authorized outside assistant.',
+						does: 'Translates the call into a WordPress ability and hands it to WordPress to run.',
+						returns:
+							'The ability’s typed result, translated back into MCP.',
+						lesson: 'The adapter is a translator at the edge of the site. It does not create the action, and it does not grant the permission.',
+					},
+				},
+			},
+			{
+				...panelDefaults.find( ( item ) => item.id === 'abilities' ),
+				roles: {
+					'uses-wp': {
+						receives:
+							'The translated request, naming the WordPress action and supplying its inputs.',
+						does: 'Validates the inputs, checks whether the current user is allowed to perform the action, then runs its registered callback.',
+						returns: 'A typed result, or a refusal.',
+						lesson: 'Connecting an outside assistant does not give it unrestricted access. WordPress still controls execution.',
+					},
+				},
+			},
+		] );
+
+		expect( stories.find( ( item ) => item.id === 'uses-wp' ) ).toEqual(
+			storyDefaults.find( ( item ) => item.id === 'uses-wp' )
+		);
+		for ( const panelId of [ 'assistant', 'mcp', 'abilities' ] ) {
+			expect(
+				panels.find( ( item ) => item.id === panelId ).roles
+			).toEqual(
+				panelDefaults.find( ( item ) => item.id === panelId ).roles
+			);
+		}
+
+		const custom = withCurrentDefaults( currentMetadata, 'stories', [
+			{
+				id: 'uses-wp',
+				copy: 'Custom inbound explanation.',
+			},
+		] );
+		expect( custom.find( ( item ) => item.id === 'uses-wp' ).copy ).toBe(
+			'Custom inbound explanation.'
 		);
 	} );
 

@@ -38,7 +38,9 @@ answer three questions:
 Four flows carry that lesson:
 
 1. **WordPress uses AI** — a feature inside WordPress needs an AI-generated result.
-2. **AI uses WordPress** — an outside assistant asks WordPress to perform an allowed action.
+2. **AI uses WordPress** — a person asks an outside assistant for available booking
+   times. The MCP Adapter plugin translates the request, and Core's Abilities API
+   validates the input and permission before WordPress returns times or refuses it.
 3. **An agent learns WordPress** — Agent Skills → coding agent → a WordPress task. This
    happens outside the site; nothing inside WordPress runs.
 4. **WordPress tests the result** — code written by an agent is judged by WP-Bench.
@@ -69,11 +71,13 @@ Remaining work is factual accuracy, release gates, and physical device sign-off.
 
 - A landscape, full-screen, touch kiosk. Authored stage is 1366 × 1024. 1024 × 768 is
   a compatibility view, not a fully supported touch layout: the stage scales by 0.7496
-  there, so authored control sizes render at three quarters. See Accessibility &
-  Inclusion for the figures.
-- Attract loop runs assemble → path → signal → caption → release. After the visitor
-  engages, motion settles rather than looping. Sixty seconds of inactivity returns the
-  kiosk to the attract screen.
+  there, so authored control sizes render at three quarters. Phone viewports retain
+  that scale in a two-axis pannable inspection view for map verification; they do not
+  reflow the exhibit. See Accessibility & Inclusion for the figures.
+- Attract loop runs assemble → path → signal → caption → release. Reduced-motion
+  visitors see a settled preview. After engagement, motion settles rather than looping.
+  Sixty seconds of inactivity returns the kiosk to the attract screen after a visible,
+  extendable ten-second warning.
 - Two delivery forms. (a) The plugin installed on a WordPress site, on a full-width
   template at a non-home/root permalink. (b) A browser-executed WordPress Playground
   artifact on Cloudflare Pages — `core-ai-living-block-map.pages.dev` and
@@ -96,10 +100,12 @@ Remaining work is factual accuracy, release gates, and physical device sign-off.
   the operating system's reduced-motion setting; external power, disabled display
   sleep, wired network, no persisted Playground `site-slug`. Agents must not imitate
   it with a local browser.
-- Agent browser work uses the globally configured Browser Run MCP service against a
-  publicly reachable HTTPS URL. It cannot reach localhost or private networks, and no
-  local browser engine may be installed or launched for an agent task. With no preview
-  URL, the correct outcome is to record the blocker and stop the browser portion.
+- Agent browser work uses the OAuth-gated Browser Run MCP service at
+  `https://browser-run-mcp.lfd.workers.dev/mcp` against a publicly reachable HTTPS URL;
+  setup and troubleshooting are documented in `README.md`, and Codex needs a new
+  session after configuration or login. It cannot reach localhost or private networks,
+  and no local browser engine may be installed or launched for an agent task. With no
+  preview URL, the correct outcome is to record the blocker and stop the browser portion.
 
 ## Capabilities and Constraints
 
@@ -109,14 +115,18 @@ Remaining work is factual accuracy, release gates, and physical device sign-off.
   server renderer directly.
 - A component panel answers, in this order: flow-to-component breadcrumb, **Its role
   in this flow** (with the structured Receives / Does / Passes on rows), **Why that
-  matters**, component title and **What it is**, **Under the hood**, **Keep
-  exploring** with canonical link and QR. Actor and transient-layer panels are shorter
-  and carry no fabricated implementation notes or QR codes. With no flow selected, the
-  breadcrumb and role sections stay hidden.
+  matters**, component title, fixed **Where** and **Core status** facts, **What it is**,
+  **Under the hood**, and **Keep exploring** with canonical link and QR. Actor and
+  transient-layer panels are shorter and carry no fabricated implementation notes or
+  QR codes. With no flow selected, the breadcrumb and role sections stay hidden.
+- **AI uses WordPress** consistently follows the illustrative
+  `bookings/get-availability` ability from MCP call to available times or refusal.
+  Its participating panels add an optional Assistant → MCP Adapter → Abilities API
+  sequence with visible progress; Back and Escape remain available throughout.
 - The Abilities API inspector has dedicated tabs. WP-Bench has a five-stage run loop
   from task and sandbox through checks to evidence, and is a test bench rather than a
   live request path. The MCP Adapter is labelled **WordPress plugin · not in Core**.
-- Seven committed canonical QR SVGs with fixed, selectable destinations. There are no
+- Eight committed canonical QR SVGs with fixed, selectable destinations. There are no
   arbitrary editable QR-image or URL fields, by design.
 - Serialized cards, actors, stories, and panels merge with current canonical defaults
   by `id`, so a release can supply new structure to an already-published block.
@@ -162,10 +172,10 @@ Remaining work is factual accuracy, release gates, and physical device sign-off.
 
 ## Evidence on Hand
 
-- Seven canonical destinations, fixed as QR targets and committed under `assets/qr/`:
+- Eight canonical destinations, fixed as QR targets and committed under `assets/qr/`:
   the Abilities API reference, `wp_ai_client_prompt()`, the Connectors API Make post,
   `wordpress.org/plugins/ai`, `WordPress/mcp-adapter`, `WordPress/wp-bench`, and
-  `WordPress/agent-skills`.
+  `WordPress/agent-skills`, plus the Core AI question form shown in About.
 - The WordPress AI speaker guide (make.wordpress.org/ai handbook, last updated
   7 May 2026) is the explanatory framework only — what a project is, why it matters,
   what to demonstrate. It is never a project-status source.
