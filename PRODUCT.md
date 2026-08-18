@@ -71,8 +71,9 @@ Remaining work is factual accuracy, release gates, and physical device sign-off.
 
 - A landscape, full-screen, touch kiosk. Authored stage is 1366 × 1024. 1024 × 768 is
   a compatibility view, not a fully supported touch layout: the stage scales by 0.7496
-  there, so authored control sizes render at three quarters. See Accessibility &
-  Inclusion for the figures.
+  there, so authored control sizes render at three quarters. Phone viewports retain
+  that scale in a two-axis pannable inspection view for map verification; they do not
+  reflow the exhibit. See Accessibility & Inclusion for the figures.
 - Attract loop runs assemble → path → signal → caption → release. Reduced-motion
   visitors see a settled preview. After engagement, motion settles rather than looping.
   Sixty seconds of inactivity returns the kiosk to the attract screen after a visible,
@@ -99,10 +100,12 @@ Remaining work is factual accuracy, release gates, and physical device sign-off.
   the operating system's reduced-motion setting; external power, disabled display
   sleep, wired network, no persisted Playground `site-slug`. Agents must not imitate
   it with a local browser.
-- Agent browser work uses the globally configured Browser Run MCP service against a
-  publicly reachable HTTPS URL. It cannot reach localhost or private networks, and no
-  local browser engine may be installed or launched for an agent task. With no preview
-  URL, the correct outcome is to record the blocker and stop the browser portion.
+- Agent browser work uses the OAuth-gated Browser Run MCP service at
+  `https://browser-run-mcp.lfd.workers.dev/mcp` against a publicly reachable HTTPS URL;
+  setup and troubleshooting are documented in `README.md`, and Codex needs a new
+  session after configuration or login. It cannot reach localhost or private networks,
+  and no local browser engine may be installed or launched for an agent task. With no
+  preview URL, the correct outcome is to record the blocker and stop the browser portion.
 
 ## Capabilities and Constraints
 

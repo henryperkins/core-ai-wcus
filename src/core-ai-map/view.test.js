@@ -362,6 +362,82 @@ describe( 'Core AI Living Block Map', () => {
 		useEffect.mockReset();
 	} );
 
+	it( 'keeps phone inspection mode across portrait and landscape', () => {
+		const effects = [];
+		let viewportWidth = 390;
+		let viewportHeight = 844;
+		Object.defineProperties( root, {
+			clientWidth: {
+				configurable: true,
+				get: () => viewportWidth,
+			},
+			clientHeight: {
+				configurable: true,
+				get: () => viewportHeight,
+			},
+		} );
+		useEffect.mockImplementation( ( callback ) => {
+			effects.push( callback );
+		} );
+
+		mapStore.callbacks.useKiosk();
+		const cleanupKiosk = effects[ 0 ]();
+
+		expect( root.classList ).toContain( 'is-phone-inspection' );
+		expect(
+			Number.parseFloat( root.style.getPropertyValue( '--cai-scale' ) )
+		).toBeCloseTo( 0.7496339677891655, 10 );
+
+		viewportWidth = 844;
+		viewportHeight = 390;
+		window.dispatchEvent( new Event( 'orientationchange' ) );
+
+		expect( root.classList ).toContain( 'is-phone-inspection' );
+		expect(
+			Number.parseFloat( root.style.getPropertyValue( '--cai-scale' ) )
+		).toBeCloseTo( 0.7496339677891655, 10 );
+
+		cleanupKiosk();
+	} );
+
+	it( 'keeps iPad kiosk viewports on the centered fit path', () => {
+		const effects = [];
+		let viewportWidth = 1024;
+		let viewportHeight = 768;
+		Object.defineProperties( root, {
+			clientWidth: {
+				configurable: true,
+				get: () => viewportWidth,
+			},
+			clientHeight: {
+				configurable: true,
+				get: () => viewportHeight,
+			},
+		} );
+		useEffect.mockImplementation( ( callback ) => {
+			effects.push( callback );
+		} );
+
+		mapStore.callbacks.useKiosk();
+		const cleanupKiosk = effects[ 0 ]();
+
+		expect( root.classList ).not.toContain( 'is-phone-inspection' );
+		expect(
+			Number.parseFloat( root.style.getPropertyValue( '--cai-scale' ) )
+		).toBeCloseTo( 0.7496339677891655, 10 );
+
+		viewportWidth = 1366;
+		viewportHeight = 1024;
+		window.dispatchEvent( new Event( 'resize' ) );
+
+		expect( root.classList ).not.toContain( 'is-phone-inspection' );
+		expect(
+			Number.parseFloat( root.style.getPropertyValue( '--cai-scale' ) )
+		).toBe( 1 );
+
+		cleanupKiosk();
+	} );
+
 	it( 'removes covered theme chrome from the accessibility tree while mounted', () => {
 		const effects = [];
 		const themeHeader = document.querySelector( 'body > header' );

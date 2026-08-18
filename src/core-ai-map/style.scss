@@ -38,8 +38,10 @@
  *
  * The map is drawn inside a fixed 1366x1024 stage — the iPad Pro 13" kiosk
  * viewport the design targets — and the stage is scaled to fit whatever
- * viewport it lands in. `--cai-scale` is 1 on the kiosk; `view.js` recomputes
- * it on resize so the geometry below never has to be responsive.
+ * iPad viewport it lands in. `--cai-scale` is 1 on the kiosk; `view.js`
+ * recomputes it on resize so the geometry below never has to be responsive.
+ * Phone-sized viewports hold the 1024px compatibility width and expose that
+ * unchanged stage through a two-axis touch-scroll inspection view.
  *
  * Every size below is authored-space and shrinks with that factor. At the
  * 1024x768 compatibility size the factor is 0.7496, so `min-height: 60px`
@@ -116,6 +118,13 @@ body.core-ai-kiosk-active {
 	-webkit-touch-callout: none;
 	user-select: none;
 
+	&.is-phone-inspection {
+		overflow: auto;
+		overscroll-behavior: contain;
+		touch-action: pan-x pan-y;
+		-webkit-overflow-scrolling: touch;
+	}
+
 	*,
 	*::before,
 	*::after {
@@ -146,6 +155,13 @@ body.core-ai-kiosk-active {
 		overflow: hidden;
 		background: var(--core-ai-canvas);
 		transform: translate(-50%, -50%) scale(var(--cai-scale));
+	}
+
+	&.is-phone-inspection &__stage {
+		top: 0;
+		left: 0;
+		transform: none;
+		zoom: var(--cai-scale);
 	}
 
 	&__grid {

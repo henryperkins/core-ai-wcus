@@ -132,6 +132,10 @@ authored size shrinks by the same factor. At the 1024 x 768 compatibility size
 that factor is 0.7496, and the rendered figures are what a finger actually
 meets:
 
+Phone-sized viewports stop at that compatibility scale and expose the unchanged
+1024 x 768 canvas through two-axis touch scrolling. This is a map-verification
+view, not a mobile reflow; the iPad kiosk fitting behavior is unchanged.
+
 | Control | Authored | Rendered at 1024 x 768 |
 | --- | --- | --- |
 | Story rail buttons | 68 px | 51 px |
@@ -232,27 +236,46 @@ publish an artifact or deploy Pages; manual publication from a verified
 
 ### Agent-run browser policy
 
-Any agent step that requires a real browser must use the globally configured
-`browser_run` MCP service. If that service is unavailable, stop and ask for
-Codex to be restarted or reloaded. Never install or launch Playwright,
-Puppeteer, Selenium, Cypress, Chrome, Chromium, Edge, Firefox, WebKit, or
-`headless_shell` locally for an agent-run browser task.
+Any agent step that requires a real browser must use the OAuth-gated
+`browser_run` MCP service at
+`https://browser-run-mcp.lfd.workers.dev/mcp`. Its source and deployment notes
+live in [browser-run-mcp](https://github.com/henryperkins/browser-run-mcp).
+Configure and authenticate it once with:
 
-Use `quick_*` for one-page rendering, accessibility output, screenshots, PDFs,
-Markdown, scraping, JSON, or links; `browser_*` for navigation and multi-step
-interaction; `crawl_*` for multi-page crawling; and `artifact_*` to retrieve
-private evidence. In stateful workflows, use `browser_snapshot` or other
-accessibility output to locate and verify controls, take screenshots only for
-claims that need visual evidence, and call `browser_close` in a final cleanup
-step whether the workflow passes or fails.
+```bash
+curl --fail --silent --show-error https://browser-run-mcp.lfd.workers.dev/health
+codex mcp add browser_run --url https://browser-run-mcp.lfd.workers.dev/mcp
+codex mcp list
+codex mcp get browser_run
+```
+
+The `add` command opens the OAuth page; enter the Browser Run passphrase and
+approve it. If the endpoint is already registered but `codex mcp list` reports
+`Not logged in`, run `codex mcp login browser_run`. Start a new Codex session
+after login because an existing session does not dynamically reload its MCP
+tool catalog. If the service is unavailable, check the health endpoint,
+`codex mcp list`, the configured endpoint, and OAuth before starting another
+new session. If it remains unavailable, record that blocker and stop the
+browser portion. Never install or launch Playwright, Puppeteer, Selenium,
+Cypress, Chrome, Chromium, Edge, Firefox, WebKit, or `headless_shell` locally
+for an agent-run browser task.
+
+Use `qa_markdown`, `qa_accessibility_tree`, `qa_screenshot`, `qa_pdf`, or the
+other `qa_*` Quick Actions for one-page work; `browser_*` for navigation and
+multi-step interaction; and `qa_crawl_start`, `qa_crawl_results`, and
+`qa_crawl_cancel` for multi-page crawling. In stateful workflows, use
+`browser_snapshot` or other accessibility output to locate and verify controls,
+take screenshots only for claims that need visual evidence, and call
+`browser_close` in a final cleanup step whether the workflow passes or fails.
 
 Browser Run cannot reach localhost or private-network URLs. An agent browser
 gate therefore requires a publicly reachable HTTPS preview of the exact
 artifact under test. If no preview URL exists, record that single blocker and
 stop the browser portion; do not fall back to a locally served artifact or a
-local browser. Browser Run evidence is private for 14 days. Record returned run
-IDs and artifact references in the release evidence, but do not commit
-screenshot/PDF bodies or credentials.
+local browser. Quick Action screenshots and PDFs may be returned inline or as
+unguessable `/files/` URLs from the configured R2 store; those URLs expire after
+seven days. Record relevant observations and returned evidence URLs in the
+release evidence, but do not commit screenshot/PDF bodies or credentials.
 
 ### Verify the accessible loader with Browser Run
 
@@ -275,9 +298,9 @@ Use one stateful Browser Run workflow against a cache-busted preview URL:
    kiosk loader to be absent and the Playground root to be accessible.
 4. Collect `browser_console_messages` and `browser_network_requests`; reject
    console or page errors, failed requests, and HTTP errors.
-5. Call `browser_close` in the workflow's final cleanup step, then use
-   `artifact_manifest` or `artifact_list`/`artifact_get` to record the run ID
-   and relevant private artifact references.
+5. Call `browser_close` in the workflow's final cleanup step. Record the
+   cache-busted preview URL, timestamp, relevant observations, and any evidence
+   URLs returned directly by screenshot or PDF tools.
 
 Treat the result as `ok: true` only when it satisfies the same approved-copy,
 loader-handoff, and error assertions retained in
@@ -442,9 +465,9 @@ system, touch, foreground-timing, power, or network evidence.
 
 Record the hostname, deployed commit, manifest SHA-256, cold/warm times,
 60-second reset result, reduced-motion result, device/browser versions, and
-operator initials. Append any separate Browser Run run IDs and artifact
-references to the same release record. These physical-device gates cannot be
-replaced by repository automation or Browser Run.
+operator initials. Append any separate Browser Run timestamp, observations, and
+returned evidence URLs to the same release record. These physical-device gates
+cannot be replaced by repository automation or Browser Run.
 
 ## What visitors see
 

@@ -7,6 +7,8 @@ import {
 
 const STAGE_WIDTH = 1366;
 const STAGE_HEIGHT = 1024;
+const PHONE_MAX_SHORT_SIDE = 600;
+const PHONE_INSPECTION_SCALE = 1024 / STAGE_WIDTH;
 const FLOW_SETTLE_DELAY = 2900;
 const ATTRACT_TIMELINE = {
 	drawing: 560,
@@ -1757,11 +1759,27 @@ store( 'core-ai/map', {
 				);
 
 				const fitStage = () => {
-					const scale = Math.min(
-						root.clientWidth / STAGE_WIDTH,
-						root.clientHeight / STAGE_HEIGHT
-					);
+					const viewportWidth = root.clientWidth;
+					const viewportHeight = root.clientHeight;
+					const hasViewport =
+						Number.isFinite( viewportWidth ) &&
+						Number.isFinite( viewportHeight ) &&
+						viewportWidth > 0 &&
+						viewportHeight > 0;
+					if ( ! hasViewport ) {
+						return;
+					}
+					const isPhone =
+						Math.min( viewportWidth, viewportHeight ) <=
+						PHONE_MAX_SHORT_SIDE;
+					const scale = isPhone
+						? PHONE_INSPECTION_SCALE
+						: Math.min(
+								viewportWidth / STAGE_WIDTH,
+								viewportHeight / STAGE_HEIGHT
+						  );
 					if ( Number.isFinite( scale ) && scale > 0 ) {
+						root.classList.toggle( 'is-phone-inspection', isPhone );
 						root.style.setProperty(
 							'--cai-scale',
 							String( scale )

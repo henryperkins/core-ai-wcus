@@ -3,9 +3,10 @@
  * Server-rendered markup for the Core AI Living Block Map.
  *
  * The kiosk is drawn inside a fixed 1366x1024 stage. Every coordinate below is
- * in that space; `style.scss` scales the whole stage to fit the viewport, so
+ * in that space; `style.scss` scales the whole stage to fit iPad viewports, so
  * the geometry stays exact on the target iPad Pro 13" and is uniformly
- * three-quarter size at the 1024x768 compatibility view.
+ * three-quarter size at the 1024x768 compatibility view. Phones inspect that
+ * same compatibility canvas by panning instead of shrinking it further.
  *
  * @var array    $attributes Block attributes.
  * @var string   $content    Saved block content.

@@ -31,7 +31,7 @@ Features include:
 * Offline support limited to a non-root kiosk permalink. Offline mode is disabled on the home/root URL so its worker cannot control unrelated site pages.
 * Existing serialized card, actor, story, and panel arrays merge current canonical defaults by id, while user copy fields remain editable.
 
-The release is reviewed 14 Aug 2026. The authored target is 1366 x 1024 landscape. The stage is scaled to fit the viewport, so authored sizes shrink with it. At 1024 x 768 the factor is 0.7496: story rail buttons authored at 68 logical pixels render at 51, header and panel controls authored at 60 render at 45, nested controls such as Apply render at 33, and the About footnote renders at 25. Every control meets WCAG 2.2 SC 2.5.8 by size at both sizes. Only the Apply control and the About footnote fall below SC 2.5.5 at 1024 x 768; everything else clears it, the 60-pixel class by less than a pixel. Treat 1024 x 768 as a compatibility view, not a fully supported touch layout; physical iPad acceptance remains a separate sign-off.
+The release is reviewed 14 Aug 2026. The authored target is 1366 x 1024 landscape. The stage is scaled to fit iPad viewports, so authored sizes shrink with it. At 1024 x 768 the factor is 0.7496: story rail buttons authored at 68 logical pixels render at 51, header and panel controls authored at 60 render at 45, nested controls such as Apply render at 33, and the About footnote renders at 25. Every control meets WCAG 2.2 SC 2.5.8 by size at both sizes. Only the Apply control and the About footnote fall below SC 2.5.5 at 1024 x 768; everything else clears it, the 60-pixel class by less than a pixel. Treat 1024 x 768 as a compatibility view, not a fully supported touch layout; physical iPad acceptance remains a separate sign-off. Phone viewports retain the compatibility scale in a two-axis pannable inspection view for map verification rather than reflowing the exhibit.
 
 == Installation ==
 
@@ -39,7 +39,7 @@ The release is reviewed 14 Aug 2026. The authored target is 1366 x 1024 landscap
 2. Activate Core AI Living Block Map.
 3. Create a fresh page and choose a blank or full-width theme template.
 4. Insert the Core AI Living Block Map block, set it to full width, and publish a non-home/root permalink.
-5. Verify the published browser experience before any kiosk setup. Agent-run checks use the globally configured Browser Run MCP service against the public HTTPS URL; physical kiosk checks remain a human on-device sign-off.
+5. Verify the published browser experience before any kiosk setup. Agent-run checks use the configured and authenticated Browser Run MCP service against the public HTTPS URL; physical kiosk checks remain a human on-device sign-off.
 
 The plugin ZIP contains the PHP bootstrap, committed build assets, local assets (icons, service worker, fonts, and QR SVGs), and readmes. Node.js is needed only to build from source. Local EB Garamond, IBM Plex Mono, and Inter WOFF2 files include their license texts in `assets/fonts/`.
 
@@ -75,7 +75,7 @@ Before deactivating or deleting the plugin, turn off Offline mode in the block a
 
 = Does local verification prove the iPad kiosk is ready? =
 
-No. Unit tests, lint, and builds prove only local source/package state. Agent-run browser verification uses the globally configured Browser Run MCP service against a publicly reachable HTTPS preview or deployment, never localhost or a locally launched browser. Safari, Add to Home Screen, Guided Access, worker behavior, and physical iPad touch and landscape acceptance require separate human on-device sign-off. This plugin does not claim deployment.
+No. Unit tests, lint, and builds prove only local source/package state. Agent-run browser verification uses a configured and authenticated Browser Run MCP service against a publicly reachable HTTPS preview or deployment, never localhost or a locally launched browser. Safari, Add to Home Screen, Guided Access, worker behavior, and physical iPad touch and landscape acceptance require separate human on-device sign-off. This plugin does not claim deployment.
 
 For every Playground booth deployment, bump all release metadata, use a fingerprinted plugin ZIP URL, compare the deployed ZIP's byte count and SHA-256 with the build manifest on both public hostnames, and clear Cache Storage, OPFS data, and service workers on every booth browser. Then perform foreground cold and warm boots, verify the visible-only 60-second reset and the operating system's reduced-motion mode, disable sleep, prefer wired networking, and prewarm the kiosk. Do not enable a persisted Playground `site-slug`; if the upstream crash dialog recurs after one foreground reload, clear site data and cold-boot again.
 
