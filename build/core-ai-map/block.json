@@ -2,7 +2,7 @@
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "apiVersion": 3,
   "name": "core-ai/core-ai-map",
-  "version": "3.2.4",
+  "version": "3.2.5",
   "title": "Core AI Living Block Map",
   "category": "design",
   "icon": "wordpress",
@@ -23,15 +23,15 @@
     },
     "title": {
       "type": "string",
-      "default": "Four ways WordPress and AI meet"
+      "default": "What is WordPress Core AI?"
     },
     "intro": {
       "type": "string",
-      "default": "Core AI is a set of open building blocks: WordPress can call out to an AI service, and an outside assistant can call into WordPress. No single provider, no single assistant.\n\nEach flow traces one real request end to end, and shows who holds permission at every step. Pick one to begin, then tap any component for its role."
+      "default": "WordPress Core AI is a set of open building blocks that let WordPress use AI services and let outside assistants work with WordPress—without tying either direction to one provider.\n\nBadges show what ships in WordPress Core, what is installed as a plugin or project, and what stays outside WordPress. Choose one flow, follow its numbered path, then open a highlighted component."
     },
     "prompt": {
       "type": "string",
-      "default": "Trace the first flow"
+      "default": "Start with WordPress uses AI"
     },
     "labels": {
       "type": "object",
@@ -39,7 +39,7 @@
         "railEmptyLabel": "Choose a flow",
         "railActiveLabel": "Choose another flow",
         "browseLabel": "Browse all components",
-        "browseDescription": "Every component on one canvas, with no flow selected.",
+        "browseDescription": "Start with AI Client. Compare what ships in Core, what is installed as a plugin or project, and what stays outside WordPress.",
         "takeawayHeading": "What this flow shows",
         "roleHeading": "Its role in this flow",
         "lessonHeading": "Why that matters",
@@ -59,7 +59,7 @@
         "attract": "Choose a flow to begin.",
         "flow": "Follow %1$s. Highlighted components take part in this flow. Tap one to learn what it contributes.",
         "inspect": "You are viewing this component’s role in “%1$s.”",
-        "browse": "Tap any component to learn what it is and where it belongs.",
+        "browse": "Open any component to learn what it is and where it belongs.",
         "cardAction": "%1$s — view its role in “%2$s.”",
         "cardActionStep": "Step %1$s: %2$s — view its role in “%3$s.”",
         "cardQuiet": "%1$s — what “%2$s” is about. Open its details.",
@@ -189,15 +189,16 @@
           "copy": "A plugin asks the AI Client for a capability. The Client routes through a configured provider plugin to an external AI service; Connectors supplies discovery, configuration, and credentials beside the request path.",
           "situation": "A feature inside WordPress needs an AI-generated result.",
           "takeaway": "A WordPress feature uses a common AI interface instead of integrating directly with every provider. Provider configuration supports the request, while the AI service remains outside WordPress.",
-          "outcome": "WordPress requests an AI result"
+          "outcome": "WordPress requests an AI result",
+          "nextLabel": "Now see AI use WordPress"
         },
         {
           "id": "uses-wp",
           "title": "AI uses WordPress",
-          "copy": "An authorized assistant calls in through the MCP Adapter, which translates the call into a WordPress ability. Permission still belongs to WordPress.",
-          "situation": "An outside assistant asks WordPress to perform an allowed action.",
-          "takeaway": "The assistant does not bypass WordPress. The MCP Adapter translates the request, and the selected ability still applies WordPress permissions.",
-          "outcome": "An assistant requests a WordPress action"
+          "copy": "A person asks an outside assistant for available booking times. Acting as a specific WordPress user, the assistant sends an MCP call for the example bookings/get-availability ability. The MCP Adapter plugin translates that call; Core’s Abilities API validates the input, calls the ability’s permission check, and returns available times or a refusal.",
+          "situation": "A person asks an outside assistant to check which booking times are available on this WordPress site.",
+          "takeaway": "The MCP Adapter is a plugin at the WordPress boundary, not part of Core, and only translates. Site or plugin code registers the example bookings/get-availability ability. Core’s Abilities API validates its input and permission before WordPress runs it and returns available times—or returns a refusal.",
+          "outcome": "An assistant checks booking availability in WordPress"
         },
         {
           "id": "learns",
@@ -228,10 +229,10 @@
           "lede": "Abilities are the list of things this site can do. Each one declares its inputs, its outputs, who is allowed to run it, and what happens when it runs.",
           "roles": {
             "uses-wp": {
-              "receives": "The translated request, naming the WordPress action and supplying its inputs.",
-              "does": "Validates the inputs, checks whether the current user is allowed to perform the action, then runs its registered callback.",
-              "returns": "A typed result, or a refusal.",
-              "lesson": "Connecting an outside assistant does not give it unrestricted access. WordPress still controls execution."
+              "receives": "The translated bookings/get-availability request and its date range.",
+              "does": "Validates the input, calls the ability’s permission callback for the current WordPress user, then runs the registered callback when allowed.",
+              "returns": "Available booking times, or a refusal.",
+              "lesson": "The Abilities API is the Core execution contract. Site or plugin code registers this example action and decides who may run it."
             }
           },
           "connectHeading": "How it connects",
@@ -404,10 +405,10 @@
           "lede": "Translation at the edge of the site. It exposes the abilities their authors marked public to authorized outside assistants — as MCP resources and prompts automatically, and as individual tools on a custom server — then translates their calls back into WordPress work. On the default server abilities are reached through three adapter tools rather than listed one by one.",
           "roles": {
             "uses-wp": {
-              "receives": "An MCP tool call from an authorized outside assistant.",
-              "does": "Translates the call into a WordPress ability and hands it to WordPress to run.",
-              "returns": "The ability’s typed result, translated back into MCP.",
-              "lesson": "The adapter is a translator at the edge of the site. It does not create the action, and it does not grant the permission."
+              "receives": "An MCP call asking for the example bookings/get-availability ability.",
+              "does": "Translates the MCP request into a WordPress ability request and hands it to WordPress.",
+              "returns": "The available times or refusal from WordPress, translated back into MCP.",
+              "lesson": "The MCP Adapter is a WordPress plugin, not part of Core. It translates at the boundary; it does not create the ability or grant permission."
             }
           },
           "connectHeading": "How it connects",
@@ -524,10 +525,10 @@
           "lede": "A program outside WordPress — a chat assistant, an editor, an agent — that speaks MCP. It holds no privileges of its own: it signs in as a WordPress user it was given credentials for, and never reaches further than that user can.",
           "roles": {
             "uses-wp": {
-              "receives": "A person’s instruction, outside WordPress.",
-              "does": "Signs in as the WordPress user it was given credentials for, then issues an MCP tool call.",
-              "returns": "Whatever that user is allowed to get back — nothing more.",
-              "lesson": "The assistant is a client, not an authority. It asks; it does not decide."
+              "receives": "A person’s request to check available booking times, outside WordPress.",
+              "does": "Acts as a specific WordPress user and sends an MCP call for the example bookings/get-availability ability.",
+              "returns": "The available times WordPress allows that user to receive, or a refusal.",
+              "lesson": "The assistant is an outside client, not an authority. Its WordPress user sets the outer limit, and the ability still checks permission."
             }
           },
           "notes": [

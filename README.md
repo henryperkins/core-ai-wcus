@@ -1,10 +1,29 @@
 # Core AI Living Block Map
 
-Version and design: **3.2.4**. Core AI Living Block Map is one dynamic,
+Version and design: **3.2.5**. Core AI Living Block Map is one dynamic,
 server-rendered `core-ai/core-ai-map` block for explaining how WordPress and AI
 building blocks fit together on a kiosk. Its server markup is enhanced by the
 WordPress Interactivity API. The repository also contains a reproducible,
 self-hosted WordPress Playground artifact for static-hosted demonstrations.
+
+## 3.2.5 release notes
+
+This release reframes welcome around what WordPress Core AI is and teaches the
+Choose → Follow → Open interaction. Browse begins at AI Client, every inspector
+names both location and Core status, and feedback now lives in About beside a
+visible, saveable destination. About also explains the exhibit architecture
+and reports offline-cache and wake-lock state.
+
+WP-Bench begins at stage 01 with Previous/Next navigation, and hydration gates
+initial actions. The reduced-motion preview remains still while a compact list
+keeps all four flows discoverable. Inactivity presents a ten-second extension
+warning before returning to welcome and pauses while About is open.
+
+Hydrated Apply, progress, offline-cache, and wake-lock labels now retain their
+translations. The release also narrows walkthrough focus to real card
+controls, removes obsolete WP-Bench stage metadata, preserves the disabled
+cache state after cleanup failures, strengthens the reset-extension button
+border, and advances the worker cache namespace with the release identity.
 
 ## 3.2.4 release notes
 
@@ -188,7 +207,7 @@ channel's static fallback tree. It validates Cloudflare Pages Free's 20,000-file
 and 25 MiB-per-asset limits, removes upstream Google Fonts and analytics, and
 uses a local Blueprint and plugin ZIP. `npm run plugin-zip` creates the local
 `core-ai-map.zip`; the Pages build copies those exact bytes to the release URL
-`/kiosk-blueprint/core-ai-map-3.2.4.zip`. It also emits a deployment manifest
+`/kiosk-blueprint/core-ai-map-3.2.5.zip`. It also emits a deployment manifest
 with that path, its byte count, and its SHA-256, plus a Pages rewrite that keeps
 the Playground runtime's literal `/remote.html` endpoint from being redirected
 to Cloudflare's extensionless route. The build owns the accessible outer
@@ -280,7 +299,7 @@ $dist = (Resolve-Path -LiteralPath 'dist-playground').Path
 $manifestPath = Join-Path $dist 'deployment-manifest.json'
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $artifactRelative = [string] $manifest.pluginArtifact.path
-$expectedArtifact = 'kiosk-blueprint/core-ai-map-3.2.4.zip'
+$expectedArtifact = 'kiosk-blueprint/core-ai-map-3.2.5.zip'
 
 if ($artifactRelative -ne $expectedArtifact) {
     throw "Expected $expectedArtifact; manifest has $artifactRelative."
@@ -349,13 +368,13 @@ foreach ($hostName in $hosts) {
 
     $remoteBlueprint = Invoke-RestMethod `
         -Uri "$hostName/kiosk-blueprint/blueprint.json?probe=$probe"
-    if ($remoteBlueprint.plugins.Count -ne 1 -or $remoteBlueprint.plugins[0].source -ne './core-ai-map-3.2.4.zip') {
+    if ($remoteBlueprint.plugins.Count -ne 1 -or $remoteBlueprint.plugins[0].source -ne './core-ai-map-3.2.5.zip') {
         throw "Blueprint plugin source mismatch on $hostName."
     }
 
     $originName = ([Uri] $hostName).Host
     $downloadPath = [IO.Path]::GetFullPath(
-        (Join-Path ([IO.Path]::GetTempPath()) "core-ai-map-${originName}-3.2.4-${PID}.zip")
+        (Join-Path ([IO.Path]::GetTempPath()) "core-ai-map-${originName}-3.2.5-${PID}.zip")
     )
     if (Test-Path -LiteralPath $downloadPath) {
         throw "Refusing to overwrite existing verification file: $downloadPath"
@@ -448,6 +467,14 @@ AI Client and a provider plugin to an external AI service. Connectors appears
 beside that path as the site-owner surface for provider discovery,
 configuration, and credentials; it is not presented as the request executor.
 
+“AI uses WordPress” follows one illustrative booking-availability request: an
+outside assistant acts as a WordPress user, the MCP Adapter plugin translates the
+call to `bookings/get-availability`, and Core's Abilities API validates input and
+permission before returning available times or a refusal. The booking action is
+registered by site or plugin code; it is not supplied by Core. Its three
+participating inspectors can be followed as an optional assistant → adapter → Core
+sequence.
+
 The **Abilities API** inspector includes its dedicated tabs. **WP-Bench** has a
 five-stage run loop that follows the work from task and sandbox through checks
 to evidence; it is a test bench, not a live request path. The MCP Adapter is
@@ -459,9 +486,9 @@ card.
 
 ## Canonical QR destinations
 
-Seven committed SVG QR assets live under `assets/qr/`; they are generated
-locally and their destinations are fixed, selectable text in the inspector.
-There are no arbitrary editable QR-image or URL fields.
+Eight committed SVG QR assets live under `assets/qr/`; they are generated
+locally and their destinations are fixed, selectable text in the inspector or
+About. There are no arbitrary editable QR-image or URL fields.
 
 - Abilities: <https://developer.wordpress.org/apis/abilities-api/>
 - AI Client: <https://developer.wordpress.org/reference/functions/wp_ai_client_prompt/>
@@ -470,6 +497,7 @@ There are no arbitrary editable QR-image or URL fields.
 - MCP Adapter: <https://github.com/WordPress/mcp-adapter>
 - WP-Bench: <https://github.com/WordPress/wp-bench>
 - Agent Skills: <https://github.com/WordPress/agent-skills>
+- Questions: <https://docs.google.com/forms/d/e/1FAIpQLSfs2LeNn7M_L66d57sXLnD1bAh28vgEoQfTx90AYkuFsVT4gA/viewform>
 
 For existing serialized blocks, canonical cards, actors, stories, and panels
 are merged with the current defaults by `id`, so this release can supply its
@@ -507,7 +535,7 @@ npm run build
 npm run plugin-zip
 ```
 
-`npm run generate:qr` deterministically refreshes the seven committed local
+`npm run generate:qr` deterministically refreshes the eight committed local
 SVGs. `build/` remains committed so the ZIP is installable without a build step.
 
 Local unit, lint, and build results prove local source and package state only.

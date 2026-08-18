@@ -4,7 +4,7 @@ Tags: core-ai, kiosk, interactive
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.2.4
+Stable tag: 3.2.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,19 +12,22 @@ One dynamic, server-rendered WordPress block that explains the building blocks c
 
 == Description ==
 
-Core AI Living Block Map 3.2.4 provides one full-width `core-ai/core-ai-map` block. Server markup is enhanced with the WordPress Interactivity API.
+Core AI Living Block Map 3.2.5 provides one full-width `core-ai/core-ai-map` block. Server markup is enhanced with the WordPress Interactivity API.
 
 The attract workflow uses assemble, path, signal, caption, and release phases. After engagement, motion settles; reduced-motion users retain the same story, path, state, and caption information.
 
 Features include:
 
-* Four stories: WordPress uses AI; AI uses WordPress; Agent Skills -> Coding agent -> A WordPress task; and WordPress tests the result with WP-Bench.
+* Four stories: WordPress uses AI; AI uses WordPress through a concrete booking-availability request; Agent Skills -> Coding agent -> A WordPress task; and WordPress tests the result with WP-Bench.
 * The WordPress-uses-AI runtime path runs through the AI Client and a provider plugin to an external AI service; Connectors is shown beside it for discovery, configuration, and credentials.
 * The Skills-to-agent-to-task story happens outside the site: nothing inside WordPress runs.
 * Abilities inspector tabs and a WP-Bench five-stage run loop from task and sandbox through checks to evidence.
 * MCP Adapter labelled "WordPress plugin · not in Core".
+* A Core AI orientation that teaches Choose, Follow, and Open; Browse starts with AI Client, and each inspector names location and Core status.
+* About explains the exhibit architecture, keeps the question QR with its visible destination, and reports offline-cache and wake-lock state.
+* WP-Bench starts at stage 01 with Previous and Next navigation; inactivity provides a ten-second extension warning before returning to welcome.
 * Focus management, inert background content while inspecting, Escape to close, and focus restoration.
-* Seven local canonical QR SVGs with fixed, selectable destinations; no arbitrary editable QR-image or URL fields.
+* Eight local canonical QR SVGs with fixed, selectable destinations; no arbitrary editable QR-image or URL fields.
 * Offline support limited to a non-root kiosk permalink. Offline mode is disabled on the home/root URL so its worker cannot control unrelated site pages.
 * Existing serialized card, actor, story, and panel arrays merge current canonical defaults by id, while user copy fields remain editable.
 
@@ -58,9 +61,11 @@ WP-Bench: https://github.com/WordPress/wp-bench
 
 Agent Skills: https://github.com/WordPress/agent-skills
 
+Questions: https://docs.google.com/forms/d/e/1FAIpQLSfs2LeNn7M_L66d57sXLnD1bAh28vgEoQfTx90AYkuFsVT4gA/viewform
+
 = Can I replace a QR code or its URL in the block editor? =
 
-No. The seven committed local QR assets and their canonical destinations are fixed. Visitor-facing copy remains editable where the block allows it.
+No. The eight committed local QR assets and their canonical destinations are fixed. Visitor-facing copy remains editable where the block allows it.
 
 = What does offline mode cover? =
 
@@ -93,6 +98,15 @@ Run these commands when building from source:
 `npm run plugin-zip`
 
 == Changelog ==
+
+= 3.2.5 =
+
+* Reframed welcome around what WordPress Core AI is and the Choose, Follow, Open interaction; Browse begins at AI Client, and every inspector names location and Core status.
+* Moved the question QR and visible destination into About, where the exhibit architecture, offline-cache state, and wake-lock state are also disclosed.
+* Opened WP-Bench at stage 01 with sequential navigation, gated controls until hydration, and added an extendable inactivity warning that pauses while About is open.
+* Kept the reduced-motion preview still while adding a compact static list of all four available flows.
+* Localized hydrated Apply, progress, offline-cache, and wake-lock labels, and kept a disabled cache state intact if service-worker cleanup fails.
+* Narrowed card focus targeting, removed obsolete WP-Bench stage metadata, and strengthened the reset-extension button border.
 
 = 3.2.4 =
 

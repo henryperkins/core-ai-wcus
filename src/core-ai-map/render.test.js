@@ -23,7 +23,7 @@ const worker = fs.readFileSync(
 	'utf8'
 );
 
-describe( 'Living Block Map v3.2.4 server render', () => {
+describe( 'Living Block Map v3.2.5 server render', () => {
 	it( 'renders the provider plugin runtime layer and Connectors sidecar', () => {
 		expect( render ).toContain( 'core-ai-map__provider-plugin' );
 		expect( render ).toContain( 'AI provider plugin' );
@@ -108,6 +108,16 @@ describe( 'Living Block Map v3.2.4 server render', () => {
 		);
 	} );
 
+	it( 'gives the reset-extension button a meaning-carrying border', () => {
+		const resetWarningRule = styles
+			.split( '\n\t&__reset-warning {' )[ 1 ]
+			.split( '\n\t&__' )[ 0 ];
+
+		expect( resetWarningRule ).toMatch(
+			/button\s*\{[\s\S]*?border:\s*1px solid var\(--core-ai-line-strong\)/
+		);
+	} );
+
 	it( 'renders the explicit WordPress task actor in story 03', () => {
 		expect( render ).toMatch( /\$actor_ids[\s\S]*?'task'/ );
 		expect( render ).toMatch( /'learns'[\s\S]*?'task'\s*=>\s*3/ );
@@ -175,7 +185,7 @@ describe( 'Living Block Map v3.2.4 server render', () => {
 	} );
 
 	it( 'names the drawing convention beside the diagram it applies to', () => {
-		expect( render ).toContain( 'Boundary view' );
+		expect( render ).toContain( 'WordPress boundary' );
 		expect( render ).toContain( 'Reading the diagram' );
 		expect( render ).toContain( 'Active request or work' );
 		expect( render ).toContain( 'Configuration or support' );
@@ -199,12 +209,16 @@ describe( 'Living Block Map v3.2.4 server render', () => {
 		);
 	} );
 
-	it( 'gives the welcome screen one destination a visitor can take away', () => {
+	it( 'keeps the Core AI question destination inside About', () => {
 		expect( render ).toContain( 'core-ai-map__feedback' );
 		expect( render ).toContain( 'Have a question?' );
 		expect( render ).toContain( 'assets/qr/feedback.svg' );
+		expect( render ).toContain( 'core-ai-map__feedback-url' );
 		expect( render ).toContain(
 			'QR code for the Core AI question form: %s'
+		);
+		expect( render ).toMatch(
+			/core-ai-map__about-content[\s\S]*core-ai-map__feedback/
 		);
 	} );
 
@@ -269,7 +283,7 @@ describe( 'Living Block Map v3.2.4 server render', () => {
 			/class="core-ai-map__attract"[\s\S]*?data-wp-bind--hidden="state\.isNotAttract"/
 		);
 		expect( render ).toMatch(
-			/class="core-ai-map__offline"(?=[^>]*data-wp-bind--hidden="state\.isOnline")(?=[^>]*\shidden(?:\s|\/?>))[^>]*>/
+			/class="core-ai-map__offline"(?=[^>]*role="status")(?=[^>]*data-wp-bind--hidden="state\.isOnline")(?=[^>]*\shidden(?:\s|\/?>))[^>]*>/
 		);
 	} );
 
@@ -307,6 +321,12 @@ describe( 'Living Block Map v3.2.4 server render', () => {
 		);
 		expect( render ).toContain(
 			'data-wp-bind--hidden="state.isSuggestionNotApplied"'
+		);
+		expect( render ).toContain(
+			'data-wp-bind--disabled="state.isSuggestionApplied"'
+		);
+		expect( render ).toContain(
+			'data-wp-text="state.suggestionActionLabel"'
 		);
 		expect( render ).toContain( 'data-wp-on--click="actions.replayStory"' );
 	} );
@@ -372,7 +392,10 @@ describe( 'Living Block Map v3.2.4 server render', () => {
 		}
 	} );
 
-	it( 'normalizes the reviewed date in the editor as well as the server', () => {
+	it( 'normalizes scalar attract copy in the editor as well as the server', () => {
+		expect( edit ).toMatch(
+			/const prompt = withCurrentDefault\(\s*metadata,\s*'prompt',\s*savedPrompt\s*\)/
+		);
 		expect( edit ).toMatch(
 			/const reviewedDate = withCurrentDefault\(\s*metadata,\s*'reviewedDate',\s*savedReviewedDate\s*\)/
 		);
@@ -382,9 +405,7 @@ describe( 'Living Block Map v3.2.4 server render', () => {
 		expect( render ).toContain(
 			'class="core-ai-map__details-continuation"'
 		);
-		expect( render ).toContain(
-			'Scroll or swipe for Under the hood and Keep exploring'
-		);
+		expect( render ).toContain( 'More details below' );
 		expect( styles ).toMatch(
 			/&__details\s*\{[\s\S]*?container-type:\s*scroll-state/
 		);
@@ -463,7 +484,7 @@ describe( 'Living Block Map v3.2.4 server render', () => {
 
 	it( 'normalizes versioned cache keys and precaches built local fonts', () => {
 		expect( worker ).toContain(
-			'const CACHE_NAME = `${ CACHE_SCOPE_PREFIX }v3.2.4-review-1`;'
+			'const CACHE_NAME = `${ CACHE_SCOPE_PREFIX }v3.2.5-review-1`;'
 		);
 		expect( worker ).toContain( "searchParams.delete( 'ver' )" );
 		expect( worker ).toMatch(

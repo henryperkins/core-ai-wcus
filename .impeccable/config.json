@@ -1,0 +1,74 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "\\s*var\\(--core-ai-mono\\)/",
+        "createdAt": "2026-08-17T21:54:12.241Z",
+        "reason": "False positive: this value is a Jest regex asserting the existing DESIGN.md-approved --core-ai-mono token, not a font declaration."
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "10px",
+        "createdAt": "2026-08-17T23:20:36.022Z",
+        "reason": "DESIGN.md typography fontSizes explicitly includes 10px"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "11px",
+        "createdAt": "2026-08-17T23:20:36.077Z",
+        "reason": "DESIGN.md typography fontSizes explicitly includes 11px"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "13px",
+        "createdAt": "2026-08-17T23:20:36.134Z",
+        "reason": "DESIGN.md typography fontSizes explicitly includes 13px"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "14px",
+        "createdAt": "2026-08-17T23:20:36.187Z",
+        "reason": "DESIGN.md typography fontSizes explicitly includes 14px"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "16px",
+        "createdAt": "2026-08-17T23:20:36.246Z",
+        "reason": "DESIGN.md typography fontSizes explicitly includes 16px"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "17px",
+        "createdAt": "2026-08-17T23:20:36.302Z",
+        "reason": "DESIGN.md typography fontSizes explicitly includes 17px"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "18px",
+        "createdAt": "2026-08-17T23:20:36.358Z",
+        "reason": "DESIGN.md typography fontSizes explicitly includes 18px"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "19px",
+        "createdAt": "2026-08-17T23:20:36.415Z",
+        "reason": "DESIGN.md typography fontSizes explicitly includes 19px"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "20px",
+        "createdAt": "2026-08-17T23:20:36.467Z",
+        "reason": "DESIGN.md typography fontSizes explicitly includes 20px"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "52px",
+        "createdAt": "2026-08-17T23:20:36.522Z",
+        "reason": "DESIGN.md typography fontSizes explicitly includes 52px"
+      }
+    ]
+  }
+}

@@ -339,7 +339,7 @@ async ( page ) => {
 	assertCardGeometry( attractGeometry, 'Attract composition' );
 
 	await page
-		.getByRole( 'button', { name: 'Trace the first flow' } )
+		.getByRole( 'button', { name: 'Start with WordPress uses AI' } )
 		.click();
 	await page.waitForTimeout( 120 );
 	assert(
@@ -971,6 +971,62 @@ async ( page ) => {
 	observations.storyTwoGeometry = storyTwoGeometry;
 	assertCardGeometry( storyTwoGeometry, 'Story 02' );
 
+	await page
+		.locator( '.core-ai-map__actor--assistant .core-ai-map__actor-body' )
+		.click();
+	await page.waitForTimeout( 120 );
+	const walkthroughSteps = [];
+	for ( const actionName of [
+		'Next: how the MCP Adapter translates it',
+		'Next: where WordPress checks permission',
+	] ) {
+		walkthroughSteps.push(
+			await page
+				.locator( '.core-ai-map__details-context:not([hidden])' )
+				.locator( '.core-ai-map__details-progress' )
+				.textContent()
+		);
+		await page.getByRole( 'button', { name: actionName } ).click();
+		await page.waitForTimeout( 120 );
+	}
+	walkthroughSteps.push(
+		await page
+			.locator( '.core-ai-map__details-context:not([hidden])' )
+			.locator( '.core-ai-map__details-progress' )
+			.textContent()
+	);
+	await page
+		.getByRole( 'button', { name: 'Return to AI uses WordPress' } )
+		.click();
+	await page.waitForTimeout( 80 );
+	const walkthroughReturn = await page.evaluate( () => {
+		const map = document.querySelector( '.core-ai-map' );
+		return {
+			steps: [ ...map.querySelectorAll( '.core-ai-map__step' ) ]
+				.map( ( step ) => step.textContent.trim() )
+				.filter( Boolean ),
+			focusedAbilities: map.ownerDocument.activeElement?.closest(
+				'.core-ai-map__block--abilities'
+			)
+				? true
+				: false,
+		};
+	} );
+	observations.storyTwoWalkthrough = {
+		steps: walkthroughSteps,
+		returnState: walkthroughReturn,
+	};
+	assert(
+		walkthroughSteps.map( ( step ) => step?.trim() ).join( ',' ) ===
+			'Step 1 of 3,Step 2 of 3,Step 3 of 3',
+		`AI uses WordPress walkthrough order was wrong: ${ walkthroughSteps.join( ',' ) }`
+	);
+	assert(
+		walkthroughReturn.steps.join( ',' ) === '1,2,3' &&
+			walkthroughReturn.focusedAbilities,
+		'AI uses WordPress walkthrough did not return to its settled flow and final card.'
+	);
+
 	await storyButtons.nth( 2 ).click();
 	await page.waitForTimeout( 800 );
 	await assertNumberedTabOrder( [ '1', '2', '3' ], 'An agent learns WordPress' );
@@ -1278,7 +1334,7 @@ async ( page ) => {
 	await page.emulateMedia( { reducedMotion: 'reduce' } );
 	await page.reload( { waitUntil: 'networkidle' } );
 	await page
-		.getByRole( 'button', { name: 'Trace the first flow' } )
+		.getByRole( 'button', { name: 'Start with WordPress uses AI' } )
 		.click();
 	await page.locator( '.core-ai-map__rail button' ).nth( 1 ).click();
 	await page.waitForTimeout( 80 );
@@ -1308,6 +1364,9 @@ async ( page ) => {
 			abilityOpacity: getComputedStyle(
 				document.querySelector( '.core-ai-map__token--ability' )
 			).opacity,
+			resultOpacity: getComputedStyle(
+				document.querySelector( '.core-ai-map__token--result' )
+			).opacity,
 			// The lesson cannot depend on having watched the movement.
 			takeaway: [
 				...document.querySelectorAll( '.core-ai-map__takeaway' ),
@@ -1326,7 +1385,8 @@ async ( page ) => {
 	} );
 	observations.reduced = reduced;
 	assert(
-		reduced.takeaway?.includes( 'does not bypass WordPress' ),
+		reduced.takeaway?.includes( 'not part of Core' ) &&
+			reduced.takeaway?.includes( 'available times' ),
 		`Reduced motion did not state the flow's takeaway: ${ reduced.takeaway }`
 	);
 	assert(
@@ -1342,8 +1402,10 @@ async ( page ) => {
 		'Reduced-motion paths were not settled.'
 	);
 	assert(
-		reduced.callOpacity === '0' && reduced.abilityOpacity === '1',
-		'Reduced-motion token endpoint was incorrect.'
+		reduced.callOpacity === '1' &&
+			reduced.abilityOpacity === '1' &&
+			reduced.resultOpacity === '1',
+		'Reduced-motion transaction did not keep its call, ability, and result visible.'
 	);
 
 	await page.emulateMedia( { reducedMotion: 'no-preference' } );

@@ -32,7 +32,7 @@ for ( const [ label, overrides, expectedError ] of [
 			constantVersion: currentVersion,
 			blockVersion: currentVersion,
 		},
-		/plug-in header version 3\.1\.2 does not match expected 3\.2\.4/i,
+		/plug-in header version 3\.1\.2 does not match expected 3\.2\.5/i,
 	],
 	[
 		'CORE_AI_MAP_VERSION constant',
@@ -41,7 +41,7 @@ for ( const [ label, overrides, expectedError ] of [
 			constantVersion: '3.1.2',
 			blockVersion: currentVersion,
 		},
-		/CORE_AI_MAP_VERSION 3\.1\.2 does not match expected 3\.2\.4/i,
+		/CORE_AI_MAP_VERSION 3\.1\.2 does not match expected 3\.2\.5/i,
 	],
 	[
 		'built block metadata',
@@ -50,7 +50,7 @@ for ( const [ label, overrides, expectedError ] of [
 			constantVersion: currentVersion,
 			blockVersion: '3.1.2',
 		},
-		/built block metadata version 3\.1\.2 does not match expected 3\.2\.4/i,
+		/built block metadata version 3\.1\.2 does not match expected 3\.2\.5/i,
 	],
 	[
 		'readme.txt Stable tag',
@@ -58,7 +58,7 @@ for ( const [ label, overrides, expectedError ] of [
 			headerVersion: currentVersion,
 			stableTag: '3.1.2',
 		},
-		/readme\.txt Stable tag 3\.1\.2 does not match expected 3\.2\.4/i,
+		/readme\.txt Stable tag 3\.1\.2 does not match expected 3\.2\.5/i,
 	],
 	[
 		'assets/service-worker.js cache namespace',
@@ -66,7 +66,7 @@ for ( const [ label, overrides, expectedError ] of [
 			headerVersion: currentVersion,
 			cacheVersion: '3.1.2',
 		},
-		/assets\/service-worker\.js cache namespace version 3\.1\.2 does not match expected 3\.2\.4/i,
+		/assets\/service-worker\.js cache namespace version 3\.1\.2 does not match expected 3\.2\.5/i,
 	],
 ] ) {
 	test( `rejects a stale ${ label }`, () => {

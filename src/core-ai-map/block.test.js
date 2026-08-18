@@ -6,10 +6,10 @@ const metadata = JSON.parse(
 );
 const { attributes } = metadata;
 
-describe( 'Living Block Map v3.2.4 metadata', () => {
-	it( 'identifies the block as Living Block Map v3.2.4', () => {
+describe( 'Living Block Map v3.2.5 metadata', () => {
+	it( 'identifies the block as Living Block Map v3.2.5', () => {
 		expect( metadata.title ).toBe( 'Core AI Living Block Map' );
-		expect( metadata.version ).toBe( '3.2.4' );
+		expect( metadata.version ).toBe( '3.2.5' );
 	} );
 
 	it( 'sets the reviewed date used by the About panel', () => {
@@ -20,16 +20,18 @@ describe( 'Living Block Map v3.2.4 metadata', () => {
 	} );
 
 	it( 'opens with the approved orientation, instructions, and legend language', () => {
-		expect( attributes.title.default ).toBe(
-			'Four ways WordPress and AI meet'
-		);
+		expect( attributes.title.default ).toBe( 'What is WordPress Core AI?' );
 		expect( attributes.intro.default ).toBe(
-			'Core AI is a set of open building blocks: WordPress can call out to an AI service, and an outside assistant can call into WordPress. No single provider, no single assistant.\n\nEach flow traces one real request end to end, and shows who holds permission at every step. Pick one to begin, then tap any component for its role.'
+			'WordPress Core AI is a set of open building blocks that let WordPress use AI services and let outside assistants work with WordPress—without tying either direction to one provider.\n\nBadges show what ships in WordPress Core, what is installed as a plugin or project, and what stays outside WordPress. Choose one flow, follow its numbered path, then open a highlighted component.'
 		);
-		expect( attributes.prompt.default ).toBe( 'Trace the first flow' );
+		expect( attributes.prompt.default ).toBe(
+			'Start with WordPress uses AI'
+		);
 		expect( attributes.labels.default ).toMatchObject( {
 			railEmptyLabel: 'Choose a flow',
 			railActiveLabel: 'Choose another flow',
+			browseDescription:
+				'Start with AI Client. Compare what ships in Core, what is installed as a plugin or project, and what stays outside WordPress.',
 			lessonHeading: 'Why that matters',
 			definitionHeading: 'What it is',
 			technicalHeading: 'Under the hood',
@@ -39,6 +41,7 @@ describe( 'Living Block Map v3.2.4 metadata', () => {
 			'Follow %1$s. Highlighted components take part in this flow. Tap one to learn what it contributes.'
 		);
 		expect( attributes.guidance.default ).toMatchObject( {
+			browse: 'Open any component to learn what it is and where it belongs.',
 			cardActionStep: 'Step %1$s: %2$s — view its role in “%3$s.”',
 			cardInactive: '%1$s — not part of this flow.',
 			// A quiet card stays pressable, so it never borrows the sentence
@@ -58,13 +61,15 @@ describe( 'Living Block Map v3.2.4 metadata', () => {
 			outcome: 'WordPress requests an AI result',
 			takeaway:
 				'A WordPress feature uses a common AI interface instead of integrating directly with every provider. Provider configuration supports the request, while the AI service remains outside WordPress.',
+			nextLabel: 'Now see AI use WordPress',
 		} );
 		expect( stories[ 'uses-wp' ] ).toMatchObject( {
 			situation:
-				'An outside assistant asks WordPress to perform an allowed action.',
-			outcome: 'An assistant requests a WordPress action',
+				'A person asks an outside assistant to check which booking times are available on this WordPress site.',
+			copy: 'A person asks an outside assistant for available booking times. Acting as a specific WordPress user, the assistant sends an MCP call for the example bookings/get-availability ability. The MCP Adapter plugin translates that call; Core’s Abilities API validates the input, calls the ability’s permission check, and returns available times or a refusal.',
+			outcome: 'An assistant checks booking availability in WordPress',
 			takeaway:
-				'The assistant does not bypass WordPress. The MCP Adapter translates the request, and the selected ability still applies WordPress permissions.',
+				'The MCP Adapter is a plugin at the WordPress boundary, not part of Core, and only translates. Site or plugin code registers the example bookings/get-availability ability. Core’s Abilities API validates its input and permission before WordPress runs it and returns available times—or returns a refusal.',
 		} );
 		expect( stories.learns ).toMatchObject( {
 			situation:
@@ -80,6 +85,36 @@ describe( 'Living Block Map v3.2.4 metadata', () => {
 			outcome: 'WordPress evaluates generated code',
 			takeaway:
 				"The generated code runs in a disposable WordPress environment and is judged by WordPress tests, not by another model's opinion.",
+		} );
+	} );
+
+	it( 'uses one booking transaction to distinguish the assistant, adapter, and Core API', () => {
+		const panels = Object.fromEntries(
+			attributes.panels.default.map( ( panel ) => [ panel.id, panel ] )
+		);
+
+		expect( panels.assistant.roles[ 'uses-wp' ] ).toEqual( {
+			receives:
+				'A person’s request to check available booking times, outside WordPress.',
+			does: 'Acts as a specific WordPress user and sends an MCP call for the example bookings/get-availability ability.',
+			returns:
+				'The available times WordPress allows that user to receive, or a refusal.',
+			lesson: 'The assistant is an outside client, not an authority. Its WordPress user sets the outer limit, and the ability still checks permission.',
+		} );
+		expect( panels.mcp.roles[ 'uses-wp' ] ).toEqual( {
+			receives:
+				'An MCP call asking for the example bookings/get-availability ability.',
+			does: 'Translates the MCP request into a WordPress ability request and hands it to WordPress.',
+			returns:
+				'The available times or refusal from WordPress, translated back into MCP.',
+			lesson: 'The MCP Adapter is a WordPress plugin, not part of Core. It translates at the boundary; it does not create the ability or grant permission.',
+		} );
+		expect( panels.abilities.roles[ 'uses-wp' ] ).toEqual( {
+			receives:
+				'The translated bookings/get-availability request and its date range.',
+			does: 'Validates the input, calls the ability’s permission callback for the current WordPress user, then runs the registered callback when allowed.',
+			returns: 'Available booking times, or a refusal.',
+			lesson: 'The Abilities API is the Core execution contract. Site or plugin code registers this example action and decides who may run it.',
 		} );
 	} );
 

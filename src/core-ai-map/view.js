@@ -154,6 +154,49 @@ const format = ( template, ...values ) =>
 		String( template || '' )
 	);
 
+const label = ( context, key, fallback ) => context.labels?.[ key ] || fallback;
+
+const describeDetailsOpen = ( context, cardId ) => {
+	const name = context.cardTitles?.[ cardId ] || cardId;
+	const storyTitle = context.storyTitles?.[ context.story ] || '';
+	const walkthrough = context.walkthroughs?.[ context.story ] || [];
+	const walkthroughIndex = walkthrough.indexOf( cardId );
+
+	if ( storyTitle && walkthroughIndex >= 0 ) {
+		return format(
+			context.announcements?.detailsStep ||
+				'Step %1$s of %2$s: %3$s. Its role in %4$s is open.',
+			String( walkthroughIndex + 1 ),
+			String( walkthrough.length ),
+			name,
+			storyTitle
+		);
+	}
+
+	return storyTitle
+		? format(
+				context.announcements?.detailsInFlow ||
+					'%1$s details open in %2$s.',
+				name,
+				storyTitle
+		  )
+		: format(
+				context.announcements?.detailsBrowse || '%1$s details open.',
+				name
+		  );
+};
+
+const findCardTrigger = ( root, cardId ) => {
+	const panelSuffix = `-panel-${ cardId }`;
+	return [
+		...( root?.querySelectorAll(
+			'.core-ai-map__block-body[aria-controls], .core-ai-map__actor-body[aria-controls], .core-ai-map__provider-plugin-body[aria-controls]'
+		) || [] ),
+	].find( ( control ) =>
+		control.getAttribute( 'aria-controls' )?.endsWith( panelSuffix )
+	);
+};
+
 const previewList = ( context ) => {
 	if ( Array.isArray( context.previews ) && context.previews.length ) {
 		return context.previews;
@@ -348,6 +391,13 @@ const focusWithin = ( root, selector, delay = 40 ) => {
 	}
 };
 
+const resetDetailsScroll = ( root ) => {
+	const details = root?.querySelector( '.core-ai-map__details' );
+	if ( details ) {
+		details.scrollTop = 0;
+	}
+};
+
 /**
  * Focuses step one of the assembled flow.
  *
@@ -480,6 +530,7 @@ const setAttractState = ( context ) => {
 	context.storyMotionPhase = 'settled';
 	context.pendingTakeawayStory = '';
 	context.benchPathsLive = false;
+	context.resetWarning = false;
 	context.suggestion = Math.floor( ( context.suggestion || 0 ) / 2 ) * 2;
 	setPreviewPhase( context, 'assembling' );
 	context.announcement =
@@ -497,52 +548,51 @@ const startAttractCycle = ( root, context ) => {
 			return;
 		}
 
-		setPreviewPhase(
-			context,
-			reducedMotion( root ) ? 'settled' : 'assembling'
-		);
-		if ( ! reducedMotion( root ) ) {
-			addTimer(
-				attractTimers,
-				root,
-				() => {
-					if ( context.screen === 'attract' ) {
-						setPreviewPhase( context, 'drawing' );
-					}
-				},
-				ATTRACT_TIMELINE.drawing
-			);
-			addTimer(
-				attractTimers,
-				root,
-				() => {
-					if ( context.screen === 'attract' ) {
-						setPreviewPhase( context, 'signalling' );
-					}
-				},
-				ATTRACT_TIMELINE.signalling
-			);
-			addTimer(
-				attractTimers,
-				root,
-				() => {
-					if ( context.screen === 'attract' ) {
-						setPreviewPhase( context, 'settled' );
-					}
-				},
-				ATTRACT_TIMELINE.settled
-			);
-			addTimer(
-				attractTimers,
-				root,
-				() => {
-					if ( context.screen === 'attract' ) {
-						setPreviewPhase( context, 'releasing' );
-					}
-				},
-				ATTRACT_TIMELINE.releasing
-			);
+		const motionReduced = reducedMotion( root );
+		setPreviewPhase( context, motionReduced ? 'settled' : 'assembling' );
+		if ( motionReduced ) {
+			return;
 		}
+		addTimer(
+			attractTimers,
+			root,
+			() => {
+				if ( context.screen === 'attract' ) {
+					setPreviewPhase( context, 'drawing' );
+				}
+			},
+			ATTRACT_TIMELINE.drawing
+		);
+		addTimer(
+			attractTimers,
+			root,
+			() => {
+				if ( context.screen === 'attract' ) {
+					setPreviewPhase( context, 'signalling' );
+				}
+			},
+			ATTRACT_TIMELINE.signalling
+		);
+		addTimer(
+			attractTimers,
+			root,
+			() => {
+				if ( context.screen === 'attract' ) {
+					setPreviewPhase( context, 'settled' );
+				}
+			},
+			ATTRACT_TIMELINE.settled
+		);
+		addTimer(
+			attractTimers,
+			root,
+			() => {
+				if ( context.screen === 'attract' ) {
+					setPreviewPhase( context, 'releasing' );
+				}
+			},
+			ATTRACT_TIMELINE.releasing
+		);
 
 		addTimer(
 			attractTimers,
@@ -555,10 +605,7 @@ const startAttractCycle = ( root, context ) => {
 				context.previewIndex = previews.length
 					? ( context.previewIndex + 1 ) % previews.length
 					: 0;
-				setPreviewPhase(
-					context,
-					reducedMotion( root ) ? 'settled' : 'assembling'
-				);
+				setPreviewPhase( context, 'assembling' );
 			},
 			ATTRACT_TIMELINE.next
 		);
@@ -614,6 +661,25 @@ const runFlow = ( root, context, { bench = false } = {} ) => {
 	);
 };
 
+const selectBenchStageByOffset = ( context, offset ) => {
+	const stages = context.benchOrder || [];
+	const current = stages.indexOf( context.benchStage );
+	const next = Math.min(
+		Math.max( current + offset, 0 ),
+		Math.max( stages.length - 1, 0 )
+	);
+	if ( current < 0 || next === current || ! stages[ next ] ) {
+		return;
+	}
+	context.benchStage = stages[ next ];
+	context.announcement = `WP-Bench stage ${ String( next + 1 ).padStart(
+		2,
+		'0'
+	) } selected: ${
+		context.benchTitles?.[ context.benchStage ] || context.benchStage
+	}.`;
+};
+
 store( 'core-ai/map', {
 	state: {
 		get isAttract() {
@@ -649,7 +715,7 @@ store( 'core-ai/map', {
 			return getContext().screen !== 'bench';
 		},
 		get isCanvasHidden() {
-			return getContext().screen !== 'map';
+			return ! [ 'map', 'inspect' ].includes( getContext().screen );
 		},
 		get isCanvasInert() {
 			return getContext().screen !== 'map';
@@ -665,7 +731,8 @@ store( 'core-ai/map', {
 		 * diagram and nowhere else. The welcome card carries its own.
 		 */
 		get isDiagramKeyHidden() {
-			return getContext().screen !== 'map';
+			const context = getContext();
+			return context.screen !== 'map' || ! activeLayout( context );
 		},
 		get railLabel() {
 			const context = getContext();
@@ -678,6 +745,22 @@ store( 'core-ai/map', {
 		},
 		get isOnline() {
 			return ! getContext().isOffline;
+		},
+		get isReady() {
+			return Boolean( getContext().ready );
+		},
+		get isNotReady() {
+			return ! this.isReady;
+		},
+		get isResetWarningHidden() {
+			const context = getContext();
+			return context.screen === 'about' || ! context.resetWarning;
+		},
+		get offlineCacheStatus() {
+			return getContext().offlineCacheStatus || '';
+		},
+		get wakeLockStatus() {
+			return getContext().wakeLockStatus || '';
 		},
 
 		get isStorySelected() {
@@ -953,9 +1036,6 @@ store( 'core-ai/map', {
 			return Boolean(
 				layout && ! isParticipant( context, context.cardId )
 			);
-		},
-		get isCardOffstage() {
-			return false;
 		},
 		get isCardInspected() {
 			const context = getContext();
@@ -1289,6 +1369,12 @@ store( 'core-ai/map', {
 		get isSuggestionApplied() {
 			return getContext().suggestion % 2 === 1;
 		},
+		get suggestionActionLabel() {
+			const context = getContext();
+			return this.isSuggestionApplied
+				? context.labels?.appliedLabel || 'Applied'
+				: context.labels?.applyLabel || 'Apply';
+		},
 		get isSuggestionNotApplied() {
 			return ! this.isSuggestionApplied;
 		},
@@ -1309,6 +1395,28 @@ store( 'core-ai/map', {
 		},
 		get isBenchStageNotSelected() {
 			return ! this.isBenchStageSelected;
+		},
+		get isPreviousBenchStageDisabled() {
+			const context = getContext();
+			return (
+				( context.benchOrder || [] ).indexOf( context.benchStage ) <= 0
+			);
+		},
+		get isNextBenchStageDisabled() {
+			const context = getContext();
+			const stages = context.benchOrder || [];
+			return stages.indexOf( context.benchStage ) >= stages.length - 1;
+		},
+		get benchProgressLabel() {
+			const context = getContext();
+			const stages = context.benchOrder || [];
+			const current =
+				Math.max( stages.indexOf( context.benchStage ), 0 ) + 1;
+			return format(
+				context.labels?.benchProgress || 'Stage %1$s of %2$s',
+				String( current ).padStart( 2, '0' ),
+				String( stages.length ).padStart( 2, '0' )
+			);
 		},
 		get benchPathsLive() {
 			return Boolean( getContext().benchPathsLive );
@@ -1358,9 +1466,12 @@ store( 'core-ai/map', {
 			context.pendingTakeawayStory = '';
 			context.announcement =
 				context.announcements?.browse ||
-				'Every component is on the canvas with no flow selected. Tap any component to learn what it is and where it belongs.';
+				'All components are on the canvas with no flow selected. Start with AI Client, then compare what ships in Core, what is installed, and what stays outside WordPress.';
 			resetSchedulers.get( root )?.();
-			focusWithin( root, '.core-ai-map__block-body:not([disabled])' );
+			focusWithin(
+				root,
+				'.core-ai-map__block--client .core-ai-map__block-body:not([disabled])'
+			);
 		},
 		selectStory() {
 			const context = getContext();
@@ -1443,22 +1554,41 @@ store( 'core-ai/map', {
 			if ( context.inspect === 'abilities' ) {
 				context.abilitiesTab = 'overview';
 			}
-			const name =
-				context.cardTitles?.[ context.cardId ] || context.cardId;
-			const storyTitle = context.storyTitles?.[ context.story ] || '';
-			context.announcement = storyTitle
-				? format(
-						context.announcements?.detailsInFlow ||
-							'%1$s details open in %2$s.',
-						name,
-						storyTitle
-				  )
-				: format(
-						context.announcements?.detailsBrowse ||
-							'%1$s details open.',
-						name
-				  );
+			context.announcement = describeDetailsOpen(
+				context,
+				context.cardId
+			);
 			resetSchedulers.get( root )?.();
+			resetDetailsScroll( root );
+			focusWithin( root, '.core-ai-map__details-close', 80 );
+		},
+		inspectNextCard() {
+			const context = getContext();
+			const walkthrough = context.walkthroughs?.[ context.story ] || [];
+			const currentIndex = walkthrough.indexOf( context.inspect );
+			const nextCardId = context.nextCardId || '';
+
+			if (
+				currentIndex < 0 ||
+				walkthrough[ currentIndex + 1 ] !== nextCardId
+			) {
+				return;
+			}
+
+			const { ref } = getElement();
+			const root = getRoot( ref );
+			ref?.blur?.();
+			const nextTrigger = findCardTrigger( root, nextCardId );
+			if ( root && nextTrigger ) {
+				lastCardTriggers.set( root, nextTrigger );
+			}
+			context.inspect = nextCardId;
+			if ( nextCardId === 'abilities' ) {
+				context.abilitiesTab = 'overview';
+			}
+			context.announcement = describeDetailsOpen( context, nextCardId );
+			resetSchedulers.get( root )?.();
+			resetDetailsScroll( root );
 			focusWithin( root, '.core-ai-map__details-close', 80 );
 		},
 		openAbout() {
@@ -1490,6 +1620,9 @@ store( 'core-ai/map', {
 				.filter( Boolean )
 				.join( ' ' );
 			resetSchedulers.get( root )?.();
+			if ( context.screen === 'attract' ) {
+				attractSchedulers.get( root )?.();
+			}
 			focusElement( root ? lastAboutTriggers.get( root ) : undefined );
 		},
 		closeInspect() {
@@ -1540,9 +1673,10 @@ store( 'core-ai/map', {
 			}
 			context.screen = 'bench';
 			context.inspect = '';
-			context.benchStage = 'sandbox';
+			context.benchStage = 'task';
 			runFlow( root, context, { bench: true } );
-			context.announcement = 'WP-Bench run loop open. Sandbox selected.';
+			context.announcement =
+				'WP-Bench run loop open. Stage 01, One task, one message, selected.';
 			resetSchedulers.get( root )?.();
 			focusWithin( root, '.core-ai-map__bench-heading button' );
 		},
@@ -1555,17 +1689,33 @@ store( 'core-ai/map', {
 		},
 		selectBenchStage() {
 			const context = getContext();
-			context.benchStage = context.stageId || 'sandbox';
+			context.benchStage = context.stageId || 'task';
 			context.announcement = `WP-Bench stage selected: ${
 				context.benchTitles?.[ context.benchStage ] ||
 				context.benchStage
 			}.`;
 		},
+		selectPreviousBenchStage() {
+			selectBenchStageByOffset( getContext(), -1 );
+		},
+		selectNextBenchStage() {
+			selectBenchStageByOffset( getContext(), 1 );
+		},
 		applySuggestion() {
 			const context = getContext();
+			if ( context.suggestion % 2 === 1 ) {
+				return;
+			}
 			context.suggestion = Math.floor( context.suggestion / 2 ) * 2 + 1;
 			context.announcement =
 				'A person chose Apply. The AI Plugin suggestion is now applied.';
+		},
+		keepExploring() {
+			const context = getContext();
+			const root = getRoot( getElement().ref );
+			context.resetWarning = false;
+			context.announcement = 'Keep exploring. Reset postponed.';
+			resetSchedulers.get( root )?.();
 		},
 		reset() {
 			const context = getContext();
@@ -1587,6 +1737,8 @@ store( 'core-ai/map', {
 				if ( ! root ) {
 					return undefined;
 				}
+				context.ready = true;
+				context.resetWarning = false;
 				root.classList.add( 'is-ready' );
 				document.body.classList.add( 'core-ai-kiosk-active' );
 				const restorePage = isolateKioskPage( root );
@@ -1595,6 +1747,8 @@ store( 'core-ai/map', {
 					10
 				);
 				let resetTimer;
+				let resetWarningTimer;
+				let cacheStatusTimer;
 				let wakeLock;
 				let servedFromOfflineCache = Boolean(
 					document.querySelector(
@@ -1617,10 +1771,11 @@ store( 'core-ai/map', {
 				const resetForInactivity = () => {
 					if (
 						document.visibilityState === 'visible' &&
-						context.screen !== 'attract'
+						! [ 'attract', 'about' ].includes( context.screen )
 					) {
 						clearTimers( flowTimers, root );
 						setAttractState( context );
+						context.resetWarning = false;
 						context.announcement =
 							'The map reset after a period of inactivity.';
 						attractSchedulers.get( root )?.();
@@ -1633,17 +1788,26 @@ store( 'core-ai/map', {
 				};
 				const scheduleReset = () => {
 					window.clearTimeout( resetTimer );
-					if ( context.screen === 'attract' ) {
+					window.clearTimeout( resetWarningTimer );
+					context.resetWarning = false;
+					if ( [ 'attract', 'about' ].includes( context.screen ) ) {
 						return;
 					}
 					const base = Number.isFinite( timeout ) ? timeout : 60000;
-					const deep =
-						context.screen === 'inspect' ||
-						context.screen === 'bench';
-					resetTimer = window.setTimeout(
-						resetForInactivity,
-						base + ( deep ? 30000 : 0 )
+					resetWarningTimer = window.setTimeout(
+						() => {
+							if (
+								document.visibilityState === 'visible' &&
+								context.screen !== 'attract'
+							) {
+								context.resetWarning = true;
+								context.announcement =
+									'The exhibit will return to the welcome screen in 10 seconds. Continue exploring to stay here.';
+							}
+						},
+						Math.max( base - 10000, 0 )
 					);
+					resetTimer = window.setTimeout( resetForInactivity, base );
 				};
 				resetSchedulers.set( root, scheduleReset );
 
@@ -1656,28 +1820,61 @@ store( 'core-ai/map', {
 				};
 				const handleCacheResult = ( event ) => {
 					if ( event.data?.type === 'CORE_AI_MAP_CACHE_RESULT' ) {
-						root.dataset.offlineReady = event.data.ok
-							? 'true'
-							: 'false';
+						window.clearTimeout( cacheStatusTimer );
+						const ready = Boolean( event.data.ok );
+						root.dataset.offlineReady = ready ? 'true' : 'false';
+						context.offlineCacheStatus = ready
+							? label( context, 'offlineReady', 'Ready' )
+							: label(
+									context,
+									'offlineUnavailable',
+									'Unavailable'
+							  );
 					}
 				};
 				const requestWakeLock = async () => {
-					if (
-						'wakeLock' in navigator &&
-						document.visibilityState === 'visible'
-					) {
-						try {
-							wakeLock =
-								await navigator.wakeLock.request( 'screen' );
-						} catch {
-							wakeLock = undefined;
-						}
+					if ( ! ( 'wakeLock' in navigator ) ) {
+						context.wakeLockStatus = label(
+							context,
+							'wakeLockNotSupported',
+							'Not supported'
+						);
+						return;
+					}
+					if ( document.visibilityState !== 'visible' ) {
+						context.wakeLockStatus = label(
+							context,
+							'wakeLockPaused',
+							'Paused'
+						);
+						return;
+					}
+					try {
+						wakeLock = await navigator.wakeLock.request( 'screen' );
+						context.wakeLockStatus = label(
+							context,
+							'wakeLockActive',
+							'Active'
+						);
+					} catch {
+						wakeLock = undefined;
+						context.wakeLockStatus = label(
+							context,
+							'wakeLockUnavailable',
+							'Unavailable'
+						);
 					}
 				};
 				const handleVisibility = () => {
 					if ( document.visibilityState === 'visible' ) {
 						scheduleReset();
 						requestWakeLock();
+					} else {
+						context.wakeLockStatus = label(
+							context,
+							'wakeLockPaused',
+							'Paused'
+						);
 					}
 				};
 				const handleKeydown = ( event ) => {
@@ -1756,14 +1953,32 @@ store( 'core-ai/map', {
 						]
 							.filter( Boolean )
 							.join( ' ' );
+						if ( context.screen === 'attract' ) {
+							attractSchedulers.get( root )?.();
+						}
 						focusElement( lastAboutTriggers.get( root ) );
 					}
 				};
 				const syncServiceWorker = async () => {
+					if ( root.dataset.offlineEnabled !== 'true' ) {
+						context.offlineCacheStatus = label(
+							context,
+							'offlineNotEnabled',
+							'Not enabled'
+						);
+					}
 					if (
 						! ( 'serviceWorker' in navigator ) ||
 						! window.isSecureContext
 					) {
+						if ( root.dataset.offlineEnabled === 'true' ) {
+							root.dataset.offlineReady = 'false';
+							context.offlineCacheStatus = label(
+								context,
+								'offlineUnavailable',
+								'Unavailable'
+							);
+						}
 						return;
 					}
 					try {
@@ -1914,6 +2129,15 @@ store( 'core-ai/map', {
 						await document.fonts?.ready;
 						const worker =
 							readyRegistration.active || registration.active;
+						if ( ! worker ) {
+							root.dataset.offlineReady = 'false';
+							context.offlineCacheStatus = label(
+								context,
+								'offlineUnavailable',
+								'Unavailable'
+							);
+							return;
+						}
 						const configuredAssets = JSON.parse(
 							root.dataset.assetUrls || '[]'
 						);
@@ -1921,7 +2145,7 @@ store( 'core-ai/map', {
 							root.dataset.cachePage === 'true'
 								? getObservedStaticAssets()
 								: [];
-						worker?.postMessage( {
+						worker.postMessage( {
 							type: 'CACHE_CORE_AI_MAP',
 							pageUrl:
 								root.dataset.cachePage === 'true'
@@ -1934,14 +2158,35 @@ store( 'core-ai/map', {
 								] ),
 							],
 						} );
+						window.clearTimeout( cacheStatusTimer );
+						cacheStatusTimer = window.setTimeout( () => {
+							root.dataset.offlineReady = 'false';
+							context.offlineCacheStatus = label(
+								context,
+								'offlineUnavailable',
+								'Unavailable'
+							);
+						}, 15000 );
 					} catch {
-						// The server-rendered experience remains usable.
+						if ( root.dataset.offlineEnabled === 'true' ) {
+							root.dataset.offlineReady = 'false';
+							context.offlineCacheStatus = label(
+								context,
+								'offlineUnavailable',
+								'Unavailable'
+							);
+						}
 					}
 				};
 
 				root.addEventListener( 'pointerdown', scheduleReset, {
 					passive: true,
 				} );
+				root.addEventListener( 'scroll', scheduleReset, {
+					capture: true,
+					passive: true,
+				} );
+				root.addEventListener( 'focusin', scheduleReset );
 				window.addEventListener( 'keydown', handleKeydown );
 				window.addEventListener( 'online', updateNetworkStatus );
 				window.addEventListener( 'offline', updateNetworkStatus );
@@ -1967,11 +2212,15 @@ store( 'core-ai/map', {
 
 				return () => {
 					window.clearTimeout( resetTimer );
+					window.clearTimeout( resetWarningTimer );
+					window.clearTimeout( cacheStatusTimer );
 					clearTimers( flowTimers, root );
 					clearTimers( attractTimers, root );
 					resetSchedulers.delete( root );
 					attractSchedulers.delete( root );
 					root.removeEventListener( 'pointerdown', scheduleReset );
+					root.removeEventListener( 'scroll', scheduleReset, true );
+					root.removeEventListener( 'focusin', scheduleReset );
 					window.removeEventListener( 'keydown', handleKeydown );
 					window.removeEventListener( 'online', updateNetworkStatus );
 					window.removeEventListener(
@@ -1990,6 +2239,8 @@ store( 'core-ai/map', {
 					);
 					wakeLock?.release?.();
 					restorePage();
+					context.ready = false;
+					context.resetWarning = false;
 					root.classList.remove( 'is-ready' );
 					if ( ! document.querySelector( '.core-ai-map.is-ready' ) ) {
 						document.body.classList.remove(

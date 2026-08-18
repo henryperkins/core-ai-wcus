@@ -374,18 +374,71 @@ const BOUNDARY_V322_DEFAULTS = {
 	},
 };
 
+// The focused inbound-request pass replaces an abstract allowed action with one
+// illustrative booking transaction. These are only former registered defaults;
+// any editor-authored story or role continues to win.
+const FOCUSED_USES_WP_V324_DEFAULTS = {
+	stories: {
+		'uses-wp': {
+			copy: 'An authorized assistant calls in through the MCP Adapter, which translates the call into a WordPress ability. Permission still belongs to WordPress.',
+			situation:
+				'An outside assistant asks WordPress to perform an allowed action.',
+			takeaway:
+				'The assistant does not bypass WordPress. The MCP Adapter translates the request, and the selected ability still applies WordPress permissions.',
+			outcome: 'An assistant requests a WordPress action',
+		},
+	},
+	panels: {
+		assistant: {
+			roles: {
+				'uses-wp': {
+					receives: 'A person’s instruction, outside WordPress.',
+					does: 'Signs in as the WordPress user it was given credentials for, then issues an MCP tool call.',
+					returns:
+						'Whatever that user is allowed to get back — nothing more.',
+					lesson: 'The assistant is a client, not an authority. It asks; it does not decide.',
+				},
+			},
+		},
+		mcp: {
+			roles: {
+				'uses-wp': {
+					receives:
+						'An MCP tool call from an authorized outside assistant.',
+					does: 'Translates the call into a WordPress ability and hands it to WordPress to run.',
+					returns:
+						'The ability’s typed result, translated back into MCP.',
+					lesson: 'The adapter is a translator at the edge of the site. It does not create the action, and it does not grant the permission.',
+				},
+			},
+		},
+		abilities: {
+			roles: {
+				'uses-wp': {
+					receives:
+						'The translated request, naming the WordPress action and supplying its inputs.',
+					does: 'Validates the inputs, checks whether the current user is allowed to perform the action, then runs its registered callback.',
+					returns: 'A typed result, or a refusal.',
+					lesson: 'Connecting an outside assistant does not give it unrestricted access. WordPress still controls execution.',
+				},
+			},
+		},
+	},
+};
+
 const LEGACY_SCALAR_DEFAULTS = {
 	reviewedDate: [ 'Reviewed 12 Aug 2026' ],
 	title: [
 		'How do WordPress and AI work together?',
-		'What is WordPress Core AI?',
+		'Four ways WordPress and AI meet',
 	],
 	intro: [
 		'Choose a flow, follow the numbered path, then tap a highlighted component to understand its role.',
 		'See WordPress call AI, let authorized agents call WordPress, and test what they build.',
 		'WordPress Core AI is a set of open building blocks that let WordPress use AI services and work with outside assistants—without tying WordPress to one provider.\n\nExplore four flows to see what happens inside WordPress, what happens outside it, and how the projects connect.',
+		'Core AI is a set of open building blocks: WordPress can call out to an AI service, and an outside assistant can call into WordPress. No single provider, no single assistant.\n\nEach flow traces one real request end to end, and shows who holds permission at every step. Pick one to begin, then tap any component for its role.',
 	],
-	prompt: [ 'Explore the first flow' ],
+	prompt: [ 'Trace the first flow', 'Explore the first flow' ],
 };
 
 const valuesMatch = ( left, right ) =>
@@ -436,6 +489,7 @@ export const withCurrentDefaults = ( metadata, key, items ) => {
 			PEDAGOGICAL_V320_DEFAULTS,
 			RUNTIME_V321_DEFAULTS,
 			BOUNDARY_V322_DEFAULTS,
+			FOCUSED_USES_WP_V324_DEFAULTS,
 		].forEach( ( defaultsSet ) => {
 			const legacyFields = defaultsSet[ key ]?.[ item.id ] || {};
 

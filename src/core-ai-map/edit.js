@@ -23,7 +23,7 @@ export default function Edit( { attributes, setAttributes } ) {
 		reviewedDate: savedReviewedDate,
 		title: savedTitle,
 		intro: savedIntro,
-		prompt,
+		prompt: savedPrompt,
 		inactivityTimeout,
 		offlineEnabled,
 		recompose,
@@ -39,6 +39,7 @@ export default function Edit( { attributes, setAttributes } ) {
 	const panels = withCurrentDefaults( metadata, 'panels', savedPanels );
 	const title = withCurrentDefault( metadata, 'title', savedTitle );
 	const intro = withCurrentDefault( metadata, 'intro', savedIntro );
+	const prompt = withCurrentDefault( metadata, 'prompt', savedPrompt );
 	const reviewedDate = withCurrentDefault(
 		metadata,
 		'reviewedDate',
