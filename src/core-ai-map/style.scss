@@ -431,8 +431,8 @@ body.core-ai-kiosk-active {
 		}
 
 		&--welcome {
-			margin-top: 20px;
-			padding: 14px 0;
+			margin-top: 12px;
+			padding: 8px 0;
 			border-top: 1px solid var(--core-ai-line);
 			border-bottom: 1px solid var(--core-ai-line);
 
@@ -1968,10 +1968,10 @@ body.core-ai-kiosk-active {
 	&__attract {
 		position: absolute;
 		z-index: 35;
-		top: 118px;
+		top: 500px;
 		left: 188px;
 		width: 990px;
-		padding: 30px 42px 28px;
+		padding: 22px 42px 18px;
 		text-align: center;
 
 		/**
@@ -1989,7 +1989,7 @@ body.core-ai-kiosk-active {
 
 		h1 {
 			max-width: 760px;
-			margin: 8px auto 0;
+			margin: 6px auto 0;
 			font-family: var(--core-ai-serif);
 			font-size: 52px;
 			font-weight: 500;
@@ -2010,7 +2010,7 @@ body.core-ai-kiosk-active {
 
 	&__intro {
 		max-width: 790px;
-		margin: 12px auto 0;
+		margin: 8px auto 0;
 		color: var(--core-ai-ink-soft);
 		font-size: 16px;
 		line-height: 1.4;
@@ -2027,7 +2027,7 @@ body.core-ai-kiosk-active {
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 		gap: 18px;
-		margin: 22px 0 0;
+		margin: 14px 0 0;
 		padding: 0;
 		list-style: none;
 
@@ -2066,7 +2066,7 @@ body.core-ai-kiosk-active {
 		align-items: baseline;
 		justify-content: center;
 		gap: 10px;
-		margin-top: 14px;
+		margin-top: 8px;
 		font-size: 12px;
 		line-height: 1.35;
 
@@ -2097,12 +2097,12 @@ body.core-ai-kiosk-active {
 		align-items: center;
 		justify-content: center;
 		gap: 18px;
-		margin-top: 20px;
+		margin-top: 14px;
 	}
 
 	&__readiness {
 		min-height: 20px;
-		margin: 14px 0 0;
+		margin: 8px 0 0;
 		color: var(--core-ai-text-muted);
 		font-size: 13px;
 		line-height: 1.45;
@@ -2225,8 +2225,8 @@ body.core-ai-kiosk-active {
 	}
 
 	&__attract-story {
-		min-height: 38px;
-		margin-top: 16px;
+		min-height: 34px;
+		margin-top: 8px;
 		color: var(--core-ai-ink-soft);
 		font-size: 13px;
 		line-height: 1.3;
@@ -2326,6 +2326,19 @@ body.core-ai-kiosk-active {
 			font-size: 17px;
 			line-height: 1;
 		}
+	}
+
+	&__details-header {
+		position: sticky;
+		z-index: 52;
+		top: 0;
+		display: flex;
+		align-items: center;
+		min-height: 84px;
+		margin: -24px -32px 0;
+		padding: 12px 32px;
+		background: var(--core-ai-surface);
+		border-bottom: 1px solid var(--core-ai-line);
 	}
 
 	@supports (container-type: scroll-state) {

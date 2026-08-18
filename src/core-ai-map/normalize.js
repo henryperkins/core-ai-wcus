@@ -426,6 +426,33 @@ const FOCUSED_USES_WP_V324_DEFAULTS = {
 	},
 };
 
+// The first-flow review corrects the AI Client's ability-calling contract and
+// stops presenting the Connectors setup grid as a formal state machine. Match
+// the complete former notes array so an author who changed any note keeps it.
+const FIRST_FLOW_REVIEW_V325_DEFAULTS = {
+	panels: {
+		client: {
+			notes: [
+				{
+					heading: 'Under the hood',
+					text: 'A WordPress wrapper around the provider-agnostic PHP AI Client, which handles provider communication, model selection, and normalized results. Consuming plugins never integrate a provider directly. A named model is a preference, not a requirement: if none of the preferred ones are configured, the request falls back to the first available model that can do the job. Core’s client is PHP only — the JavaScript prompt builder lives outside Core and is administrator-only, because it can send any prompt to any configured provider, so a feature exposes its own REST endpoint instead. Check support before showing any AI interface: the check is free and makes no network call, and a 7.0 site may have no provider configured at all.',
+				},
+				{
+					heading: 'Not every request returns a result',
+					text: 'A failure arrives as a WordPress error rather than an exception, and a site can block prompts outright — the support check then reports false and the feature hides itself. Design for the empty answer as well as the good one.',
+				},
+				{
+					heading: 'Calling back into WordPress',
+					text: 'A request can name registered abilities the model is allowed to call. When it calls one, WordPress runs that ability — permission check and all — and folds the result back into the same request. This is where the two halves of the map meet: WordPress asking AI for something can end with WordPress doing the work itself.',
+				},
+			],
+		},
+		connectors: {
+			connectHeading: 'Connection states',
+		},
+	},
+};
+
 const LEGACY_SCALAR_DEFAULTS = {
 	reviewedDate: [ 'Reviewed 12 Aug 2026' ],
 	title: [
@@ -490,6 +517,7 @@ export const withCurrentDefaults = ( metadata, key, items ) => {
 			RUNTIME_V321_DEFAULTS,
 			BOUNDARY_V322_DEFAULTS,
 			FOCUSED_USES_WP_V324_DEFAULTS,
+			FIRST_FLOW_REVIEW_V325_DEFAULTS,
 		].forEach( ( defaultsSet ) => {
 			const legacyFields = defaultsSet[ key ]?.[ item.id ] || {};
 

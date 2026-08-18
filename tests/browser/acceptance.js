@@ -307,6 +307,25 @@ async ( page ) => {
 					}
 				: null;
 		} )(),
+		previewClearance: ( () => {
+			const welcome = document
+				.querySelector( '.core-ai-map__attract' )
+				.getBoundingClientRect();
+			const previewCards = [
+				...document.querySelectorAll(
+					'.is-preview-member, .is-preview-sidecar, .core-ai-map__provider-plugin:not([hidden])'
+				),
+			].map( ( element ) => element.getBoundingClientRect() );
+			return {
+				gap:
+					welcome.top -
+					Math.max( ...previewCards.map( ( bounds ) => bounds.bottom ) ),
+				welcomeBottom: welcome.bottom,
+				stageBottom: document
+					.querySelector( '.core-ai-map__stage' )
+					.getBoundingClientRect().bottom,
+			};
+		} )(),
 	} ) );
 	observations.attract = attract;
 	assert(
@@ -333,6 +352,15 @@ async ( page ) => {
 			attract.configPath?.dash.includes( '5px' ) &&
 			attract.runtimePaths.length === 3,
 		'Attract did not distinguish Connectors configuration from the three runtime paths.'
+	);
+	assert(
+		attract.previewClearance.gap >= 20,
+		`Welcome obscured the attract preview (${ attract.previewClearance.gap }px clearance).`
+	);
+	assert(
+		attract.previewClearance.welcomeBottom <=
+			attract.previewClearance.stageBottom,
+		'Welcome surface extended below the fixed stage.'
 	);
 	const attractGeometry = await measureCardGeometry();
 	observations.attractGeometry = attractGeometry;

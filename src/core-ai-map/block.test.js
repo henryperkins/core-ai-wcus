@@ -179,6 +179,34 @@ describe( 'Living Block Map v3.2.5 metadata', () => {
 		);
 	} );
 
+	it( 'describes ability calling as a caller-driven round trip', () => {
+		const clientPanel = attributes.panels.default.find(
+			( panel ) => panel.id === 'client'
+		);
+		const abilityCalling = clientPanel.notes.find(
+			( note ) => note.heading === 'Calling back into WordPress'
+		).text;
+
+		expect( abilityCalling ).toContain(
+			'using_abilities() only describes those functions to the model; it executes nothing'
+		);
+		expect( abilityCalling ).toContain(
+			'WP_AI_Client_Ability_Function_Resolver'
+		);
+		expect( abilityCalling ).toContain( 'a second generate call' );
+		expect( abilityCalling ).not.toContain(
+			'folds the result back into the same request'
+		);
+	} );
+
+	it( 'labels the Connectors grid without claiming every item is a state', () => {
+		const connectorsPanel = attributes.panels.default.find(
+			( panel ) => panel.id === 'connectors'
+		);
+
+		expect( connectorsPanel.connectHeading ).toBe( 'Provider setup' );
+	} );
+
 	it( 'dates WordPress 7.1 while telling visitors the exhibit already runs it', () => {
 		const abilities = attributes.panels.default.find(
 			( panel ) => panel.id === 'abilities'

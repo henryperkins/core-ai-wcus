@@ -203,10 +203,9 @@ $block_ids = array( 'plugin', 'client', 'connectors', 'mcp', 'abilities', 'bench
 $actor_ids = array( 'assistant', 'skills', 'agent', 'task', 'provider' );
 $card_dom_order = array( 'assistant', 'skills', 'agent', 'task', 'mcp', 'plugin', 'client', 'provider-plugin', 'provider', 'connectors', 'abilities', 'bench' );
 /*
- * Every card a visitor can reach has a panel. The five ids after `skills` are
- * the actors and the transient provider layer: they carry a badge, a lede and
- * their per-story roles, but none of the reference apparatus (chain, notes, QR)
- * that the WordPress projects carry.
+ * Every card a visitor can reach has a panel. The outside actors carry a badge,
+ * a lede and their per-story roles, but none of the reference apparatus (chain,
+ * notes, QR) that the WordPress projects and provider-plugin layer carry.
  */
 $panel_ids = array(
 	'abilities',
@@ -224,10 +223,10 @@ $panel_ids = array(
 );
 
 /**
- * Panels that describe an actor or the transient provider layer rather than a
- * WordPress project. They render the contextual sections and stop there.
+ * Panels that describe outside actors rather than WordPress code. They render
+ * the contextual sections and stop there.
  */
-$context_only_panels = array( 'assistant', 'agent', 'provider', 'task', 'provider-plugin' );
+$context_only_panels = array( 'assistant', 'agent', 'provider', 'task' );
 
 /**
  * Canonical location and Core status shown in every component inspector.
@@ -1027,6 +1026,37 @@ $panels = $migrate_legacy_defaults(
 					'lesson'   => 'The provider-specific part is a plugin. Swapping providers does not change the feature that asked.',
 				),
 			),
+		),
+	)
+);
+
+/*
+ * The first-flow review corrects the AI Client's ability-calling contract and
+ * stops presenting the Connectors setup grid as a formal state machine.
+ * Compare the complete former notes array so any authored note remains intact.
+ */
+$panels = $migrate_legacy_defaults(
+	$panels,
+	$panel_defaults,
+	array(
+		'client'     => array(
+			'notes' => array(
+				array(
+					'heading' => 'Under the hood',
+					'text'    => 'A WordPress wrapper around the provider-agnostic PHP AI Client, which handles provider communication, model selection, and normalized results. Consuming plugins never integrate a provider directly. A named model is a preference, not a requirement: if none of the preferred ones are configured, the request falls back to the first available model that can do the job. Core’s client is PHP only — the JavaScript prompt builder lives outside Core and is administrator-only, because it can send any prompt to any configured provider, so a feature exposes its own REST endpoint instead. Check support before showing any AI interface: the check is free and makes no network call, and a 7.0 site may have no provider configured at all.',
+				),
+				array(
+					'heading' => 'Not every request returns a result',
+					'text'    => 'A failure arrives as a WordPress error rather than an exception, and a site can block prompts outright — the support check then reports false and the feature hides itself. Design for the empty answer as well as the good one.',
+				),
+				array(
+					'heading' => 'Calling back into WordPress',
+					'text'    => 'A request can name registered abilities the model is allowed to call. When it calls one, WordPress runs that ability — permission check and all — and folds the result back into the same request. This is where the two halves of the map meet: WordPress asking AI for something can end with WordPress doing the work itself.',
+				),
+			),
+		),
+		'connectors' => array(
+			'connectHeading' => 'Connection states',
 		),
 	)
 );
@@ -2414,10 +2444,12 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			data-wp-bind--hidden="state.isNotInspect"
 			hidden
 		>
-			<button class="core-ai-map__details-close" type="button" data-wp-on--click="actions.closeInspect">
-				<span aria-hidden="true">&larr;</span>
-				<span data-wp-text="state.detailsBackLabel"><?php esc_html_e( 'Back to the map', 'core-ai-map' ); ?></span>
-			</button>
+			<div class="core-ai-map__details-header">
+				<button class="core-ai-map__details-close" type="button" data-wp-on--click="actions.closeInspect">
+					<span aria-hidden="true">&larr;</span>
+					<span data-wp-text="state.detailsBackLabel"><?php esc_html_e( 'Back to the map', 'core-ai-map' ); ?></span>
+				</button>
+			</div>
 
 			<?php
 			/*

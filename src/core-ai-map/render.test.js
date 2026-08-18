@@ -417,6 +417,26 @@ describe( 'Living Block Map v3.2.5 server render', () => {
 		);
 	} );
 
+	it( 'keeps the shared panel exit pinned to the scrollport', () => {
+		expect( render ).toContain( 'core-ai-map__details-header' );
+		expect( styles ).toMatch(
+			/&__details-header\s*\{[\s\S]*?position:\s*sticky[\s\S]*?top:\s*0[\s\S]*?background:\s*var\(--core-ai-surface\)/
+		);
+	} );
+
+	it( 'places the opaque welcome surface below the attract preview', () => {
+		const attractRule = styles
+			.split( '\n\t&__attract {' )[ 1 ]
+			.split( '\n\t&__eyebrow' )[ 0 ];
+		const top = Number.parseFloat(
+			attractRule.match( /top:\s*([\d.]+)px/ )?.[ 1 ]
+		);
+
+		// The lowest preview card ends at authored y=458.4. Preserve a visible
+		// gap before the opaque welcome surface begins.
+		expect( top ).toBeGreaterThanOrEqual( 480 );
+	} );
+
 	it( 'emits modern and Apple install-capability metadata', () => {
 		expect( plugin ).toContain(
 			'<meta name="mobile-web-app-capable" content="yes">'

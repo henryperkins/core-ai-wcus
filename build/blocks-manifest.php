@@ -311,7 +311,7 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 							),
 							array(
 								'heading' => 'Calling back into WordPress',
-								'text' => 'A request can name registered abilities the model is allowed to call. When it calls one, WordPress runs that ability — permission check and all — and folds the result back into the same request. This is where the two halves of the map meet: WordPress asking AI for something can end with WordPress doing the work itself.'
+								'text' => 'An AI request can declare registered abilities the model may ask to call. using_abilities() only describes those functions to the model; it executes nothing. If the model returns an ability call, caller code passes that message to WP_AI_Client_Ability_Function_Resolver, then sends the function response through a second generate call. Only the resolver step runs the ability’s permission and execution callbacks. That caller-driven round trip is where WordPress asking AI for something can end with WordPress doing the work itself.'
 							)
 						),
 						'href' => 'https://developer.wordpress.org/reference/functions/wp_ai_client_prompt/',
@@ -331,7 +331,7 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 								'lesson' => 'Provider setup is centralized instead of being rebuilt inside every AI-powered feature. Connectors supports the path; it does not execute the request.'
 							)
 						),
-						'connectHeading' => 'Connection states',
+						'connectHeading' => 'Provider setup',
 						'connectLayout' => 'grid',
 						'connect' => array(
 							array(
