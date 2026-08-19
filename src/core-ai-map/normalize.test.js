@@ -139,13 +139,18 @@ describe( 'editor copy normalization', () => {
 		expect( actors.find( ( item ) => item.id === 'task' ) ).toMatchObject( {
 			name: 'Code for this site',
 			tagline: 'A plugin, block, or ability registration',
-			badge: 'Still outside',
 		} );
+		// The retired per-card badge is dropped rather than carried forward.
+		expect( actors.find( ( item ) => item.id === 'task' ).badge ).toBe(
+			undefined
+		);
 		expect( panels.find( ( item ) => item.id === 'mcp' ) ).toMatchObject( {
-			badge: 'WordPress plugin · not in Core',
 			href: 'https://github.com/WordPress/mcp-adapter',
 			qr: 'qr/mcp.svg',
 		} );
+		expect( panels.find( ( item ) => item.id === 'mcp' ).badge ).toBe(
+			undefined
+		);
 	} );
 
 	it( 'preserves visitor-authored copy that differs from the old default', () => {

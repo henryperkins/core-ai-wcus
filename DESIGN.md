@@ -423,7 +423,7 @@ smaller than a fingertip, or when it reports state and therefore takes a pill.
   tall, 26px horizontal padding, with a 22px stroked icon at 1.7 weight. One per screen.
 - **Control** (`button-control`): white, hairline border, Inter 620 at 14–15px, 60px tall
   authored — 45px at 1024 × 768
-  with a 100px minimum width — Start over, Browse all components, Replay.
+  with a 100px minimum width — Start over, Compare components, Replay.
 - **Run-loop link:** the one control that inverts to solid Live Blue, marking a jump into
   a sub-surface rather than a state change on this one.
 - **Secondary** (`button-secondary`): no fill, no border, `ink-soft`, underlined at 4px

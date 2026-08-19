@@ -20,6 +20,7 @@ test( 'accepts a plug-in archive whose internal versions match package.json', ()
 			blockVersion: currentVersion,
 			stableTag: currentVersion,
 			cacheVersion: currentVersion,
+			renderVersionMarker: 'CORE_AI_MAP_VERSION',
 		}
 	);
 } );
@@ -90,6 +91,32 @@ test( 'rejects an archive with a missing bootstrap identity entry', () => {
 				} )
 			),
 		/must contain core-ai-map\/core-ai-map\.php exactly once; found 0/i
+	);
+} );
+
+test( 'rejects an archive without a visitor-visible version marker', () => {
+	assert.throws(
+		() =>
+			validatePluginArchiveIdentity(
+				createPluginZipFixture( {
+					headerVersion: currentVersion,
+					includeRender: false,
+				} )
+			),
+		/must contain core-ai-map\/build\/core-ai-map\/render\.php exactly once; found 0/i
+	);
+} );
+
+test( 'rejects a visitor version marker that can drift from the plug-in constant', () => {
+	assert.throws(
+		() =>
+			validatePluginArchiveIdentity(
+				createPluginZipFixture( {
+					headerVersion: currentVersion,
+					renderVersionSource: "'3.1.2'",
+				} )
+			),
+		/visitor version marker must derive from CORE_AI_MAP_VERSION/i
 	);
 } );
 

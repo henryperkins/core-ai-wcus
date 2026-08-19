@@ -82,6 +82,9 @@ body.core-ai-kiosk-active {
 	--core-ai-warning-tint: #fff8e1;
 	--core-ai-warning-line: #f2d675;
 	--core-ai-radius: 4px;
+	--core-ai-readable-primary: 16px;
+	--core-ai-readable-compact: 15px;
+	--core-ai-readable-secondary: 14px;
 	--core-ai-mono:
 		"Core AI IBM Plex Mono",
 		ui-monospace,
@@ -211,7 +214,7 @@ body.core-ai-kiosk-active {
 		margin: 0;
 		overflow: hidden;
 		color: var(--core-ai-text-muted);
-		font-size: 13px;
+		font-size: var(--core-ai-readable-primary);
 		font-weight: 500;
 		line-height: 1.35;
 		text-wrap: pretty;
@@ -350,7 +353,7 @@ body.core-ai-kiosk-active {
 		top: 78px;
 		margin: 0;
 		color: var(--core-ai-text-muted);
-		font-size: 12px;
+		font-size: var(--core-ai-readable-primary);
 		font-weight: 650;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
@@ -393,7 +396,7 @@ body.core-ai-kiosk-active {
 		padding: 3px 8px;
 		color: var(--core-ai-text-muted);
 		font-family: var(--core-ai-mono);
-		font-size: 11px;
+		font-size: var(--core-ai-readable-compact);
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		border: 1px solid var(--core-ai-line);
@@ -402,7 +405,7 @@ body.core-ai-kiosk-active {
 
 	&__legend {
 		color: var(--core-ai-ink-soft);
-		font-size: 11px;
+		font-size: var(--core-ai-readable-secondary);
 		line-height: 1.3;
 
 		ul {
@@ -446,7 +449,7 @@ body.core-ai-kiosk-active {
 	&__legend-heading {
 		margin: 0 0 9px;
 		color: var(--core-ai-text-muted);
-		font-size: 11px;
+		font-size: var(--core-ai-readable-secondary);
 		font-weight: 700;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
@@ -903,7 +906,7 @@ body.core-ai-kiosk-active {
 		border: 1px dashed var(--core-ai-line-strong);
 		border-radius: var(--core-ai-radius);
 
-		strong {
+		> strong {
 			display: block;
 			margin-top: 8px;
 			font-size: 18px;
@@ -911,7 +914,7 @@ body.core-ai-kiosk-active {
 			letter-spacing: -0.01em;
 		}
 
-		small {
+		> small {
 			display: block;
 			margin-top: 2px;
 			color: var(--core-ai-ink-soft);
@@ -941,6 +944,35 @@ body.core-ai-kiosk-active {
 		font-weight: 650;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
+	}
+
+	&__card-status {
+		display: block;
+		min-width: 0;
+
+		strong,
+		small {
+			display: block;
+		}
+
+		strong {
+			color: var(--core-ai-ink-soft);
+			font-size: var(--core-ai-readable-primary);
+			font-weight: 700;
+			line-height: 1.2;
+			letter-spacing: 0.06em;
+			text-transform: uppercase;
+		}
+
+		small {
+			margin-top: 2px;
+			color: var(--core-ai-text-muted);
+			font-size: var(--core-ai-readable-secondary);
+			font-weight: 520;
+			line-height: 1.2;
+			letter-spacing: 0;
+			text-transform: none;
+		}
 	}
 
 	/* Block cards ------------------------------------------------------ */
@@ -1003,6 +1035,31 @@ body.core-ai-kiosk-active {
 		letter-spacing: 0.06em;
 		text-align: right;
 		text-transform: uppercase;
+	}
+
+	&__block-badge &__card-status {
+		text-align: right;
+	}
+
+	&__start-here {
+		position: absolute;
+		z-index: 3;
+		top: -28px;
+		left: 14px;
+		color: var(--core-ai-blue-dark);
+		font-size: var(--core-ai-readable-secondary);
+		font-weight: 700;
+		line-height: 1.2;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		pointer-events: none;
+	}
+
+	&__block.is-browse-start {
+
+		.core-ai-map__block-body {
+			border-color: var(--core-ai-blue-line);
+		}
 	}
 
 	&__block-name {
@@ -1189,20 +1246,20 @@ body.core-ai-kiosk-active {
 			opacity 320ms ease,
 			transform 620ms var(--core-ai-ease);
 
-		strong,
-		small,
-		span {
+		> .core-ai-map__provider-plugin-body > strong,
+		> .core-ai-map__provider-plugin-body > small,
+		> .core-ai-map__provider-plugin-body > span {
 			display: block;
 		}
 
-		strong {
+		> .core-ai-map__provider-plugin-body > strong {
 			margin-top: 6px;
 			font-size: 18px;
 			font-weight: 650;
 			line-height: 1.05;
 		}
 
-		small {
+		> .core-ai-map__provider-plugin-body > small {
 			margin-top: 4px;
 			color: var(--core-ai-ink-soft);
 			font-size: 13px;
@@ -1249,6 +1306,21 @@ body.core-ai-kiosk-active {
 		font-weight: 700;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
+	}
+
+	&__provider-plugin-badge &__card-status {
+
+		strong {
+			margin-top: 0;
+			font-size: var(--core-ai-readable-primary);
+			line-height: 1.2;
+		}
+
+		small {
+			margin-top: 2px;
+			font-size: var(--core-ai-readable-secondary);
+			line-height: 1.2;
+		}
 	}
 
 	/**
@@ -1728,6 +1800,10 @@ body.core-ai-kiosk-active {
 			gap: 14px;
 		}
 
+		.core-ai-map__browse-note strong {
+			font-size: var(--core-ai-readable-secondary);
+		}
+
 		p {
 			margin: 0;
 		}
@@ -1836,7 +1912,7 @@ body.core-ai-kiosk-active {
 		.core-ai-map__rail-label {
 			margin: 0;
 			color: var(--core-ai-text-muted);
-			font-size: 11px;
+			font-size: var(--core-ai-readable-compact);
 			font-weight: 700;
 			letter-spacing: 0.08em;
 			line-height: 1.3;
@@ -2413,6 +2489,32 @@ body.core-ai-kiosk-active {
 		color: var(--core-ai-ink-soft);
 	}
 
+	&__about-reset-warning {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		margin: -6px 0 20px;
+		padding: 8px 8px 8px 16px;
+		color: var(--core-ai-warning-ink);
+		font-size: 14px;
+		font-weight: 620;
+		background: var(--core-ai-warning-tint);
+		border: 1px solid var(--core-ai-warning-line);
+		border-radius: var(--core-ai-radius);
+
+		button {
+			min-height: 44px;
+			padding: 0 14px;
+			font-size: 13px;
+			font-weight: 650;
+			background: var(--core-ai-surface);
+			border: 1px solid var(--core-ai-line-strong);
+			border-radius: var(--core-ai-radius);
+			cursor: pointer;
+		}
+	}
+
 	&__about-close {
 		position: static;
 		display: inline-flex;
@@ -2434,7 +2536,7 @@ body.core-ai-kiosk-active {
 	}
 
 	&__about-disclosure {
-		margin: 26px 0 0;
+		margin: 10px 0 0;
 
 		div {
 			display: grid;
@@ -2456,6 +2558,44 @@ body.core-ai-kiosk-active {
 			margin: 0;
 			font-size: 16px;
 			line-height: 1.45;
+		}
+	}
+
+	&__about-review {
+
+		> p:first-child {
+			margin-top: 20px;
+		}
+	}
+
+	&__about-ai-disclosure {
+		margin-top: 24px;
+		padding-top: 20px;
+		border-top: 1px solid var(--core-ai-line);
+
+		h3 {
+			margin: 0;
+			font-size: 15px;
+			font-weight: 680;
+		}
+	}
+
+	&__about-operations {
+		margin-top: 18px;
+		border-top: 1px solid var(--core-ai-line);
+		border-bottom: 1px solid var(--core-ai-line);
+
+		summary {
+			min-height: 48px;
+			padding: 14px 0;
+			color: var(--core-ai-ink-soft);
+			font-size: 14px;
+			font-weight: 650;
+			cursor: pointer;
+		}
+
+		.core-ai-map__about-disclosure {
+			margin-top: 0;
 		}
 	}
 
@@ -2664,6 +2804,18 @@ body.core-ai-kiosk-active {
 		}
 	}
 
+	&__details-status-primary,
+	&__details-status-secondary {
+		display: block;
+	}
+
+	&__details-status-secondary {
+		margin-top: 2px;
+		color: var(--core-ai-text-muted);
+		font-size: 12px;
+		font-weight: 500;
+	}
+
 	&__details-heading {
 		margin: 28px 0 10px;
 		color: var(--core-ai-text-muted);
@@ -2686,7 +2838,7 @@ body.core-ai-kiosk-active {
 	}
 
 	/* The identity of the component follows the contextual answer. */
-	&__details-context + &__details-badge {
+	&__details-context + &__details-title {
 		margin-top: 26px;
 	}
 
@@ -3779,7 +3931,8 @@ body.core-ai-kiosk-active {
 
 @media (hover: hover) {
 
-	.core-ai-map__reset:hover {
+	.core-ai-map__reset:hover,
+	.core-ai-map__browse:hover {
 		color: var(--core-ai-blue);
 		border-color: var(--core-ai-blue);
 	}
@@ -3789,7 +3942,7 @@ body.core-ai-kiosk-active {
 	}
 
 	.core-ai-map__rail button:hover:not(.is-active),
-	.core-ai-map__block-body:hover,
+	.core-ai-map__block-body:hover:not(:disabled),
 	.core-ai-map__ability-tab:hover,
 	.core-ai-map__details-next:hover,
 	.core-ai-map__bench-stage:hover,

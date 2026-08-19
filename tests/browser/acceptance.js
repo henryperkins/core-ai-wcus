@@ -218,6 +218,7 @@ async ( page ) => {
 		return {
 			map: map.getBoundingClientRect().toJSON(),
 			stage: stage.getBoundingClientRect().toJSON(),
+			version: map.dataset.coreAiMapVersion,
 			scale: Number.parseFloat(
 				getComputedStyle( map ).getPropertyValue( '--cai-scale' )
 			),
@@ -236,6 +237,10 @@ async ( page ) => {
 	} );
 	observations.targetFit = targetFit;
 	assert( targetFit.scale === 1, '1366 viewport did not use scale 1.' );
+	assert(
+		/^\d+\.\d+\.\d+$/.test( targetFit.version || '' ),
+		`Rendered release identity was missing or invalid: ${ targetFit.version }`
+	);
 	assert(
 		targetFit.stage.width === 1366 && targetFit.stage.height === 1024,
 		'1366 stage did not exactly fill the target viewport.'
@@ -365,6 +370,34 @@ async ( page ) => {
 	const attractGeometry = await measureCardGeometry();
 	observations.attractGeometry = attractGeometry;
 	assertCardGeometry( attractGeometry, 'Attract composition' );
+
+	await page.locator( '.core-ai-map__prompt' ).focus();
+	await page.keyboard.press( 'Tab' );
+	const welcomeSecondTab = await page.evaluate( () => {
+		const map = document.querySelector( '.core-ai-map' );
+		return map.ownerDocument.activeElement?.textContent
+			.replace( /\s+/g, ' ' )
+			.trim();
+	} );
+	await page.keyboard.press( 'Tab' );
+	const welcomeThirdTab = await page.evaluate( () => {
+		const map = document.querySelector( '.core-ai-map' );
+		return map.ownerDocument.activeElement?.textContent
+			.replace( /\s+/g, ' ' )
+			.trim();
+	} );
+	observations.welcomeTabOrder = [
+		'Start with WordPress uses AI',
+		welcomeSecondTab,
+		welcomeThirdTab,
+	];
+	assert(
+		welcomeSecondTab === 'Compare components' &&
+			welcomeThirdTab === 'About this exhibit',
+		`Welcome keyboard order did not lead prompt → compare → About: ${ JSON.stringify(
+			observations.welcomeTabOrder
+		) }`
+	);
 
 	await page
 		.getByRole( 'button', { name: 'Start with WordPress uses AI' } )
@@ -599,7 +632,7 @@ async ( page ) => {
 	 * purpose rather than landed on by default.
 	 */
 	await page
-		.getByRole( 'button', { name: 'Browse all components' } )
+		.getByRole( 'button', { name: 'Compare components' } )
 		.click();
 	await page.waitForTimeout( 120 );
 	assert(
@@ -608,7 +641,7 @@ async ( page ) => {
 				element.classList.contains( 'is-map' ) &&
 				! element.classList.contains( 'has-story' )
 		),
-		'Browse all components did not open the neutral map.'
+		'Compare components did not open the neutral map.'
 	);
 	assert(
 		await page.evaluate(
@@ -616,7 +649,7 @@ async ( page ) => {
 				document
 					.querySelector( '.core-ai-map__guidance' )
 					?.textContent.trim() ===
-				'Tap any component to learn what it is and where it belongs.'
+				'Open any component to learn what it is and where it belongs.'
 		),
 		'Component explorer did not carry its own instruction.'
 	);
@@ -742,6 +775,37 @@ async ( page ) => {
 			selector: card.className,
 			opacity: getComputedStyle( card ).opacity,
 		} ) );
+		const statusParity = [
+			...document.querySelectorAll(
+				'.core-ai-map__actor, .core-ai-map__block, .core-ai-map__provider-plugin'
+			),
+		]
+			.filter( ( card ) => {
+				const bounds = card.getBoundingClientRect();
+				return ! card.hidden && bounds.width > 0 && bounds.height > 0;
+			} )
+			.map( ( card ) => {
+				const button = card.querySelector( 'button' );
+				const primary = card
+					.querySelector( '.core-ai-map__card-status strong' )
+					?.textContent.trim();
+				const secondary = card
+					.querySelector( '.core-ai-map__card-status small' )
+					?.textContent.trim();
+				const accessibleName = button?.getAttribute( 'aria-label' ) || '';
+				return {
+					primary,
+					secondary,
+					accessibleName,
+					matches:
+						Boolean( primary && secondary ) &&
+						accessibleName.includes( primary ) &&
+						accessibleName.includes( secondary ),
+				};
+			} );
+		const startHere = document.querySelector(
+			'.core-ai-map__block--client .core-ai-map__start-here'
+		);
 		const textContrast = [
 			...document.querySelectorAll(
 				'.core-ai-map__actor-body strong, .core-ai-map__actor-body small, .core-ai-map__block-body strong, .core-ai-map__block-body small, .core-ai-map__provider-plugin-body strong, .core-ai-map__provider-plugin-body small'
@@ -763,6 +827,11 @@ async ( page ) => {
 			actors,
 			actorOverlaps,
 			cardOpacities,
+			statusParity,
+			startHere: {
+				hidden: startHere.hidden,
+				text: startHere.textContent.trim(),
+			},
 			textContrast,
 			providerPluginActive: document
 				.querySelector( '.core-ai-map__provider-plugin' )
@@ -786,12 +855,23 @@ async ( page ) => {
 	);
 	assert(
 		! neutral.providerPluginActive,
-		'Browse all components retained a stale active provider-plugin class after hydration.'
+		'Compare components retained a stale active provider-plugin class after hydration.'
+	);
+	assert(
+		neutral.statusParity.length === 12 &&
+			neutral.statusParity.every( ( status ) => status.matches ),
+		`Neutral-map status was not visible and present in every accessible card name: ${ JSON.stringify(
+			neutral.statusParity.filter( ( status ) => ! status.matches )
+		) }`
+	);
+	assert(
+		! neutral.startHere.hidden && neutral.startHere.text === 'Start here',
+		'AI Client did not carry the neutral-map starting cue.'
 	);
 	assert(
 		neutral.cardOpacities.length > 5 &&
 			neutral.cardOpacities.every( ( card ) => card.opacity === '1' ),
-		`Browse-all cards were not fully opaque: ${ neutral.cardOpacities
+		`Compare-components cards were not fully opaque: ${ neutral.cardOpacities
 			.filter( ( card ) => card.opacity !== '1' )
 			.map( ( card ) => `${ card.selector }=${ card.opacity }` )
 			.join( ', ' ) }`
@@ -799,7 +879,7 @@ async ( page ) => {
 	assert(
 		neutral.textContrast.length > 0 &&
 			neutral.textContrast.every( ( sample ) => sample.ratio >= 4.5 ),
-		`Browse-all card text fell below 4.5:1 contrast: ${ neutral.textContrast
+		`Compare-components card text fell below 4.5:1 contrast: ${ neutral.textContrast
 			.filter( ( sample ) => sample.ratio < 4.5 )
 			.map( ( sample ) => `${ sample.text }=${ sample.ratio.toFixed( 2 ) }` )
 			.join( ', ' ) }`
@@ -842,6 +922,23 @@ async ( page ) => {
 		const close = document.querySelector( '.core-ai-map__about-close' );
 		const content = document.querySelector( '.core-ai-map__about-content' );
 		const brand = document.querySelector( '.core-ai-map__brand' );
+		const dialog = document.querySelector( '.core-ai-map__about' );
+		const summary = dialog.querySelector( '.core-ai-map__about-summary' );
+		const feedback = dialog.querySelector( '.core-ai-map__feedback' );
+		const review = dialog.querySelector( '.core-ai-map__about-review' );
+		const disclosure = dialog.querySelector(
+			'.core-ai-map__about-ai-disclosure'
+		);
+		const operations = dialog.querySelector(
+			'.core-ai-map__about-operations'
+		);
+		const feedbackUrl = dialog.querySelector(
+			'.core-ai-map__feedback-url'
+		).textContent.trim();
+		const ordered = [ summary, feedback, review, disclosure, operations ].every(
+			( element, index, elements ) =>
+				index === 0 || elements[ index - 1 ].nextElementSibling === element
+		);
 
 		return {
 			closeInsideContent: content.firstElementChild === close,
@@ -850,6 +947,24 @@ async ( page ) => {
 				brand.getBoundingClientRect()
 			),
 			focusedClose: close.ownerDocument.activeElement === close,
+			backgroundIsolated: [ ...dialog.parentElement.children ]
+				.filter( ( sibling ) => sibling !== dialog )
+				.every(
+					( sibling ) =>
+						sibling.inert &&
+						sibling.getAttribute( 'aria-hidden' ) === 'true'
+				),
+			ordered,
+			officialSummary: summary.textContent.includes(
+				'official WordPress Core AI artifact'
+			),
+			feedbackUrl,
+			feedbackQrNamesDestination: dialog
+				.querySelector( '.core-ai-map__feedback-qr' )
+				.alt.includes( feedbackUrl ),
+			humanReview: review.textContent.includes( 'human-reviewed' ),
+			aiDisclosure: disclosure.textContent.includes( 'OpenAI Codex' ),
+			operationsCollapsed: ! operations.open,
 		};
 	} );
 	observations.about = about;
@@ -858,6 +973,38 @@ async ( page ) => {
 		'About Back control was not contained by the white card without brand overlap.'
 	);
 	assert( about.focusedClose, 'About dialog did not focus its Back control.' );
+	assert(
+		about.backgroundIsolated,
+		'About dialog left the map exposed behind its modal semantics.'
+	);
+	assert(
+		about.ordered &&
+			about.officialSummary &&
+			/^https:\/\//.test( about.feedbackUrl ) &&
+			about.feedbackQrNamesDestination &&
+			about.humanReview &&
+			about.aiDisclosure &&
+			about.operationsCollapsed,
+		`About did not present trust, feedback, review, disclosure, then collapsed operations: ${ JSON.stringify(
+			about
+		) }`
+	);
+	await page.keyboard.press( 'Shift+Tab' );
+	const aboutBackwardTab = await page.evaluate( () => {
+		const dialog = document.querySelector( '.core-ai-map__about' );
+		return dialog.ownerDocument.activeElement?.tagName;
+	} );
+	await page.keyboard.press( 'Tab' );
+	const aboutForwardTab = await page.evaluate( () => {
+		const dialog = document.querySelector( '.core-ai-map__about' );
+		return dialog.ownerDocument.activeElement?.classList.contains(
+			'core-ai-map__about-close'
+		);
+	} );
+	assert(
+		aboutBackwardTab === 'SUMMARY' && aboutForwardTab,
+		'About focus did not wrap between its last and first controls.'
+	);
 	await page.locator( '.core-ai-map__about-close' ).click();
 	await page.waitForTimeout( 80 );
 	assert(
@@ -1473,7 +1620,7 @@ async ( page ) => {
 				expectedCount: 1,
 			},
 			{
-				name: 'Browse all components',
+				name: 'Compare components',
 				selector: '.core-ai-map__browse',
 				authoredHeight: 60,
 				expectedCount: 1,
@@ -1486,6 +1633,47 @@ async ( page ) => {
 			},
 		],
 		'1024 component browser'
+	);
+	const compatibilityType = await page.evaluate( () => {
+		const map = document.querySelector( '.core-ai-map' );
+		const scale = Number.parseFloat(
+			getComputedStyle( map ).getPropertyValue( '--cai-scale' )
+		);
+		return [
+			[ 'Guidance', '.core-ai-map__guidance', 11.9 ],
+			[ 'Zone label', '.core-ai-map__zone', 11.9 ],
+			[ 'Boundary label', '.core-ai-map__boundary-view', 11.2 ],
+			[ 'Status type', '.core-ai-map__card-status strong', 11.9 ],
+			[ 'Status detail', '.core-ai-map__card-status small', 10.4 ],
+			[ 'Start here', '.core-ai-map__start-here', 10.4 ],
+			[ 'Legend heading', '.core-ai-map__legend-heading', 10.4 ],
+			[ 'Legend item', '.core-ai-map__legend-item', 10.4 ],
+			[ 'Browse heading', '.core-ai-map__browse-note strong', 10.4 ],
+			[ 'Rail label', '.core-ai-map__rail-label', 11.2 ],
+		].map( ( [ name, selector, minimum ] ) => {
+			const element = document.querySelector( selector );
+			const authored = Number.parseFloat(
+				getComputedStyle( element ).fontSize
+			);
+			return {
+				name,
+				selector,
+				minimum,
+				authored,
+				rendered: authored * scale,
+			};
+		} );
+	} );
+	observations.compatibilityType = compatibilityType;
+	assert(
+		compatibilityType.every(
+			( sample ) => sample.rendered >= sample.minimum
+		),
+		`1024 semantic map text fell below its rendered type floor: ${ JSON.stringify(
+			compatibilityType.filter(
+				( sample ) => sample.rendered < sample.minimum
+			)
+		) }`
 	);
 	await storyButtons.nth( 0 ).click();
 	await page.waitForTimeout( 800 );

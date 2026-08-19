@@ -1,7 +1,5 @@
 const LEGACY_DEFAULTS = {
 	blocks: {
-		plugin: { badge: 'Experimental plugin' },
-		mcp: { badge: 'Open adapter' },
 		bench: {
 			name: 'WP Bench',
 			tagline: 'Test how well agents perform WordPress work',
@@ -59,7 +57,6 @@ const LEGACY_DEFAULTS = {
 			],
 		},
 		mcp: {
-			badge: 'Open adapter',
 			lede: 'Translation at the edge of the site. It exposes eligible abilities to authorized outside assistants as MCP tools, resources, and prompts — and translates their calls back into WordPress work.',
 			notes: [
 				{
@@ -243,7 +240,6 @@ const BOUNDARY_V322_DEFAULTS = {
 		task: {
 			name: 'A WordPress task',
 			tagline: 'Plugin or theme work',
-			badge: 'Not WordPress',
 		},
 	},
 	stories: {
@@ -346,7 +342,6 @@ const BOUNDARY_V322_DEFAULTS = {
 			},
 		},
 		task: {
-			badge: 'Not WordPress',
 			title: 'A WordPress task',
 			lede: 'The actual work someone wants done: a plugin, a theme, a fix. On this map it stands for the job itself, not for any code running on a site.',
 			roles: {
@@ -539,9 +534,13 @@ export const withCurrentDefaults = ( metadata, key, items ) => {
 			merged.qr = item.qr;
 		}
 
-		if ( item.id === 'mcp' && ( key === 'blocks' || key === 'panels' ) ) {
-			merged.badge = item.badge;
-		}
+		/*
+		 * `badge` was the authored status line on cards and inspectors before
+		 * the plug-in took that taxonomy over. Nothing renders it now, so drop
+		 * whatever a saved post still carries rather than keep writing a dead
+		 * field back into post content.
+		 */
+		delete merged.badge;
 
 		return merged;
 	} );

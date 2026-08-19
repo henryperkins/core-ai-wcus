@@ -173,7 +173,7 @@ describe( 'Living Block Map v3.2.5 server render', () => {
 	 */
 	it( 'cues and names the quiet cards it leaves pressable', () => {
 		expect( render ).toContain(
-			"'cardQuiet'        => __( '%1$s — what “%2$s” is about. Open its details.', 'core-ai-map' )"
+			"'cardQuiet'             => __( '%1$s — what “%2$s” is about. Open its details.', 'core-ai-map' )"
 		);
 		expect( view ).toContain( 'strings.cardQuiet' );
 		expect( view ).toMatch(

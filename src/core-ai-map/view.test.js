@@ -139,13 +139,13 @@ describe( 'Core AI Living Block Map', () => {
 			>
 				<button class="core-ai-map__prompt" type="button">Start with WordPress uses AI</button>
 				<button class="core-ai-map__attract-browse" type="button">
-					Browse all components
+					Compare components
 				</button>
 				<button class="core-ai-map__about-trigger" type="button">
 					About this exhibit
 				</button>
 				<button class="core-ai-map__browse" type="button">
-					Browse all components
+					Compare components
 				</button>
 				<button class="core-ai-map__reset" type="button">Start over</button>
 				<div class="core-ai-map__block core-ai-map__block--plugin">
@@ -270,6 +270,16 @@ describe( 'Core AI Living Block Map', () => {
 				skills: 'Agent Skills',
 				'provider-plugin': 'AI provider plugin',
 			},
+			cardStatuses: {
+				plugin: 'WordPress plugin, Experimental',
+				client: 'Core API, Since 7.0',
+				bench: 'Core AI project, Early benchmark',
+				assistant: 'External, AI assistant',
+				mcp: 'WordPress plugin, Not in Core',
+				abilities: 'Core API, Since 6.9',
+				skills: 'Core AI project, Guidance',
+				'provider-plugin': 'WordPress plugin, Not in Core',
+			},
 			guidance: {
 				attract: 'Choose a flow to begin.',
 				flow: 'Follow %1$s. Highlighted components take part in this flow. Tap one to learn what it contributes.',
@@ -277,12 +287,14 @@ describe( 'Core AI Living Block Map', () => {
 				browse: 'Open any component to learn what it is and where it belongs.',
 				cardAction: '%1$s — view its role in “%2$s.”',
 				cardActionStep: 'Step %1$s: %2$s — view its role in “%3$s.”',
-				cardActionBrowse: '%1$s — open its details.',
+				cardActionBrowse: '%1$s — %2$s. Open its details.',
+				cardActionBrowseStart:
+					'Start here: %1$s — %2$s. Open its details.',
 				cardQuiet: '%1$s — what “%2$s” is about. Open its details.',
 				cardInactive: '%1$s — not part of this flow.',
 			},
 			labels: {
-				railEmptyLabel: 'Choose a flow',
+				railEmptyLabel: 'Guided stories',
 				railActiveLabel: 'Choose another flow',
 				takeawayHeading: 'What this flow shows',
 				shelfLabel: 'Also part of the ecosystem',
@@ -644,6 +656,40 @@ describe( 'Core AI Living Block Map', () => {
 		);
 	} );
 
+	it( 'keeps AI Client visibly and accessibly marked as the neutral starting point', () => {
+		context.screen = 'map';
+		context.story = '';
+		context.cardId = 'client';
+
+		expect( mapStore.state.isBrowseStartingPoint ).toBe( true );
+		expect( mapStore.state.isNotBrowseStartingPoint ).toBe( false );
+		expect( mapStore.state.cardActionLabel ).toBe(
+			'Start here: AI Client — Core API, Since 7.0. Open its details.'
+		);
+
+		/*
+		 * The cue is one authored template, not an English prefix glued onto
+		 * the ordinary one — a translation has to be able to move it.
+		 */
+		context.guidance.cardActionBrowseStart = '%1$s (%2$s) — hier beginnen.';
+		expect( mapStore.state.cardActionLabel ).toBe(
+			'AI Client (Core API, Since 7.0) — hier beginnen.'
+		);
+		context.guidance.cardActionBrowseStart =
+			'Start here: %1$s — %2$s. Open its details.';
+
+		context.cardId = 'plugin';
+		expect( mapStore.state.isBrowseStartingPoint ).toBe( false );
+		expect( mapStore.state.isNotBrowseStartingPoint ).toBe( true );
+		expect( mapStore.state.cardActionLabel ).toBe(
+			'AI Plugin — WordPress plugin, Experimental. Open its details.'
+		);
+
+		context.cardId = 'client';
+		context.story = 'uses-ai';
+		expect( mapStore.state.isBrowseStartingPoint ).toBe( false );
+	} );
+
 	it( 'names the state the visitor is in, one instruction at a time', () => {
 		expect( mapStore.state.guidance ).toBe( 'Choose a flow to begin.' );
 		expect( mapStore.state.isGuidanceHidden ).toBe( true );
@@ -660,7 +706,7 @@ describe( 'Core AI Living Block Map', () => {
 		expect( mapStore.state.guidance ).toBe(
 			'Open any component to learn what it is and where it belongs.'
 		);
-		expect( mapStore.state.railLabel ).toBe( 'Choose a flow' );
+		expect( mapStore.state.railLabel ).toBe( 'Guided stories' );
 		expect( mapStore.state.isDiagramKeyHidden ).toBe( true );
 
 		context.story = 'uses-ai';
@@ -849,7 +895,7 @@ describe( 'Core AI Living Block Map', () => {
 
 		context.cardId = 'bench';
 		expect( mapStore.state.cardActionLabel ).toBe(
-			'WP-Bench — open its details.'
+			'WP-Bench — Core AI project, Early benchmark. Open its details.'
 		);
 	} );
 
@@ -1332,6 +1378,14 @@ describe( 'Core AI Living Block Map', () => {
 
 		expect( context.screen ).toBe( 'about' );
 		expect( document.activeElement ).toBe( closeButton );
+		expect( root.querySelector( '.core-ai-map__prompt' ).inert ).toBe(
+			true
+		);
+		expect(
+			root
+				.querySelector( '.core-ai-map__prompt' )
+				.getAttribute( 'aria-hidden' )
+		).toBe( 'true' );
 
 		currentElement = closeButton;
 		root.dispatchEvent(
@@ -1344,9 +1398,122 @@ describe( 'Core AI Living Block Map', () => {
 
 		expect( context.screen ).toBe( 'map' );
 		expect( document.activeElement ).toBe( aboutTrigger );
+		expect( root.querySelector( '.core-ai-map__prompt' ).inert ).toBe(
+			false
+		);
+		expect(
+			root
+				.querySelector( '.core-ai-map__prompt' )
+				.hasAttribute( 'aria-hidden' )
+		).toBe( false );
 		expect( context.announcement ).toContain( 'What this flow shows' );
 		expect( context.pendingTakeawayStory ).toBe( '' );
 		cleanupKiosk();
+	} );
+
+	it( 'cycles Tab and Shift+Tab inside About', () => {
+		const effects = [];
+		const about = root.querySelector( '.core-ai-map__about' );
+		const aboutTrigger = root.querySelector(
+			'.core-ai-map__about-trigger'
+		);
+		const closeButton = root.querySelector( '.core-ai-map__about-close' );
+		const secondary = document.createElement( 'button' );
+		secondary.type = 'button';
+		secondary.textContent = 'Kiosk status';
+		about.append( secondary );
+
+		currentElement = root;
+		useEffect.mockImplementation( ( callback ) =>
+			effects.push( callback )
+		);
+		mapStore.callbacks.useKiosk();
+		const cleanupKiosk = effects[ 0 ]();
+
+		try {
+			currentElement = aboutTrigger;
+			mapStore.actions.openAbout();
+			jest.advanceTimersByTime( 80 );
+
+			secondary.focus();
+			secondary.dispatchEvent(
+				new window.KeyboardEvent( 'keydown', {
+					bubbles: true,
+					key: 'Tab',
+				} )
+			);
+			expect( document.activeElement ).toBe( closeButton );
+
+			closeButton.focus();
+			closeButton.dispatchEvent(
+				new window.KeyboardEvent( 'keydown', {
+					bubbles: true,
+					key: 'Tab',
+					shiftKey: true,
+				} )
+			);
+			expect( document.activeElement ).toBe( secondary );
+
+			/*
+			 * Focus can sit on the dialog itself when the visitor clicks its
+			 * padding. Every surface behind About is inert, so an untrapped
+			 * Tab there would leave the exhibit for good.
+			 */
+			closeButton.blur();
+			about.dispatchEvent(
+				new window.KeyboardEvent( 'keydown', {
+					bubbles: true,
+					key: 'Tab',
+				} )
+			);
+			expect( document.activeElement ).toBe( closeButton );
+
+			about.dispatchEvent(
+				new window.KeyboardEvent( 'keydown', {
+					bubbles: true,
+					key: 'Tab',
+					shiftKey: true,
+				} )
+			);
+			expect( document.activeElement ).toBe( secondary );
+		} finally {
+			cleanupKiosk();
+		}
+	} );
+
+	it( 'hands focus back to About when its reset warning is dismissed', () => {
+		const effects = [];
+		const aboutTrigger = root.querySelector(
+			'.core-ai-map__about-trigger'
+		);
+		const closeButton = root.querySelector( '.core-ai-map__about-close' );
+
+		currentElement = root;
+		useEffect.mockImplementation( ( callback ) =>
+			effects.push( callback )
+		);
+		mapStore.callbacks.useKiosk();
+		const cleanupKiosk = effects[ 0 ]();
+
+		try {
+			currentElement = aboutTrigger;
+			mapStore.actions.openAbout();
+			jest.advanceTimersByTime( 80 );
+			jest.advanceTimersByTime( 80000 );
+
+			expect( context.resetWarning ).toBe( true );
+
+			// The button lives in the row that dismissing it hides.
+			closeButton.blur();
+			mapStore.actions.keepExploring();
+			jest.advanceTimersByTime( 40 );
+
+			expect( context.screen ).toBe( 'about' );
+			expect( context.resetWarning ).toBe( false );
+			expect( document.activeElement ).toBe( closeButton );
+		} finally {
+			cleanupKiosk();
+		}
 	} );
 
 	it( 'replays rather than clears the flow already showing', () => {
@@ -1535,7 +1702,7 @@ describe( 'Core AI Living Block Map', () => {
 		cleanupKiosk();
 	} );
 
-	it( 'pauses the inactivity warning and reset while About is open', () => {
+	it( 'warns and returns to welcome when About is left open', () => {
 		const effects = [];
 		const aboutTrigger = root.querySelector(
 			'.core-ai-map__about-trigger'
@@ -1552,14 +1719,27 @@ describe( 'Core AI Living Block Map', () => {
 		try {
 			currentElement = aboutTrigger;
 			mapStore.actions.openAbout();
-			context.resetWarning = true;
-
-			expect( mapStore.state.isResetWarningHidden ).toBe( true );
-			context.resetWarning = false;
-			jest.advanceTimersByTime( 180000 );
+			jest.advanceTimersByTime( 80 );
+			jest.advanceTimersByTime( 80000 );
 
 			expect( context.screen ).toBe( 'about' );
+			expect( context.resetWarning ).toBe( true );
+			expect( mapStore.state.isResetWarningHidden ).toBe( true );
+			expect( mapStore.state.isAboutResetWarningHidden ).toBe( false );
+			expect( context.announcement ).toContain(
+				'return to the welcome screen in 10 seconds'
+			);
+
+			jest.advanceTimersByTime( 10040 );
+
+			expect( context.screen ).toBe( 'attract' );
 			expect( context.resetWarning ).toBe( false );
+			expect( document.activeElement ).toBe(
+				root.querySelector( '.core-ai-map__prompt' )
+			);
+			expect( root.querySelector( '.core-ai-map__prompt' ).inert ).toBe(
+				false
+			);
 		} finally {
 			cleanupKiosk();
 		}
@@ -1599,6 +1779,10 @@ describe( 'Core AI Living Block Map', () => {
 
 	it( 'marks the enhanced map ready and restores the gated state on cleanup', () => {
 		const effects = [];
+		const aboutTrigger = root.querySelector(
+			'.core-ai-map__about-trigger'
+		);
+		aboutTrigger.focus();
 		currentElement = root;
 		useEffect.mockImplementation( ( callback ) =>
 			effects.push( callback )
@@ -1609,6 +1793,10 @@ describe( 'Core AI Living Block Map', () => {
 		const cleanupKiosk = effects[ 0 ]();
 		expect( context.ready ).toBe( true );
 		expect( mapStore.state.isReady ).toBe( true );
+		expect( context.announcement ).toBe(
+			'Core AI Living Block Map ready. Start with WordPress uses AI, or compare components.'
+		);
+		expect( document.activeElement ).toBe( aboutTrigger );
 
 		cleanupKiosk();
 		expect( context.ready ).toBe( false );

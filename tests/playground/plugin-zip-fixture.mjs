@@ -3,6 +3,7 @@ import AdmZip from 'adm-zip';
 export const pluginBootstrapPath = 'core-ai-map/core-ai-map.php';
 export const pluginBlockMetadataPath =
 	'core-ai-map/build/core-ai-map/block.json';
+export const pluginRenderPath = 'core-ai-map/build/core-ai-map/render.php';
 export const pluginReadmePath = 'core-ai-map/readme.txt';
 export const pluginServiceWorkerPath = 'core-ai-map/assets/service-worker.js';
 
@@ -12,8 +13,10 @@ export const createPluginZipFixture = ( {
 	blockVersion = headerVersion,
 	stableTag = headerVersion,
 	cacheVersion = headerVersion,
+	renderVersionSource = 'CORE_AI_MAP_VERSION',
 	includeBootstrap = true,
 	includeBlockMetadata = true,
+	includeRender = true,
 	includeReadme = true,
 	includeServiceWorker = true,
 } ) => {
@@ -33,6 +36,15 @@ export const createPluginZipFixture = ( {
 			pluginBlockMetadataPath,
 			Buffer.from(
 				`${ JSON.stringify( { version: blockVersion }, null, 2 ) }\n`
+			)
+		);
+	}
+
+	if ( includeRender ) {
+		zip.addFile(
+			pluginRenderPath,
+			Buffer.from(
+				`<?php\n$wrapper_attributes = get_block_wrapper_attributes( array(\n\t'data-core-ai-map-version' => ${ renderVersionSource },\n) );\n`
 			)
 		);
 	}

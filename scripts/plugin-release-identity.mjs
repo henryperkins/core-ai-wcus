@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 
 const pluginBootstrapPath = 'core-ai-map/core-ai-map.php';
 const pluginBlockMetadataPath = 'core-ai-map/build/core-ai-map/block.json';
+const pluginRenderPath = 'core-ai-map/build/core-ai-map/render.php';
 const pluginReadmePath = 'core-ai-map/readme.txt';
 const pluginServiceWorkerPath = 'core-ai-map/assets/service-worker.js';
 const expectedVersion = JSON.parse(
@@ -49,6 +50,7 @@ export const validatePluginArchiveIdentity = ( contents ) => {
 
 	const pluginContents = readUniqueEntry( entries, pluginBootstrapPath );
 	const blockContents = readUniqueEntry( entries, pluginBlockMetadataPath );
+	const renderContents = readUniqueEntry( entries, pluginRenderPath );
 	const readmeContents = readUniqueEntry( entries, pluginReadmePath );
 	const serviceWorkerContents = readUniqueEntry(
 		entries,
@@ -65,6 +67,9 @@ export const validatePluginArchiveIdentity = ( contents ) => {
 	)?.[ 1 ];
 	const cacheVersion = serviceWorkerContents.match(
 		/\bCACHE_NAME\s*=\s*`\$\{\s*CACHE_SCOPE_PREFIX\s*\}v(\d+\.\d+\.\d+)(?:-[^`]*)?`/
+	)?.[ 1 ];
+	const renderVersionMarker = renderContents.match(
+		/'data-core-ai-map-version'\s*=>\s*(CORE_AI_MAP_VERSION)\s*,/
 	)?.[ 1 ];
 	let blockVersion;
 
@@ -98,6 +103,11 @@ export const validatePluginArchiveIdentity = ( contents ) => {
 		cacheVersion,
 		expectedVersion
 	);
+	if ( renderVersionMarker !== 'CORE_AI_MAP_VERSION' ) {
+		throw new Error(
+			'The plug-in ZIP visitor version marker must derive from CORE_AI_MAP_VERSION.'
+		);
+	}
 
 	return {
 		headerVersion,
@@ -105,5 +115,6 @@ export const validatePluginArchiveIdentity = ( contents ) => {
 		blockVersion,
 		stableTag,
 		cacheVersion,
+		renderVersionMarker,
 	};
 };

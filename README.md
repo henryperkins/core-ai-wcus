@@ -9,21 +9,27 @@ self-hosted WordPress Playground artifact for static-hosted demonstrations.
 ## 3.2.5 release notes
 
 This release reframes welcome around what WordPress Core AI is and teaches the
-Choose → Follow → Open interaction. Browse begins at AI Client, every inspector
-names both location and Core status, and feedback now lives in About beside a
-visible, saveable destination. About also explains the exhibit architecture
-and reports offline-cache and wake-lock state.
+Choose → Follow → Open interaction. **Compare components** begins at a visibly
+marked AI Client, and every card and inspector uses the same type-and-maturity
+status taxonomy — owned by the plug-in rather than authored per card, so the
+per-card badge fields it replaces are retired. Feedback now lives in About
+beside a visible, saveable destination. About also explains the exhibit
+architecture and keeps offline and screen-awake status behind a secondary
+**Kiosk status** disclosure.
 
 WP-Bench begins at stage 01 with Previous/Next navigation, and hydration gates
 initial actions. The reduced-motion preview remains still while a compact list
 keeps all four flows discoverable. Inactivity presents a ten-second extension
-warning before returning to welcome and pauses while About is open.
+warning before returning to welcome, including while About is open. About traps
+focus, isolates the map behind its modal semantics, and restores the visitor's
+place when closed.
 
 Hydrated Apply, progress, offline-cache, and wake-lock labels now retain their
 translations. The release also narrows walkthrough focus to real card
 controls, removes obsolete WP-Bench stage metadata, preserves the disabled
 cache state after cleanup failures, strengthens the reset-extension button
-border, and advances the worker cache namespace with the release identity.
+border, advances the worker cache namespace, and exposes a visitor release
+marker derived from the plug-in version constant.
 
 ## 3.2.4 release notes
 

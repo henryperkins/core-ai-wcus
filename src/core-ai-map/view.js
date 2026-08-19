@@ -26,6 +26,7 @@ const attractTimers = new WeakMap();
 const lastCardTriggers = new WeakMap();
 const lastBenchTriggers = new WeakMap();
 const lastAboutTriggers = new WeakMap();
+const aboutSurfaceRestorers = new WeakMap();
 
 const getRoot = ( element ) => element?.closest( '.core-ai-map' );
 
@@ -90,6 +91,78 @@ const isolateKioskPage = ( root ) => {
 			}
 		}
 	};
+};
+
+const restoreAboutSurface = ( root ) => {
+	const restore = root ? aboutSurfaceRestorers.get( root ) : undefined;
+	restore?.();
+	if ( root ) {
+		aboutSurfaceRestorers.delete( root );
+	}
+};
+
+/**
+ * Removes every surface behind About from focus and the accessibility tree.
+ *
+ * The kiosk itself is already isolated from theme chrome. This second layer
+ * makes `aria-modal="true"` an accurate promise inside the block as well.
+ *
+ * @param {HTMLElement} root Kiosk root.
+ */
+const isolateAboutSurface = ( root ) => {
+	restoreAboutSurface( root );
+	const dialog = root?.querySelector( '.core-ai-map__about' );
+	if ( ! dialog?.parentElement ) {
+		return;
+	}
+
+	const records = [];
+	for ( const sibling of dialog.parentElement.children ) {
+		if ( sibling === dialog ) {
+			continue;
+		}
+		records.push( {
+			element: sibling,
+			hadInert: sibling.hasAttribute( 'inert' ),
+			inert: sibling.inert,
+			hadAriaHidden: sibling.hasAttribute( 'aria-hidden' ),
+			ariaHidden: sibling.getAttribute( 'aria-hidden' ),
+		} );
+		sibling.inert = true;
+		sibling.setAttribute( 'aria-hidden', 'true' );
+	}
+
+	aboutSurfaceRestorers.set( root, () => {
+		for ( const record of records ) {
+			if ( record.hadInert ) {
+				record.element.inert = record.inert;
+			} else {
+				record.element.inert = false;
+				record.element.removeAttribute( 'inert' );
+			}
+			if ( record.hadAriaHidden ) {
+				record.element.setAttribute( 'aria-hidden', record.ariaHidden );
+			} else {
+				record.element.removeAttribute( 'aria-hidden' );
+			}
+		}
+	} );
+};
+
+const focusableAboutControls = ( root ) => {
+	const dialog = root?.querySelector( '.core-ai-map__about' );
+	if ( ! dialog ) {
+		return [];
+	}
+	return [
+		...dialog.querySelectorAll(
+			'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
+		),
+	].filter(
+		( control ) =>
+			! control.closest( '[hidden]' ) &&
+			control.getAttribute( 'aria-hidden' ) !== 'true'
+	);
 };
 
 const activeLayout = ( context ) =>
@@ -758,6 +831,10 @@ store( 'core-ai/map', {
 			const context = getContext();
 			return context.screen === 'about' || ! context.resetWarning;
 		},
+		get isAboutResetWarningHidden() {
+			const context = getContext();
+			return context.screen !== 'about' || ! context.resetWarning;
+		},
 		get offlineCacheStatus() {
 			return getContext().offlineCacheStatus || '';
 		},
@@ -1043,6 +1120,17 @@ store( 'core-ai/map', {
 			const context = getContext();
 			return context.cardId === context.inspect;
 		},
+		get isBrowseStartingPoint() {
+			const context = getContext();
+			return Boolean(
+				context.screen === 'map' &&
+					! activeLayout( context ) &&
+					context.cardId === 'client'
+			);
+		},
+		get isNotBrowseStartingPoint() {
+			return ! this.isBrowseStartingPoint;
+		},
 		get isCardNotInspected() {
 			const context = getContext();
 			return context.cardId !== context.inspect;
@@ -1084,6 +1172,7 @@ store( 'core-ai/map', {
 			const context = getContext();
 			const strings = context.guidance || {};
 			const name = context.cardTitles?.[ context.cardId ] || '';
+			const status = context.cardStatuses?.[ context.cardId ] || '';
 
 			if (
 				activeLayout( context ) &&
@@ -1126,7 +1215,17 @@ store( 'core-ai/map', {
 				);
 			}
 
-			return format( strings.cardActionBrowse, name );
+			/*
+			 * The starting point gets its own template rather than a prefix
+			 * glued onto the other one, so a translation can put "start here"
+			 * wherever its language needs it.
+			 */
+			const browseTemplate = this.isBrowseStartingPoint
+				? strings.cardActionBrowseStart ||
+				  'Start here: %1$s — %2$s. Open its details.'
+				: strings.cardActionBrowse || '%1$s — %2$s. Open its details.';
+
+			return format( browseTemplate, name, status );
 		},
 
 		get isStripLive() {
@@ -1604,6 +1703,7 @@ store( 'core-ai/map', {
 			context.aboutReturnScreen = context.screen;
 			context.screen = 'about';
 			context.announcement = 'About this exhibit open.';
+			isolateAboutSurface( root );
 			resetSchedulers.get( root )?.();
 			focusWithin( root, '.core-ai-map__about-close', 80 );
 		},
@@ -1613,6 +1713,7 @@ store( 'core-ai/map', {
 			context.screen =
 				context.aboutReturnScreen === 'map' ? 'map' : 'attract';
 			context.aboutReturnScreen = '';
+			restoreAboutSurface( root );
 			context.announcement = [
 				'About this exhibit closed.',
 				context.screen === 'map'
@@ -1718,6 +1819,14 @@ store( 'core-ai/map', {
 			context.resetWarning = false;
 			context.announcement = 'Keep exploring. Reset postponed.';
 			resetSchedulers.get( root )?.();
+			/*
+			 * Postponing hides the row this button sits in. Inside About that
+			 * would drop focus to the document — outside the modal and past
+			 * the inert map — so hand it back to the control About opens on.
+			 */
+			if ( context.screen === 'about' ) {
+				focusWithin( root, '.core-ai-map__about-close' );
+			}
 		},
 		reset() {
 			const context = getContext();
@@ -1725,6 +1834,7 @@ store( 'core-ai/map', {
 			if ( root ) {
 				clearTimers( flowTimers, root );
 			}
+			restoreAboutSurface( root );
 			setAttractState( context );
 			attractSchedulers.get( root )?.();
 			focusWithin( root, '.core-ai-map__prompt' );
@@ -1741,6 +1851,9 @@ store( 'core-ai/map', {
 				}
 				context.ready = true;
 				context.resetWarning = false;
+				context.announcement =
+					context.announcements?.ready ||
+					'Core AI Living Block Map ready. Start with WordPress uses AI, or compare components.';
 				root.classList.add( 'is-ready' );
 				document.body.classList.add( 'core-ai-kiosk-active' );
 				const restorePage = isolateKioskPage( root );
@@ -1789,9 +1902,10 @@ store( 'core-ai/map', {
 				const resetForInactivity = () => {
 					if (
 						document.visibilityState === 'visible' &&
-						! [ 'attract', 'about' ].includes( context.screen )
+						context.screen !== 'attract'
 					) {
 						clearTimers( flowTimers, root );
+						restoreAboutSurface( root );
 						setAttractState( context );
 						context.resetWarning = false;
 						context.announcement =
@@ -1808,7 +1922,7 @@ store( 'core-ai/map', {
 					window.clearTimeout( resetTimer );
 					window.clearTimeout( resetWarningTimer );
 					context.resetWarning = false;
-					if ( [ 'attract', 'about' ].includes( context.screen ) ) {
+					if ( context.screen === 'attract' ) {
 						return;
 					}
 					const base = Number.isFinite( timeout ) ? timeout : 60000;
@@ -1901,6 +2015,34 @@ store( 'core-ai/map', {
 					}
 
 					scheduleReset();
+					if ( context.screen === 'about' && event.key === 'Tab' ) {
+						const controls = focusableAboutControls( root );
+						const first = controls[ 0 ];
+						const last = controls.at( -1 );
+						if ( ! first || ! last ) {
+							return;
+						}
+						/*
+						 * Focus can also sit on something that is not one of
+						 * these controls — the visitor clicked the dialog's
+						 * own padding. Every surface behind About is inert by
+						 * then, so the browser's own Tab would leave the
+						 * exhibit and no later key would reach this handler.
+						 * Re-enter at whichever edge the direction implies.
+						 */
+						if (
+							! controls.includes( event.target ) ||
+							controls.length === 1 ||
+							( event.shiftKey && event.target === first ) ||
+							( ! event.shiftKey && event.target === last )
+						) {
+							event.preventDefault();
+							( event.shiftKey ? last : first ).focus( {
+								preventScroll: true,
+							} );
+						}
+						return;
+					}
 					const tab = event.target?.closest?.( '[role="tab"]' );
 					if (
 						tab &&
@@ -1963,6 +2105,7 @@ store( 'core-ai/map', {
 								? 'map'
 								: 'attract';
 						context.aboutReturnScreen = '';
+						restoreAboutSurface( root );
 						context.announcement = [
 							'About this exhibit closed.',
 							context.screen === 'map'
@@ -2256,6 +2399,7 @@ store( 'core-ai/map', {
 						handleVisibility
 					);
 					wakeLock?.release?.();
+					restoreAboutSurface( root );
 					restorePage();
 					context.ready = false;
 					context.resetWarning = false;

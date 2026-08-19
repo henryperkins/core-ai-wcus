@@ -41,9 +41,9 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 			'labels' => array(
 				'type' => 'object',
 				'default' => array(
-					'railEmptyLabel' => 'Choose a flow',
+					'railEmptyLabel' => 'Guided stories',
 					'railActiveLabel' => 'Choose another flow',
-					'browseLabel' => 'Browse all components',
+					'browseLabel' => 'Compare components',
 					'browseDescription' => 'Start with AI Client. Compare what ships in Core, what is installed as a plugin or project, and what stays outside WordPress.',
 					'takeawayHeading' => 'What this flow shows',
 					'roleHeading' => 'Its role in this flow',
@@ -69,7 +69,8 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 					'cardActionStep' => 'Step %1$s: %2$s — view its role in “%3$s.”',
 					'cardQuiet' => '%1$s — what “%2$s” is about. Open its details.',
 					'cardInactive' => '%1$s — not part of this flow.',
-					'cardActionBrowse' => '%1$s — open its details.'
+					'cardActionBrowse' => '%1$s — %2$s. Open its details.',
+					'cardActionBrowseStart' => 'Start here: %1$s — %2$s. Open its details.'
 				)
 			),
 			'inactivityTimeout' => array(
@@ -94,38 +95,32 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 					array(
 						'id' => 'plugin',
 						'name' => 'AI Plugin',
-						'tagline' => 'Turn the foundations into useful features',
-						'badge' => 'Experimental reference plugin'
+						'tagline' => 'Turn the foundations into useful features'
 					),
 					array(
 						'id' => 'client',
 						'name' => 'AI Client',
-						'tagline' => 'Request AI through one common interface',
-						'badge' => 'Core API · 7.0'
+						'tagline' => 'Request AI through one common interface'
 					),
 					array(
 						'id' => 'connectors',
 						'name' => 'Connectors',
-						'tagline' => 'Configure provider plugins and credentials',
-						'badge' => 'Core API · 7.0'
+						'tagline' => 'Configure provider plugins and credentials'
 					),
 					array(
 						'id' => 'abilities',
 						'name' => 'Abilities API',
-						'tagline' => 'Describe what WordPress can do',
-						'badge' => 'Core API · 6.9'
+						'tagline' => 'Describe what WordPress can do'
 					),
 					array(
 						'id' => 'mcp',
 						'name' => 'MCP Adapter',
-						'tagline' => 'Let authorized assistants work with WordPress',
-						'badge' => 'WordPress plugin · not in Core'
+						'tagline' => 'Let authorized assistants work with WordPress'
 					),
 					array(
 						'id' => 'bench',
 						'name' => 'WP-Bench',
-						'tagline' => 'See whether the code an agent writes actually runs',
-						'badge' => 'Early benchmark'
+						'tagline' => 'See whether the code an agent writes actually runs'
 					)
 				)
 			),
@@ -135,32 +130,27 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 					array(
 						'id' => 'assistant',
 						'name' => 'AI assistant',
-						'tagline' => 'Speaks MCP',
-						'badge' => 'Not WordPress'
+						'tagline' => 'Speaks MCP'
 					),
 					array(
 						'id' => 'skills',
 						'name' => 'Agent Skills',
-						'tagline' => 'Instruction bundles',
-						'badge' => 'Guidance'
+						'tagline' => 'Instruction bundles'
 					),
 					array(
 						'id' => 'agent',
 						'name' => 'Coding agent',
-						'tagline' => 'Writes the code',
-						'badge' => 'Not WordPress'
+						'tagline' => 'Writes the code'
 					),
 					array(
 						'id' => 'provider',
 						'name' => 'External AI service',
-						'tagline' => 'Selected from site configuration',
-						'badge' => 'Not WordPress'
+						'tagline' => 'Selected from site configuration'
 					),
 					array(
 						'id' => 'task',
 						'name' => 'Code for this site',
-						'tagline' => 'A plugin, block, or ability registration',
-						'badge' => 'Still outside'
+						'tagline' => 'A plugin, block, or ability registration'
 					)
 				)
 			),
@@ -229,7 +219,6 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 				'default' => array(
 					array(
 						'id' => 'abilities',
-						'badge' => 'Core API · 6.9',
 						'title' => 'Abilities API',
 						'lede' => 'Abilities are the list of things this site can do. Each one declares its inputs, its outputs, who is allowed to run it, and what happens when it runs.',
 						'roles' => array(
@@ -269,7 +258,6 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 					),
 					array(
 						'id' => 'client',
-						'badge' => 'Core API · 7.0',
 						'title' => 'AI Client',
 						'lede' => 'A plugin asks for a capability and the kind of result it needs. The AI Client routes through an installed provider plugin to a compatible external service; Connectors supplies that plugin’s configuration and credentials.',
 						'roles' => array(
@@ -320,7 +308,6 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 					),
 					array(
 						'id' => 'connectors',
-						'badge' => 'Core API · 7.0',
 						'title' => 'Connectors',
 						'lede' => 'Where a site owner installs provider plugins, supplies credentials, and sees connection status — one setup shared by every plugin that needs it. It supports the request path; it is not the request executor.',
 						'roles' => array(
@@ -365,7 +352,6 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 					),
 					array(
 						'id' => 'plugin',
-						'badge' => 'Experimental reference plugin',
 						'title' => 'AI Plugin',
 						'lede' => 'Where the foundations become things people can use: alt text, summaries, titles, editorial notes, image generation. Nothing is on by default: a site owner switches AI on, then enables one experiment at a time.',
 						'roles' => array(
@@ -405,7 +391,6 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 					),
 					array(
 						'id' => 'mcp',
-						'badge' => 'WordPress plugin · not in Core',
 						'title' => 'MCP Adapter',
 						'lede' => 'Translation at the edge of the site. It exposes the abilities their authors marked public to authorized outside assistants — as MCP resources and prompts automatically, and as individual tools on a custom server — then translates their calls back into WordPress work. On the default server abilities are reached through three adapter tools rather than listed one by one.',
 						'roles' => array(
@@ -448,7 +433,6 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 					),
 					array(
 						'id' => 'bench',
-						'badge' => 'Early benchmark',
 						'title' => 'WP-Bench',
 						'lede' => 'A test bench, not part of any live request. It measures whether the code an agent writes for WordPress actually runs.',
 						'roles' => array(
@@ -488,7 +472,6 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 					),
 					array(
 						'id' => 'skills',
-						'badge' => 'Contributor guidance',
 						'title' => 'Agent Skills',
 						'lede' => 'Portable instruction bundles — guidance, checklists, references — that help a coding assistant follow current WordPress practice. Nothing here runs on a live site.',
 						'roles' => array(
@@ -525,7 +508,6 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 					),
 					array(
 						'id' => 'assistant',
-						'badge' => 'Not WordPress',
 						'title' => 'AI assistant',
 						'lede' => 'A program outside WordPress — a chat assistant, an editor, an agent — that speaks MCP. It holds no privileges of its own: it signs in as a WordPress user it was given credentials for, and never reaches further than that user can.',
 						'roles' => array(
@@ -545,7 +527,6 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 					),
 					array(
 						'id' => 'agent',
-						'badge' => 'Not WordPress',
 						'title' => 'Coding agent',
 						'lede' => 'A coding assistant that writes plugin and theme code. It works outside the site — on a developer’s machine or in a hosted environment — and never runs against a live install.',
 						'roles' => array(
@@ -565,7 +546,6 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 					),
 					array(
 						'id' => 'provider',
-						'badge' => 'Not WordPress',
 						'title' => 'External AI service',
 						'lede' => 'The model provider a site owner configured: an API run by someone else, on someone else’s infrastructure. WordPress sends it a request and receives a result.',
 						'roles' => array(
@@ -579,7 +559,6 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 					),
 					array(
 						'id' => 'task',
-						'badge' => 'Not WordPress yet',
 						'title' => 'Code for this site',
 						'lede' => 'What the agent produced: files, a diff, a pull request. A plugin, a block, an ability registration — written for this WordPress and not yet part of it.',
 						'roles' => array(
@@ -613,7 +592,6 @@ Badges show what ships in WordPress Core, what is installed as a plugin or proje
 					),
 					array(
 						'id' => 'provider-plugin',
-						'badge' => 'WordPress plugin',
 						'title' => 'AI provider plugin',
 						'lede' => 'A provider-specific integration installed as a WordPress plugin. It speaks one external service’s protocol using the credentials Connectors resolved for it, and it is what turns that service into something a site owner can choose.',
 						'roles' => array(

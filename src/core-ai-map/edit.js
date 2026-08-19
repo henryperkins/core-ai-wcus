@@ -186,29 +186,6 @@ export default function Edit( { attributes, setAttributes } ) {
 									} )
 								}
 							/>
-							<TextControl
-								label={ __( 'Status badge', 'core-ai-map' ) }
-								value={ item.badge }
-								disabled={ item.id === 'mcp' }
-								help={
-									item.id === 'mcp'
-										? __(
-												'Fixed to the reviewed WordPress project status.',
-												'core-ai-map'
-										  )
-										: undefined
-								}
-								onChange={ ( value ) =>
-									setAttributes( {
-										blocks: updateItem(
-											blocks,
-											index,
-											'badge',
-											value
-										),
-									} )
-								}
-							/>
 						</div>
 					) ) }
 				</PanelBody>
@@ -246,20 +223,6 @@ export default function Edit( { attributes, setAttributes } ) {
 											actors,
 											index,
 											'tagline',
-											value
-										),
-									} )
-								}
-							/>
-							<TextControl
-								label={ __( 'Eyebrow', 'core-ai-map' ) }
-								value={ item.badge }
-								onChange={ ( value ) =>
-									setAttributes( {
-										actors: updateItem(
-											actors,
-											index,
-											'badge',
 											value
 										),
 									} )

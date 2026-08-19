@@ -10,6 +10,7 @@ const setupPath = join( root, 'playground', 'setup.php' );
 const packagePath = join( root, 'package.json' );
 const blockPath = join( root, 'src', 'core-ai-map', 'block.json' );
 const pluginPath = join( root, 'core-ai-map.php' );
+const renderPath = join( root, 'src', 'core-ai-map', 'render.php' );
 
 test( 'defines a self-contained v2 Playground kiosk Blueprint', () => {
 	const blueprint = JSON.parse( readFileSync( blueprintPath, 'utf8' ) );
@@ -52,6 +53,7 @@ test( 'keeps package, plugin, block, and Blueprint release identity aligned', ()
 	const packageMetadata = JSON.parse( readFileSync( packagePath, 'utf8' ) );
 	const blockMetadata = JSON.parse( readFileSync( blockPath, 'utf8' ) );
 	const plugin = readFileSync( pluginPath, 'utf8' );
+	const render = readFileSync( renderPath, 'utf8' );
 	const version = packageMetadata.version;
 
 	assert.equal( blockMetadata.version, version );
@@ -63,5 +65,9 @@ test( 'keeps package, plugin, block, and Blueprint release identity aligned', ()
 	assert.ok( plugin.includes( ` * Version:           ${ version }` ) );
 	assert.ok(
 		plugin.includes( `define( 'CORE_AI_MAP_VERSION', '${ version }' );` )
+	);
+	assert.match(
+		render,
+		/'data-core-ai-map-version'\s*=>\s*CORE_AI_MAP_VERSION/
 	);
 } );

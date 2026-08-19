@@ -101,12 +101,14 @@ Run these commands when building from source:
 
 = 3.2.5 =
 
-* Reframed welcome around what WordPress Core AI is and the Choose, Follow, Open interaction; Browse begins at AI Client, and every inspector names location and Core status.
-* Moved the question QR and visible destination into About, where the exhibit architecture, offline-cache state, and wake-lock state are also disclosed.
-* Opened WP-Bench at stage 01 with sequential navigation, gated controls until hydration, and added an extendable inactivity warning that pauses while About is open.
+* Reframed welcome around what WordPress Core AI is and the Choose, Follow, Open interaction; "Compare components" begins at a visibly marked AI Client.
+* Gave every card and inspector one type-and-maturity status taxonomy, owned by the plug-in rather than authored per card, and retired the per-card badge fields it replaces.
+* Moved the question QR and visible destination into About, which explains the exhibit architecture and keeps offline and screen-awake state behind a secondary "Kiosk status" disclosure.
+* Opened WP-Bench at stage 01 with sequential navigation, gated controls until hydration, and added an extendable inactivity warning that also runs while About is open.
+* Gave About a focus trap and modal isolation of the map behind it, and returned the visitor to their place on close.
 * Kept the reduced-motion preview still while adding a compact static list of all four available flows.
 * Localized hydrated Apply, progress, offline-cache, and wake-lock labels, and kept a disabled cache state intact if service-worker cleanup fails.
-* Narrowed card focus targeting, removed obsolete WP-Bench stage metadata, and strengthened the reset-extension button border.
+* Narrowed card focus targeting, removed obsolete WP-Bench stage metadata, strengthened the reset-extension button border, and exposed a visitor release marker derived from the plug-in version constant.
 
 = 3.2.4 =
 

@@ -28,8 +28,9 @@ describe( 'Living Block Map v3.2.5 metadata', () => {
 			'Start with WordPress uses AI'
 		);
 		expect( attributes.labels.default ).toMatchObject( {
-			railEmptyLabel: 'Choose a flow',
+			railEmptyLabel: 'Guided stories',
 			railActiveLabel: 'Choose another flow',
+			browseLabel: 'Compare components',
 			browseDescription:
 				'Start with AI Client. Compare what ships in Core, what is installed as a plugin or project, and what stays outside WordPress.',
 			lessonHeading: 'Why that matters',
@@ -130,7 +131,6 @@ describe( 'Living Block Map v3.2.5 metadata', () => {
 			id: 'task',
 			name: 'Code for this site',
 			tagline: 'A plugin, block, or ability registration',
-			badge: 'Still outside',
 		} );
 	} );
 
@@ -265,8 +265,13 @@ describe( 'Living Block Map v3.2.5 metadata', () => {
 			( candidate ) => candidate.id === 'mcp'
 		);
 
-		expect( card.badge ).toBe( 'WordPress plugin · not in Core' );
-		expect( panel.badge ).toBe( 'WordPress plugin · not in Core' );
+		/*
+		 * Status is product-owned and rendered from the plug-in's own
+		 * taxonomy, so neither the card nor its panel carries an authored
+		 * badge that could drift away from it.
+		 */
+		expect( card.badge ).toBeUndefined();
+		expect( panel.badge ).toBeUndefined();
 		expect( panel.notes[ 0 ].text ).toContain(
 			'supports multiple MCP protocol versions'
 		);
