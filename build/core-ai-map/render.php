@@ -1346,6 +1346,7 @@ $asset_urls         = array(
 	CORE_AI_MAP_URL . 'assets/icon.svg',
 	CORE_AI_MAP_URL . 'assets/icon-192.png',
 	CORE_AI_MAP_URL . 'assets/icon-512.png',
+	CORE_AI_MAP_URL . 'assets/generated/illustrative-ceramic-mug.png',
 	CORE_AI_MAP_URL . 'assets/qr/feedback.svg',
 );
 
@@ -2599,6 +2600,24 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					</dl>
 					<h3 class="core-ai-map__details-heading"><?php echo esc_html( $labels['definitionHeading'] ); ?></h3>
 					<p class="core-ai-map__details-lede"><?php echo esc_html( $panel['lede'] ?? '' ); ?></p>
+					<?php if ( 'plugin' === $panel_id ) : ?>
+						<figure class="core-ai-map__image-example">
+							<div class="core-ai-map__image-example-stage">
+								<img
+									src="<?php echo esc_url( CORE_AI_MAP_URL . 'assets/generated/illustrative-ceramic-mug.png' ); ?>"
+									alt="<?php esc_attr_e( 'A cream ceramic mug with a cobalt blue handle.', 'core-ai-map' ); ?>"
+									width="196"
+									height="196"
+									loading="lazy"
+									decoding="async"
+								>
+							</div>
+							<figcaption>
+								<strong><?php esc_html_e( 'Illustrative source image', 'core-ai-map' ); ?></strong>
+								<span><?php esc_html_e( 'This bundled example makes the image modality concrete; the exhibit sends no live request.', 'core-ai-map' ); ?></span>
+							</figcaption>
+						</figure>
+					<?php endif; ?>
 					<?php if ( ! $is_context_only ) : ?>
 						<p class="core-ai-map__details-continuation" aria-hidden="true">
 							<span><?php esc_html_e( 'More details below', 'core-ai-map' ); ?></span>

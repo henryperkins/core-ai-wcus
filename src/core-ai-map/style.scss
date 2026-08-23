@@ -2769,6 +2769,58 @@ body.core-ai-kiosk-active {
 		text-wrap: pretty;
 	}
 
+	&__image-example {
+		display: grid;
+		grid-template-columns: 176px minmax(0, 1fr);
+		gap: 18px;
+		align-items: center;
+		margin: 22px 0 0;
+		padding: 12px;
+		background: var(--core-ai-surface);
+		border: 1px solid var(--core-ai-line);
+		border-radius: 3px;
+
+		figcaption {
+			display: grid;
+			gap: 8px;
+			margin: 0;
+		}
+
+		figcaption strong {
+			color: var(--core-ai-text-muted);
+			font-family: var(--core-ai-mono);
+			font-size: 11px;
+			font-weight: 700;
+			letter-spacing: 0.07em;
+			line-height: 1.35;
+			text-transform: uppercase;
+		}
+
+		figcaption span {
+			color: var(--core-ai-ink-soft);
+			font-size: 14px;
+			line-height: 1.5;
+			text-wrap: pretty;
+		}
+	}
+
+	&__image-example-stage {
+		display: grid;
+		place-items: center;
+		min-height: 156px;
+		overflow: hidden;
+		background: linear-gradient(90deg, var(--core-ai-canvas) 0 50%, var(--core-ai-blue-tint) 50% 100%);
+		border: 1px solid var(--core-ai-line);
+		border-radius: 2px;
+
+		img {
+			display: block;
+			width: 144px;
+			height: 144px;
+			object-fit: contain;
+		}
+	}
+
 	&__details-meta {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));

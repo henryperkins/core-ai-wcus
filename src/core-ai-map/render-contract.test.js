@@ -292,7 +292,13 @@ function esc_html( $value ) { return htmlspecialchars( (string) $value, ENT_QUOT
 function esc_url( $value ) { return htmlspecialchars( (string) $value, ENT_QUOTES ); }
 function esc_attr_e( $value ) { echo esc_attr( $value ); }
 function esc_html_e( $value ) { echo esc_html( $value ); }
-function get_block_wrapper_attributes( $attributes ) { return 'data-core-ai-map-version="' . esc_attr( $attributes['data-core-ai-map-version'] ?? '' ) . '"'; }
+	function get_block_wrapper_attributes( $attributes ) {
+		$pairs = array();
+		foreach ( $attributes as $name => $value ) {
+			$pairs[] = esc_attr( $name ) . '="' . esc_attr( $value ) . '"';
+		}
+		return implode( ' ', $pairs );
+	}
 function wp_interactivity_data_wp_context( $context ) { return 'data-test-context="' . esc_attr( json_encode( $context ) ) . '"'; }
 class CoreAiMapTestModules { public function get_registered( $id ) { return null; } }
 function wp_script_modules() { return new CoreAiMapTestModules(); }
@@ -569,6 +575,38 @@ describe( 'Core AI map render contract', () => {
 		expect( markup ).not.toContain( 'Every feature is opt-in' );
 		expect( markup ).not.toContain( 'ships 19 August' );
 		expect( markup ).toContain( 'One flag, every client. New in 7.1.' );
+	} );
+
+	it( 'keeps the bundled image example inside the AI Plugin inspector and offline cache', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup();
+		const pluginPanel = container.querySelector( '[id$="-panel-plugin"]' );
+		const examples = container.querySelectorAll(
+			'.core-ai-map__image-example'
+		);
+		const image = pluginPanel?.querySelector(
+			'.core-ai-map__image-example img'
+		);
+		const caption = pluginPanel?.querySelector(
+			'.core-ai-map__image-example figcaption'
+		);
+		const root = container.querySelector( '.core-ai-map' );
+		const offlineAssets = JSON.parse( root?.dataset.assetUrls || '[]' );
+		const expectedUrl =
+			'https://example.test/plugin/assets/generated/illustrative-ceramic-mug.png';
+
+		expect( examples ).toHaveLength( 1 );
+		expect( image?.getAttribute( 'src' ) ).toBe( expectedUrl );
+		expect( image?.getAttribute( 'alt' ) ).toBe(
+			'A cream ceramic mug with a cobalt blue handle.'
+		);
+		expect( image?.getAttribute( 'width' ) ).toBe( '196' );
+		expect( image?.getAttribute( 'height' ) ).toBe( '196' );
+		expect( caption?.textContent ).toContain( 'Illustrative source image' );
+		expect( caption?.textContent ).toContain(
+			'This bundled example makes the image modality concrete; the exhibit sends no live request.'
+		);
+		expect( offlineAssets ).toContain( expectedUrl );
 	} );
 
 	it( 'migrates untouched pre-booth v3.1.1 copy on the server', () => {
