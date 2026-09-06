@@ -6,6 +6,31 @@ building blocks fit together on a kiosk. Its server markup is enhanced by the
 WordPress Interactivity API. The repository also contains a reproducible,
 self-hosted WordPress Playground artifact for static-hosted demonstrations.
 
+## Local audit remediation
+
+The inactivity warning allows 20 seconds to extend the session, including
+at the 30-second minimum timeout. Navigation, reset, About, and WP-Bench
+announcements use the translated PHP context. Inspector continuation cues
+measure remaining content when scroll-state queries are unavailable; the
+recovery link becomes focusable only when it appears. Forced-colors states
+and meaningful sidecar boundaries preserve the participation cues.
+
+Page zoom changes after loading retain the stage's apparent enlargement and
+allow panning. The fitter distinguishes page zoom from display-density changes
+by comparing viewport and browser-window dimensions, preserving the current
+zoom when moving between displays. Saved initial browser zoom remains the
+document's baseline; it cannot be inferred from pixel density alone.
+Phone inspection permits pinch zoom, and keyboard focus reveals controls
+outside the visible part of a pannable stage. The inspector's continuation cue
+moves with the stage during panning and stays fixed while its text scrolls.
+The browser acceptance contract includes `tests/browser/inspection-geometry.js`
+for these geometry checks at desktop and phone inspection sizes.
+
+The transparent illustration is now a 392px RGBA PNG (70,431 bytes), and the
+two variable fonts receive kiosk-only preload hints. Repository lint commands
+check authored files. These local changes require a rebuilt, verified release
+artifact and the browser/device gates below before deployment.
+
 ## 3.2.5 release notes
 
 This release reframes welcome around what WordPress Core AI is and teaches the
@@ -19,7 +44,7 @@ architecture and keeps offline and screen-awake status behind a secondary
 
 WP-Bench begins at stage 01 with Previous/Next navigation, and hydration gates
 initial actions. The reduced-motion preview remains still while a compact list
-keeps all four flows discoverable. Inactivity presents a ten-second extension
+keeps all four flows discoverable. Inactivity presents a twenty-second extension
 warning before returning to welcome, including while About is open. About traps
 focus, isolates the map behind its modal semantics, and restores the visitor's
 place when closed.
@@ -174,21 +199,17 @@ pull request for this work.
 ## Cloudflare Pages Playground exhibit
 
 `playground/blueprint.json` packages this same plugin into a browser-executed
-WordPress Playground kiosk. It pins WordPress to Playground's `beta` channel
+WordPress Playground kiosk. It pins WordPress to the stable `7.1` build
 and PHP to 8.3, creates the `/living-block-map/` page, disables Playground
 network access, and keeps each visitor's WordPress state in that visitor's
 browser. The page disables this plugin's own offline worker because Playground
 already owns the virtual site's service worker and browser-local persistence.
 
-`beta` is how the exhibit reaches WordPress 7.1: Playground publishes no `7.1`
-branch build and has no syntax for pinning an exact release candidate, so the
-channel is the only route to prerelease 7.1. It resolved to 7.1-RC1 when this
-was written, which lags WordPress.org's own beta channel — 7.1-RC3 as of
-15 August 2026. The channel moves upstream; a built artifact does not. The
-runtime tree is copied out of `PLAYGROUND_SOURCE_DIR` at build time, so a
-deployed booth stays on whatever RC that source carried. Re-download the
-Playground static release to move the booth forward, and switch the pin to
-`7.1` once 7.1 ships on 19 August 2026.
+WordPress 7.1 was released on 19 August 2026 and the official Playground runtime
+now provides its stable build. The runtime tree is copied out of
+`PLAYGROUND_SOURCE_DIR` at build time: changing the Blueprint alone does not
+refresh an older runtime or a deployed booth. Use an official static release
+containing `wp-7.1` and verify the generated artifact before publishing.
 
 Build the static Pages artifact from an official WordPress Playground static
 release directory:
@@ -212,7 +233,7 @@ npx wrangler pages deploy dist-playground `
     --commit-dirty=false
 ```
 
-The build copies only the assets needed by the pinned runtime plus the `beta`
+The build copies only the assets needed by the pinned runtime plus the `7.1`
 channel's static fallback tree. It validates Cloudflare Pages Free's 20,000-file
 and 25 MiB-per-asset limits, removes upstream Google Fonts and analytics, and
 uses a local Blueprint and plugin ZIP. `npm run plugin-zip` creates the local

@@ -16,7 +16,7 @@
 		}
 	},
 	"contentBaseline": "empty",
-	"wordpressVersion": "beta",
+	"wordpressVersion": "7.1",
 	"phpVersion": "8.3",
 	"siteOptions": {
 		"blogname": "Core AI Living Block Map",

@@ -207,16 +207,16 @@ describe( 'Living Block Map v3.2.5 metadata', () => {
 		expect( connectorsPanel.connectHeading ).toBe( 'Provider setup' );
 	} );
 
-	it( 'dates WordPress 7.1 while telling visitors the exhibit already runs it', () => {
+	it( 'describes shipped 7.1 features without assuming the host runtime', () => {
 		const abilities = attributes.panels.default.find(
 			( panel ) => panel.id === 'abilities'
 		);
 		const copy = abilities.notes.map( ( note ) => note.text ).join( ' ' );
 
 		expect( copy ).toContain(
-			'arrive in WordPress 7.1 on August 19, 2026'
+			'arrived in WordPress 7.1 on August 19, 2026'
 		);
-		expect( copy ).toContain( 'runs a 7.1 release candidate' );
+		expect( copy ).not.toContain( 'runs a 7.1 release candidate' );
 		expect( copy ).not.toContain( 'ships 19 August' );
 		expect( copy ).not.toContain( 'this exhibit runs WordPress 7.0' );
 	} );

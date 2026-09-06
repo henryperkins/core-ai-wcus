@@ -7,6 +7,7 @@ colors:
   blue-tint: "#eef1ff"
   blue-line: "#aab5ff"
   blue-wash: "#f4f6ff"
+  on-accent: "#ffffff"
   ink: "#1e1e1e"
   ink-soft: "#50575e"
   text-muted: "#646970"
@@ -206,8 +207,12 @@ project-authored extensions on top of that foundation.
   values — router results, socket labels, breadcrumbs, the applied workbench state.
 - **Participant Wash** (`blue-wash`): the palest fill in the system, and the single
   signal that a card belongs to the selected flow.
-- **Result Tint** (`blue-tint`) and **Result Line** (`blue-line`): the chip pairing for
-  a settled value, and the dashed border on a sidecar card standing beside the path.
+- **Result Tint** (`blue-tint`) and **Result Line** (`blue-line`): the decorative chip
+  pairing for a settled value. Meaning-bearing sidecar borders use Live Blue to
+  exceed 3:1 against Participant Wash; in increased contrast Result Line uses Deep Blue.
+- **On Accent** (`on-accent`): white foreground on Live Blue or the selected dark tab.
+  The exhibit pins a light color scheme. Forced colors uses the visitor's system
+  palette, with highlighted selections and heavier participant borders.
 
 ### Neutral
 
@@ -312,6 +317,16 @@ the same composition at a smaller scale, not a different layout: `--cai-scale` i
 0.7496 there, so every size in this document renders at three quarters of the figure
 stated. 68px rail buttons render at 51, 64px primaries at 48, 60px controls at 45,
 44px nested controls at 33, and the 34px colophon box at 25.
+
+Browser zoom changes after loading compensate only when pixel density and both
+viewport dimensions change inversely inside an unchanged browser window. Display
+changes rebase density while preserving the visitor's current zoom. When the stage
+exceeds the viewport, inspection mode permits two-axis panning and reveals focused
+controls. A compatibility scale floor prevents smaller viewports from shrinking text
+further. Phone inspection
+permits native pinch zoom. Saved initial browser zoom remains the document baseline;
+pixel density alone does not identify absolute zoom. The pannable stage keeps a
+transform so fixed inspector cues retain their anchor while the stage moves.
 
 The stage divides into four bands. A 60px top bar inset 24px left and right, 18px from
 the top, laid out in flow — identity, the one instruction that applies right now, then
@@ -442,14 +457,14 @@ smaller than a fingertip, or when it reports state and therefore takes a pill.
   - *Dimmed:* opacity 0.4 and scale 0.945, plus the native `disabled` attribute.
   - *Parked:* 176 × 100, opacity 0.62, badge and description dropped, name to 15px, the
     card rotating to a horizontal icon-and-name row.
-  - *Sidecar:* parked geometry with a `blue-wash` fill and a **dashed** `blue-line`
+  - *Sidecar:* parked geometry with a `blue-wash` fill and a **dashed** `blue`
     border, an absolute uppercase label 23px above it, and the tap cue on its own line.
 - **Actor card** (`actor-card`): 180 wide, min-height 120, dashed `line-strong` border,
   content-sized so a tap cue has somewhere to go, backed by two offset dashed ghosts.
 - **Inspect panel** (`inspect-panel`): 520px anchored right, full stage height, hairline
   left border, directional float shadow, 92px of bottom padding to clear the
   continuation pill. Uses `container-type: scroll-state` so the pill appears only when
-  there is more to read.
+  there is more to read; a measured overflow fallback covers other browsers.
 - **Internal padding:** 14px on a parked or actor card, 16px on a full card, 24/32 in the
   panel, 36/42 in the About dialog.
 

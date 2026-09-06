@@ -77,13 +77,13 @@ Remaining work is factual accuracy, release gates, and physical device sign-off.
 - Attract loop runs assemble → path → signal → caption → release. Reduced-motion
   visitors see a settled preview. After engagement, motion settles rather than looping.
   Sixty seconds of inactivity returns the kiosk to the attract screen after a visible,
-  extendable ten-second warning.
+  extendable twenty-second warning.
 - Two delivery forms. (a) The plugin installed on a WordPress site, on a full-width
   template at a non-home/root permalink. (b) A browser-executed WordPress Playground
   artifact on Cloudflare Pages — `core-ai-living-block-map.pages.dev` and
   `wcus.hperkins.com` (CNAME in DNS-only mode; the orange-cloud proxy breaks Pages
-  routing). Playground pins the `beta` channel to reach a WordPress 7.1 release
-  candidate, disables network access, and keeps each visitor's state in that
+  routing). Playground pins the stable `7.1` build,
+  disables network access, and keeps each visitor's state in that
   visitor's browser.
 - The booth site `wcus-ai/wcus-ai.github.io` introduces the exhibit with a static
   poster and an explicit external link. No iframe, no embedded kiosk, no imitation of
@@ -146,10 +146,9 @@ Remaining work is factual accuracy, release gates, and physical device sign-off.
   2026 speaker guide, for framing alone. Prerelease behavior is stated as scheduled or
   present in a release candidate — never as already shipped. Numeric counts that
   current project documentation does not make a durable public contract are removed.
-- Known upcoming change: WordPress 7.1 ships 19 August 2026. The Playground pin moves
-  from `beta` to `7.1` after that date. The `beta` channel moves upstream while a
-  built artifact does not, so a deployed booth stays on whatever RC its build source
-  carried.
+- WordPress 7.1 was released on 19 August 2026. The Playground pin is `7.1`.
+  Builds need an official static runtime containing `wp-7.1`; changing the
+  Blueprint does not update an existing artifact or deployed booth.
 
 ## Brand Commitments
 

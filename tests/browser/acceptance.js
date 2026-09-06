@@ -1,5 +1,7 @@
 /* eslint-disable no-unused-expressions */
 /* global getComputedStyle, NodeFilter */
+import { verifyInspectionGeometry } from './inspection-geometry';
+
 /*
  * Agent runs use Browser Run against a public HTTPS preview; see README.md.
  * Retain this callback as the assertion contract, not a local agent entry point.
@@ -1956,6 +1958,17 @@ async ( page ) => {
 		compatibilityStoryOneGeometry,
 		'1024 Story 01'
 	);
+
+	for ( const viewport of [ { width: 840, height: 680 }, { width: 390, height: 600 } ] ) {
+		await page.setViewportSize( viewport );
+		await page.locator( '.core-ai-map__block--client button' ).click();
+		await page.waitForTimeout( 120 );
+		const geometry = await root.evaluate( verifyInspectionGeometry );
+		observations[ `inspectionPanning${ viewport.width }` ] = geometry;
+		assert( geometry.passed, geometry.failures.join( ' ' ) );
+		await page.locator( '.core-ai-map__details-close' ).click();
+	}
+	await page.setViewportSize( { width: 1024, height: 768 } );
 
 	await page.waitForFunction(
 		() =>

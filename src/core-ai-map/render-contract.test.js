@@ -6,7 +6,7 @@ const renderPath = join( __dirname, 'render.php' );
 const metadataPath = join( __dirname, 'block.json' );
 const styleSource = readFileSync( join( __dirname, 'style.scss' ), 'utf8' );
 
-const renderDefaultContext = () => {
+const renderDefaultContext = ( translations = {} ) => {
 	const metadata = JSON.parse( readFileSync( metadataPath, 'utf8' ) );
 	const attributes = Object.fromEntries(
 		Object.entries( metadata.attributes ).flatMap( ( [ key, value ] ) =>
@@ -17,7 +17,7 @@ const renderDefaultContext = () => {
 define( 'ABSPATH', __DIR__ );
 define( 'CORE_AI_MAP_URL', 'https://example.test/plugin/' );
 define( 'CORE_AI_MAP_VERSION', '3.2.5' );
-function __( $text ) { return $text; }
+function __( $text ) { return ( json_decode( getenv( 'CORE_AI_MAP_TEST_TRANSLATIONS' ), true ) ?? array() )[ $text ] ?? $text; }
 function sanitize_key( $key ) { return strtolower( $key ); }
 function absint( $number ) { return abs( (int) $number ); }
 function wp_unique_id( $prefix = '' ) { return $prefix . 'test'; }
@@ -35,6 +35,7 @@ require ${ JSON.stringify( renderPath ) };
 		encoding: 'utf8',
 		env: {
 			...process.env,
+			CORE_AI_MAP_TEST_TRANSLATIONS: JSON.stringify( translations ),
 			CORE_AI_MAP_TEST_ATTRIBUTES: Buffer.from(
 				JSON.stringify( attributes )
 			).toString( 'base64' ),
@@ -48,7 +49,7 @@ require ${ JSON.stringify( renderPath ) };
 	return JSON.parse( result.stdout );
 };
 
-const renderLegacyMarkup = ( profile = 'legacy' ) => {
+const renderLegacyMarkup = ( profile = 'legacy', returnPanels = false ) => {
 	const metadata = JSON.parse( readFileSync( metadataPath, 'utf8' ) );
 	const legacyMetadata = JSON.parse(
 		readFileSync( join( __dirname, 'fixtures', 'block-v0.2.json' ), 'utf8' )
@@ -107,6 +108,21 @@ const renderLegacyMarkup = ( profile = 'legacy' ) => {
 	}
 	if ( profile === 'blank-title' ) {
 		attributes.title = '';
+	}
+	if (
+		profile === 'release-candidate' ||
+		profile === 'authored-release-note'
+	) {
+		attributes.panels.find( ( item ) => item.id === 'abilities' ).notes = [
+			{
+				heading: 'Under the hood',
+				text:
+					'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution arrive in WordPress 7.1 on August 19, 2026. This exhibit runs a 7.1 release candidate, so the Anatomy panel describes the version you are looking at.' +
+					( profile === 'authored-release-note'
+						? ' Operator note.'
+						: '' ),
+			},
+		];
 	}
 	if ( profile === 'protocol-v320' ) {
 		attributes.panels.find( ( item ) => item.id === 'mcp' ).notes = [
@@ -307,7 +323,8 @@ $schemas = json_decode( base64_decode( getenv( 'CORE_AI_MAP_TEST_SCHEMAS' ) ), t
 $block = (object) array( 'block_type' => (object) array( 'attributes' => $schemas ) );
 ob_start();
 require ${ JSON.stringify( renderPath ) };
-echo ob_get_clean();
+$markup = ob_get_clean();
+echo getenv( 'CORE_AI_MAP_TEST_RETURN_PANELS' ) === '1' ? json_encode( $panels ) : $markup;
 `;
 	const result = spawnSync( 'php', [ '-r', harness ], {
 		encoding: 'utf8',
@@ -319,6 +336,7 @@ echo ob_get_clean();
 			CORE_AI_MAP_TEST_SCHEMAS: Buffer.from(
 				JSON.stringify( metadata.attributes )
 			).toString( 'base64' ),
+			CORE_AI_MAP_TEST_RETURN_PANELS: returnPanels ? '1' : '0',
 		},
 	} );
 
@@ -328,10 +346,58 @@ echo ob_get_clean();
 		);
 	}
 
-	return result.stdout;
+	return returnPanels ? JSON.parse( result.stdout ) : result.stdout;
 };
 
 describe( 'Core AI map render contract', () => {
+	it( 'updates saved release-candidate copy without replacing an authored note', () => {
+		const markup = renderLegacyMarkup( 'release-candidate' );
+		expect( markup ).toContain( 'arrived in WordPress 7.1' );
+		expect( markup ).not.toContain( 'runs a 7.1 release candidate' );
+		expect(
+			renderLegacyMarkup( 'release-candidate', true ).abilities.notes[ 0 ]
+				.text
+		).not.toContain( 'release candidate' );
+		expect(
+			renderLegacyMarkup( 'authored-release-note', true ).abilities
+				.notes[ 0 ].text
+		).toContain( 'Operator note.' );
+	} );
+	it( 'gives the legends and bench navigation valid accessible group names', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup( 'current' );
+		const groups = container.querySelectorAll(
+			'.core-ai-map__legend, .core-ai-map__bench-navigation'
+		);
+		expect( groups ).toHaveLength( 3 );
+		for ( const group of groups ) {
+			expect( group.getAttribute( 'role' ) ).toBe( 'group' );
+			expect( group.getAttribute( 'aria-label' ) ).toBeTruthy();
+		}
+	} );
+
+	it( 'passes translated reset and navigation copy from PHP to hydration', () => {
+		const context = renderDefaultContext( {
+			'Back to %1$s': '%1$s: volver',
+			'Back to the map': 'Volver al mapa',
+			'About this exhibit open.': 'Acerca del mapa.',
+			'Keep exploring. Reset postponed.': 'Reinicio aplazado.',
+			'The exhibit will return to the welcome screen in 20 seconds. Continue exploring to stay here.':
+				'Aviso: quedan 20 segundos.',
+			'WP-Bench stage %1$s selected: %2$s.': '%2$s: etapa %1$s.',
+		} );
+		expect( context.labels ).toMatchObject( {
+			backToFlow: '%1$s: volver',
+			backToMap: 'Volver al mapa',
+		} );
+		expect( context.announcements ).toMatchObject( {
+			aboutOpen: 'Acerca del mapa.',
+			resetPostponed: 'Reinicio aplazado.',
+			resetWarning: 'Aviso: quedan 20 segundos.',
+			benchStageNumberSelected: '%2$s: etapa %1$s.',
+		} );
+	} );
+
 	it( 'renders SVG without Interactivity directives or PHP stderr', () => {
 		const container = document.createElement( 'div' );
 		container.innerHTML = renderLegacyMarkup();
@@ -622,7 +688,7 @@ describe( 'Core AI map render contract', () => {
 		expect( markup ).toContain( 'not the request executor' );
 		expect( markup ).toContain( 'auto-discovers them' );
 		expect( markup ).toContain(
-			'arrive in WordPress 7.1 on August 19, 2026'
+			'arrived in WordPress 7.1 on August 19, 2026'
 		);
 		expect( markup ).not.toContain( 'ships 19 August' );
 	} );
@@ -673,9 +739,9 @@ describe( 'Core AI map render contract', () => {
 		expect( markup ).toContain( 'Calling back into WordPress' );
 		expect( markup ).toContain( 'Reached from both directions' );
 
-		// The kiosk boots a 7.1 release candidate, so 7.1 is no longer pending
-		// and the exhibit is no longer a 7.0 site.
-		expect( markup ).toContain( 'runs a 7.1 release candidate' );
+		// Shipped-version copy must also upgrade older serialized defaults.
+		expect( markup ).toContain( 'arrived in WordPress 7.1' );
+		expect( markup ).not.toContain( 'runs a 7.1 release candidate' );
 		expect( markup ).not.toContain( 'this exhibit runs WordPress 7.0' );
 		expect( markup ).not.toContain(
 			'scheduled for WordPress 7.1 on August 19, 2026'
@@ -1116,7 +1182,7 @@ describe( 'Core AI map render contract', () => {
 		expect( warning.hidden ).toBe( true );
 		expect( warning.getAttribute( 'role' ) ).toBe( 'status' );
 		expect( warning.textContent ).toContain(
-			'Returning to welcome in 10 seconds'
+			'Returning to welcome in 20 seconds'
 		);
 		expect(
 			warning

@@ -28,12 +28,10 @@ const packageManifest = JSON.parse(
 );
 const execFileAsync = promisify( execFile );
 
-// Playground publishes no `7.1` branch build and cannot pin an exact release
-// candidate, so the exhibit rides the `beta` channel — WordPress 7.1-RC1 at the
-// time of writing. The channel moves upstream, but this artifact does not: the
-// runtime tree below is copied out of the static source at build time, which
-// freezes the booth on whatever RC that source carried.
-export const playgroundWordPressVersion = 'beta';
+// Use Playground's stable WordPress 7.1 build. The runtime tree below is copied
+// from the official static source at build time, freezing its exact assets in
+// the kiosk artifact even when the upstream build changes later.
+export const playgroundWordPressVersion = '7.1';
 
 // The virtual-site service worker falls back to this unpacked tree when a
 // WordPress core, theme, or plugin asset is not available from the PHP
@@ -534,7 +532,21 @@ export const getRuntimeFiles = async ( sourceDirectory ) => {
 	}
 
 	const assetsDirectory = join( sourceDirectory, 'assets' );
-	for ( const file of await walkFiles( assetsDirectory, sourceDirectory ) ) {
+	const assetFiles = await walkFiles( assetsDirectory, sourceDirectory );
+	const runtimeBundlePrefix = `assets/wp-${ playgroundWordPressVersion }.`;
+	if (
+		! assetFiles.some(
+			( file ) =>
+				file.relativePath.startsWith( runtimeBundlePrefix ) &&
+				/\.(?:zip|zst)$/.test( file.relativePath )
+		)
+	) {
+		throw new Error(
+			`The official Playground static build is missing the pinned WordPress ${ playgroundWordPressVersion } bundle. Refresh the build source before packaging.`
+		);
+	}
+
+	for ( const file of assetFiles ) {
 		const path = file.relativePath;
 
 		if (

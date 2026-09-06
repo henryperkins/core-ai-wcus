@@ -219,6 +219,19 @@ const PEDAGOGICAL_V320_DEFAULTS = {
 // The kiosk Blueprint now boots a WordPress 7.1 release candidate, so the note
 // that called 7.1 unshipped and the exhibit a 7.0 site no longer describes what
 // a visitor is looking at.
+const RELEASE_CANDIDATE_DEFAULTS = {
+	panels: {
+		abilities: {
+			notes: [
+				{
+					heading: 'Under the hood',
+					text: 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution arrive in WordPress 7.1 on August 19, 2026. This exhibit runs a 7.1 release candidate, so the Anatomy panel describes the version you are looking at.',
+				},
+			],
+		},
+	},
+};
+
 const RUNTIME_V321_DEFAULTS = {
 	panels: {
 		abilities: {
@@ -510,6 +523,7 @@ export const withCurrentDefaults = ( metadata, key, items ) => {
 			PRE_BOOTH_V311_DEFAULTS,
 			PEDAGOGICAL_V320_DEFAULTS,
 			RUNTIME_V321_DEFAULTS,
+			RELEASE_CANDIDATE_DEFAULTS,
 			BOUNDARY_V322_DEFAULTS,
 			FOCUSED_USES_WP_V324_DEFAULTS,
 			FIRST_FLOW_REVIEW_V325_DEFAULTS,

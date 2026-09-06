@@ -231,6 +231,25 @@ const format = ( template, ...values ) =>
 
 const label = ( context, key, fallback ) => context.labels?.[ key ] || fallback;
 
+const announcement = ( context, key, fallback, ...values ) =>
+	format( context.announcements?.[ key ] || fallback, ...values );
+
+const describeDetailsClosed = ( context ) => {
+	const title = context.storyTitles?.[ context.story ];
+	return title
+		? announcement(
+				context,
+				'detailsClosedFlow',
+				'Details closed. Back in %1$s.',
+				title
+		  )
+		: announcement(
+				context,
+				'detailsClosedMap',
+				'Details closed. Back on the map.'
+		  );
+};
+
 const describeDetailsOpen = ( context, cardId ) => {
 	const name = context.cardTitles?.[ cardId ] || cardId;
 	const storyTitle = context.storyTitles?.[ context.story ] || '';
@@ -473,6 +492,67 @@ const resetDetailsScroll = ( root ) => {
 	}
 };
 
+// Safari and other engines without scroll-state queries need a measured cue.
+const observeDetailsOverflow = ( root ) => {
+	const details = root.querySelector( '.core-ai-map__details' );
+	if (
+		! details ||
+		window.CSS?.supports?.( 'container-type', 'scroll-state' )
+	) {
+		return () => {};
+	}
+	let frame;
+	let active = true;
+	const update = () => {
+		frame = undefined;
+		const hasMore =
+			! details.hidden &&
+			details.clientHeight > 0 &&
+			details.scrollHeight -
+				details.clientHeight -
+				Math.max( 0, details.scrollTop ) >
+				1;
+		details.classList.toggle( 'has-more-content', hasMore );
+	};
+	const schedule = () => {
+		if ( active && frame === undefined ) {
+			frame = window.requestAnimationFrame( update );
+		}
+	};
+	const mutations = new window.MutationObserver( schedule );
+	mutations.observe( details, {
+		subtree: true,
+		childList: true,
+		characterData: true,
+		attributes: true,
+		attributeFilter: [ 'hidden', 'open' ],
+	} );
+	const resize = window.ResizeObserver
+		? new window.ResizeObserver( schedule )
+		: undefined;
+	resize?.observe( details );
+	for ( const child of details.children ) {
+		resize?.observe( child );
+	}
+	details.addEventListener( 'scroll', schedule, { passive: true } );
+	details.addEventListener( 'load', schedule, true );
+	details.addEventListener( 'toggle', schedule, true );
+	window.addEventListener( 'resize', schedule );
+	document.fonts?.ready.then( schedule );
+	schedule();
+	return () => {
+		active = false;
+		window.cancelAnimationFrame( frame );
+		mutations.disconnect();
+		resize?.disconnect();
+		details.removeEventListener( 'scroll', schedule );
+		details.removeEventListener( 'load', schedule, true );
+		details.removeEventListener( 'toggle', schedule, true );
+		window.removeEventListener( 'resize', schedule );
+		details.classList.remove( 'has-more-content' );
+	};
+};
+
 /**
  * Focuses step one of the assembled flow.
  *
@@ -582,7 +662,11 @@ const closeBenchState = ( root, context ) => {
 	context.storyMotionPhase = 'settled';
 	context.pendingTakeawayStory = '';
 	context.announcement = [
-		'WP-Bench run loop closed. Back on the map.',
+		announcement(
+			context,
+			'benchClosed',
+			'WP-Bench run loop closed. Back on the map.'
+		),
 		describeCurrentTakeaway( context ),
 	]
 		.filter( Boolean )
@@ -608,8 +692,11 @@ const setAttractState = ( context ) => {
 	context.resetWarning = false;
 	context.suggestion = Math.floor( ( context.suggestion || 0 ) / 2 ) * 2;
 	setPreviewPhase( context, 'assembling' );
-	context.announcement =
-		'The Living Block Map returned to its welcome screen.';
+	context.announcement = announcement(
+		context,
+		'welcome',
+		'The Living Block Map returned to its welcome screen.'
+	);
 };
 
 const startAttractCycle = ( root, context ) => {
@@ -747,12 +834,13 @@ const selectBenchStageByOffset = ( context, offset ) => {
 		return;
 	}
 	context.benchStage = stages[ next ];
-	context.announcement = `WP-Bench stage ${ String( next + 1 ).padStart(
-		2,
-		'0'
-	) } selected: ${
+	context.announcement = announcement(
+		context,
+		'benchStageNumberSelected',
+		'WP-Bench stage %1$s selected: %2$s.',
+		String( next + 1 ).padStart( 2, '0' ),
 		context.benchTitles?.[ context.benchStage ] || context.benchStage
-	}.`;
+	);
 };
 
 store( 'core-ai/map', {
@@ -930,7 +1018,12 @@ store( 'core-ai/map', {
 		get detailsBackLabel() {
 			const context = getContext();
 			const title = context.storyTitles?.[ context.story ];
-			return title ? `Back to ${ title }` : 'Back to the map';
+			return title
+				? format(
+						label( context, 'backToFlow', 'Back to %1$s' ),
+						title
+				  )
+				: label( context, 'backToMap', 'Back to the map' );
 		},
 
 		get cardTransform() {
@@ -1702,7 +1795,11 @@ store( 'core-ai/map', {
 			}
 			context.aboutReturnScreen = context.screen;
 			context.screen = 'about';
-			context.announcement = 'About this exhibit open.';
+			context.announcement = announcement(
+				context,
+				'aboutOpen',
+				'About this exhibit open.'
+			);
 			isolateAboutSurface( root );
 			resetSchedulers.get( root )?.();
 			focusWithin( root, '.core-ai-map__about-close', 80 );
@@ -1715,7 +1812,11 @@ store( 'core-ai/map', {
 			context.aboutReturnScreen = '';
 			restoreAboutSurface( root );
 			context.announcement = [
-				'About this exhibit closed.',
+				announcement(
+					context,
+					'aboutClosed',
+					'About this exhibit closed.'
+				),
 				context.screen === 'map'
 					? consumePendingTakeaway( context )
 					: '',
@@ -1736,12 +1837,9 @@ store( 'core-ai/map', {
 			 * learning, not to a cleared canvas, and focus goes back to the
 			 * card they opened.
 			 */
-			const title = context.storyTitles?.[ context.story ];
 			context.screen = 'map';
 			context.inspect = '';
-			const closed = title
-				? `Details closed. Back in ${ title }.`
-				: 'Details closed. Back on the map.';
+			const closed = describeDetailsClosed( context );
 			context.announcement = [ closed, consumePendingTakeaway( context ) ]
 				.filter( Boolean )
 				.join( ' ' );
@@ -1778,8 +1876,12 @@ store( 'core-ai/map', {
 			context.inspect = '';
 			context.benchStage = 'task';
 			runFlow( root, context, { bench: true } );
-			context.announcement =
-				'WP-Bench run loop open. Stage 01, One task, one message, selected.';
+			context.announcement = announcement(
+				context,
+				'benchOpen',
+				'WP-Bench run loop open. Stage 01, %1$s, selected.',
+				context.benchTitles?.task || 'One task, one message'
+			);
 			resetSchedulers.get( root )?.();
 			focusWithin( root, '.core-ai-map__bench-heading button' );
 		},
@@ -1793,10 +1895,13 @@ store( 'core-ai/map', {
 		selectBenchStage() {
 			const context = getContext();
 			context.benchStage = context.stageId || 'task';
-			context.announcement = `WP-Bench stage selected: ${
+			context.announcement = announcement(
+				context,
+				'benchStageSelected',
+				'WP-Bench stage selected: %1$s.',
 				context.benchTitles?.[ context.benchStage ] ||
-				context.benchStage
-			}.`;
+					context.benchStage
+			);
 		},
 		selectPreviousBenchStage() {
 			selectBenchStageByOffset( getContext(), -1 );
@@ -1810,14 +1915,21 @@ store( 'core-ai/map', {
 				return;
 			}
 			context.suggestion = Math.floor( context.suggestion / 2 ) * 2 + 1;
-			context.announcement =
-				'A person chose Apply. The AI Plugin suggestion is now applied.';
+			context.announcement = announcement(
+				context,
+				'suggestionApplied',
+				'A person chose Apply. The AI Plugin suggestion is now applied.'
+			);
 		},
 		keepExploring() {
 			const context = getContext();
 			const root = getRoot( getElement().ref );
 			context.resetWarning = false;
-			context.announcement = 'Keep exploring. Reset postponed.';
+			context.announcement = announcement(
+				context,
+				'resetPostponed',
+				'Keep exploring. Reset postponed.'
+			);
 			resetSchedulers.get( root )?.();
 			/*
 			 * Postponing hides the row this button sits in. Inside About that
@@ -1857,6 +1969,9 @@ store( 'core-ai/map', {
 				root.classList.add( 'is-ready' );
 				document.body.classList.add( 'core-ai-kiosk-active' );
 				const restorePage = isolateKioskPage( root );
+				const stopObservingDetails = observeDetailsOverflow( root );
+				let previousViewport;
+				let zoom = 1;
 				const timeout = Number.parseInt(
 					root.dataset.inactivityTimeout,
 					10
@@ -1872,8 +1987,11 @@ store( 'core-ai/map', {
 				);
 
 				const fitStage = () => {
-					const viewportWidth = root.clientWidth;
-					const viewportHeight = root.clientHeight;
+					// Scrollbars from inspection must not shrink the next fit and
+					// keep an otherwise fitting stage permanently in scroll mode.
+					const viewportWidth = root.offsetWidth || root.clientWidth;
+					const viewportHeight =
+						root.offsetHeight || root.clientHeight;
 					const hasViewport =
 						Number.isFinite( viewportWidth ) &&
 						Number.isFinite( viewportHeight ) &&
@@ -1882,22 +2000,92 @@ store( 'core-ai/map', {
 					if ( ! hasViewport ) {
 						return;
 					}
+					const pixelRatio = window.devicePixelRatio || 1;
+					const outerWidth = window.outerWidth;
+					const outerHeight = window.outerHeight;
+					if ( previousViewport ) {
+						const ratioChange =
+							pixelRatio / previousViewport.pixelRatio;
+						const tolerance = Math.max( 2, ratioChange );
+						// Page zoom changes DPR and inversely changes both layout
+						// dimensions inside the same browser window. A display
+						// change must rebase DPR without changing the chosen zoom.
+						if (
+							Math.abs(
+								outerWidth - previousViewport.outerWidth
+							) <= 2 &&
+							Math.abs(
+								outerHeight - previousViewport.outerHeight
+							) <= 2 &&
+							Math.abs(
+								viewportWidth * ratioChange -
+									previousViewport.width
+							) <= tolerance &&
+							Math.abs(
+								viewportHeight * ratioChange -
+									previousViewport.height
+							) <= tolerance
+						) {
+							zoom *= ratioChange;
+						}
+					}
+					previousViewport = {
+						width: viewportWidth,
+						height: viewportHeight,
+						outerWidth,
+						outerHeight,
+						pixelRatio,
+					};
 					const isPhone =
-						Math.min( viewportWidth, viewportHeight ) <=
+						Math.min( viewportWidth, viewportHeight ) * zoom <=
 						PHONE_MAX_SHORT_SIDE;
 					const scale = isPhone
 						? PHONE_INSPECTION_SCALE
-						: Math.min(
-								viewportWidth / STAGE_WIDTH,
-								viewportHeight / STAGE_HEIGHT
+						: Math.max(
+								PHONE_INSPECTION_SCALE,
+								Math.min(
+									viewportWidth / STAGE_WIDTH,
+									viewportHeight / STAGE_HEIGHT
+								) * zoom
 						  );
 					if ( Number.isFinite( scale ) && scale > 0 ) {
 						root.classList.toggle( 'is-phone-inspection', isPhone );
+						root.classList.toggle(
+							'is-pannable-inspection',
+							! isPhone &&
+								( STAGE_WIDTH * scale > viewportWidth + 1 ||
+									STAGE_HEIGHT * scale > viewportHeight + 1 )
+						);
 						root.style.setProperty(
 							'--cai-scale',
 							String( scale )
 						);
+						if (
+							! isPhone &&
+							! root.classList.contains(
+								'is-pannable-inspection'
+							)
+						) {
+							// A centered stage must not retain its former pan offset.
+							root.scrollLeft = 0;
+							root.scrollTop = 0;
+						}
 					}
+				};
+				let resolutionQuery;
+				const handlePixelRatioChange = () => {
+					fitStage();
+					resolutionQuery?.removeEventListener?.(
+						'change',
+						handlePixelRatioChange
+					);
+					resolutionQuery = window.matchMedia?.(
+						`(resolution: ${ window.devicePixelRatio || 1 }dppx)`
+					);
+					resolutionQuery?.addEventListener?.(
+						'change',
+						handlePixelRatioChange
+					);
 				};
 				const resetForInactivity = () => {
 					if (
@@ -1908,8 +2096,11 @@ store( 'core-ai/map', {
 						restoreAboutSurface( root );
 						setAttractState( context );
 						context.resetWarning = false;
-						context.announcement =
-							'The map reset after a period of inactivity.';
+						context.announcement = announcement(
+							context,
+							'inactivityReset',
+							'The map reset after a period of inactivity.'
+						);
 						attractSchedulers.get( root )?.();
 						if (
 							root.contains( root.ownerDocument.activeElement )
@@ -1925,23 +2116,37 @@ store( 'core-ai/map', {
 					if ( context.screen === 'attract' ) {
 						return;
 					}
-					const base = Number.isFinite( timeout ) ? timeout : 60000;
-					resetWarningTimer = window.setTimeout(
-						() => {
-							if (
-								document.visibilityState === 'visible' &&
-								context.screen !== 'attract'
-							) {
-								context.resetWarning = true;
-								context.announcement =
-									'The exhibit will return to the welcome screen in 10 seconds. Continue exploring to stay here.';
-							}
-						},
-						Math.max( base - 10000, 0 )
-					);
+					const base = Number.isFinite( timeout )
+						? Math.max( timeout, 30000 )
+						: 60000;
+					resetWarningTimer = window.setTimeout( () => {
+						if (
+							document.visibilityState === 'visible' &&
+							context.screen !== 'attract'
+						) {
+							context.resetWarning = true;
+							context.announcement = announcement(
+								context,
+								'resetWarning',
+								'The exhibit will return to the welcome screen in 20 seconds. Continue exploring to stay here.'
+							);
+						}
+					}, base - 20000 );
 					resetTimer = window.setTimeout( resetForInactivity, base );
 				};
 				resetSchedulers.set( root, scheduleReset );
+				const handleFocus = ( event ) => {
+					scheduleReset();
+					if (
+						root.classList.contains( 'is-pannable-inspection' ) ||
+						root.classList.contains( 'is-phone-inspection' )
+					) {
+						event.target?.scrollIntoView?.( {
+							block: 'nearest',
+							inline: 'nearest',
+						} );
+					}
+				};
 
 				const updateNetworkStatus = ( event ) => {
 					if ( event?.type === 'online' ) {
@@ -2084,13 +2289,10 @@ store( 'core-ai/map', {
 					}
 					event.preventDefault();
 					if ( context.screen === 'inspect' ) {
-						const title = context.storyTitles?.[ context.story ];
 						context.screen = 'map';
 						context.inspect = '';
 						context.announcement = [
-							title
-								? `Details closed. Back in ${ title }.`
-								: 'Details closed. Back on the map.',
+							describeDetailsClosed( context ),
 							consumePendingTakeaway( context ),
 						]
 							.filter( Boolean )
@@ -2107,7 +2309,11 @@ store( 'core-ai/map', {
 						context.aboutReturnScreen = '';
 						restoreAboutSurface( root );
 						context.announcement = [
-							'About this exhibit closed.',
+							announcement(
+								context,
+								'aboutClosed',
+								'About this exhibit closed.'
+							),
 							context.screen === 'map'
 								? consumePendingTakeaway( context )
 								: '',
@@ -2347,7 +2553,7 @@ store( 'core-ai/map', {
 					capture: true,
 					passive: true,
 				} );
-				root.addEventListener( 'focusin', scheduleReset );
+				root.addEventListener( 'focusin', handleFocus );
 				window.addEventListener( 'keydown', handleKeydown );
 				window.addEventListener( 'online', updateNetworkStatus );
 				window.addEventListener( 'offline', updateNetworkStatus );
@@ -2361,7 +2567,7 @@ store( 'core-ai/map', {
 					'visibilitychange',
 					handleVisibility
 				);
-				fitStage();
+				handlePixelRatioChange();
 				updateNetworkStatus();
 				requestWakeLock();
 				syncServiceWorker();
@@ -2372,6 +2578,11 @@ store( 'core-ai/map', {
 				}
 
 				return () => {
+					stopObservingDetails();
+					resolutionQuery?.removeEventListener?.(
+						'change',
+						handlePixelRatioChange
+					);
 					window.clearTimeout( resetTimer );
 					window.clearTimeout( resetWarningTimer );
 					window.clearTimeout( cacheStatusTimer );
@@ -2381,7 +2592,7 @@ store( 'core-ai/map', {
 					attractSchedulers.delete( root );
 					root.removeEventListener( 'pointerdown', scheduleReset );
 					root.removeEventListener( 'scroll', scheduleReset, true );
-					root.removeEventListener( 'focusin', scheduleReset );
+					root.removeEventListener( 'focusin', handleFocus );
 					window.removeEventListener( 'keydown', handleKeydown );
 					window.removeEventListener( 'online', updateNetworkStatus );
 					window.removeEventListener(

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-15T00:00:00Z",
+  "generatedAt": "2026-09-06T18:41:27Z",
   "title": "Design System: Core AI Living Block Map",
   "extensions": {
     "colorMeta": {
@@ -36,8 +36,15 @@
         "role": "primary",
         "displayName": "Result Line",
         "canonical": "#aab5ff",
-        "note": "Border on a result chip, and the dashed edge of a sidecar card standing beside the live path.",
+        "note": "Decorative border on a result chip. Meaning-bearing sidecar borders use Live Blue to exceed 3:1 against Participant Wash; in increased contrast Result Line uses Deep Blue.",
         "tonalRamp": ["#080d33", "#0f1750", "#16226f", "#1e3a8a", "#2843bd", "#3858e9", "#aab5ff", "#eef1ff"]
+      },
+      "on-accent": {
+        "role": "neutral",
+        "displayName": "On Accent",
+        "canonical": "#ffffff",
+        "note": "White foreground on Live Blue or the selected dark tab. The exhibit pins a light color scheme. Forced colors uses the visitor's system palette, with highlighted selections and heavier participant borders.",
+        "tonalRamp": ["#1e1e1e", "#2f2f2f", "#50575e", "#646970", "#757575", "#a7aaad", "#dcdcde", "#ffffff"]
       },
       "ink": {
         "role": "neutral",
@@ -188,7 +195,7 @@
       { "name": "reduced-motion", "value": "0.01ms", "purpose": "prefers-reduced-motion collapses every duration, cancels all animation, and snaps paths and tokens to their end state — the settled composition, not a degraded one." }
     ],
     "breakpoints": [
-      { "name": "kiosk", "value": "1366px", "note": "Authored stage width at 1366 x 1024. The composition is fixed; --cai-scale carries it to other viewports." },
+      { "name": "kiosk", "value": "1366px", "note": "Authored stage width at 1366 x 1024. The composition is fixed; --cai-scale carries it to other viewports. Browser zoom changes after loading compensate only when pixel density and both viewport dimensions change inversely inside an unchanged browser window. Display changes rebase density while preserving the visitor's current zoom. When the stage exceeds the viewport, inspection mode permits two-axis panning and reveals focused controls. A compatibility scale floor prevents smaller viewports from shrinking text further. Phone inspection permits native pinch zoom. Saved initial browser zoom remains the document baseline; pixel density alone does not identify absolute zoom. The pannable stage keeps a transform so fixed inspector cues retain their anchor while the stage moves." },
       { "name": "compatibility", "value": "1024px", "note": "1024 x 768 is the same composition at a smaller scale, not a different layout. --cai-scale is 0.7496 there: authored 68px rail controls render at about 51px; the 60px header, story, panel, tab and dialog class renders at about 45px; 44px nested controls render at about 33px; and the 34px About footnote renders at about 25px. Only the nested Apply control and About footnote are below the SC 2.5.5 44px target, while every named control clears the SC 2.5.8 24px minimum. This is therefore a compatibility view rather than a fully supported touch layout." }
     ]
   },

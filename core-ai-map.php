@@ -48,6 +48,41 @@ function core_ai_map_is_kiosk_page() {
 }
 
 /**
+ * Preloads the two variable fonts used for the kiosk's first paint.
+ *
+ * @param array $preloads Existing resource preloads.
+ * @return array Resource preloads for the current page.
+ */
+function core_ai_map_preload_kiosk_fonts( $preloads ) {
+	if ( ! core_ai_map_is_kiosk_page() ) {
+		return $preloads;
+	}
+
+	$fonts = array(
+		'inter-latin-wght-normal',
+		'eb-garamond-latin-wght-normal',
+	);
+
+	foreach ( $fonts as $font ) {
+		$files = glob( CORE_AI_MAP_PATH . 'build/fonts/' . $font . '.*.woff2' );
+
+		if ( ! is_array( $files ) || 1 !== count( $files ) ) {
+			continue;
+		}
+
+		$preloads[] = array(
+			'href'        => CORE_AI_MAP_URL . 'build/fonts/' . rawurlencode( basename( $files[ 0 ] ) ),
+			'as'          => 'font',
+			'type'        => 'font/woff2',
+			'crossorigin' => 'anonymous',
+		);
+	}
+
+	return $preloads;
+}
+add_filter( 'wp_preload_resources', 'core_ai_map_preload_kiosk_fonts' );
+
+/**
  * Marks only an anonymous kiosk response as eligible for page-level offline
  * caching. The service worker refuses HTML without this explicit signal.
  *

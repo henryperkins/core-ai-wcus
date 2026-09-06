@@ -67,6 +67,7 @@ body.core-ai-kiosk-active {
 	--core-ai-blue-tint: #eef1ff;
 	--core-ai-blue-line: #aab5ff;
 	--core-ai-blue-wash: #f4f6ff;
+	--core-ai-on-accent: #fff;
 	--core-ai-ink: #1e1e1e;
 	--core-ai-ink-soft: #50575e;
 	--core-ai-canvas: #f6f7f7;
@@ -106,6 +107,7 @@ body.core-ai-kiosk-active {
 	max-height: none;
 	margin: 0 !important;
 	overflow: hidden;
+	color-scheme: light;
 	color: var(--core-ai-ink);
 	font-family:
 		"Core AI Inter",
@@ -121,10 +123,11 @@ body.core-ai-kiosk-active {
 	-webkit-touch-callout: none;
 	user-select: none;
 
-	&.is-phone-inspection {
+	&.is-phone-inspection,
+	&.is-pannable-inspection {
 		overflow: auto;
 		overscroll-behavior: contain;
-		touch-action: pan-x pan-y;
+		touch-action: pan-x pan-y pinch-zoom;
 		-webkit-overflow-scrolling: touch;
 	}
 
@@ -160,10 +163,12 @@ body.core-ai-kiosk-active {
 		transform: translate(-50%, -50%) scale(var(--cai-scale));
 	}
 
-	&.is-phone-inspection &__stage {
+	&.is-phone-inspection &__stage,
+	&.is-pannable-inspection &__stage {
 		top: 0;
 		left: 0;
-		transform: none;
+		// Keep fixed inspector cues anchored to the stage while zoom scales layout.
+		transform: translate(0, 0);
 		zoom: var(--cai-scale);
 	}
 
@@ -334,7 +339,6 @@ body.core-ai-kiosk-active {
 		inset: 0;
 		transition:
 			opacity 420ms ease,
-			filter 420ms ease,
 			transform 520ms var(--core-ai-ease);
 		transform-origin: 6% 50%;
 	}
@@ -797,7 +801,7 @@ body.core-ai-kiosk-active {
 		&--ability {
 			top: 374px;
 			left: 360px;
-			color: #fff;
+			color: var(--core-ai-on-accent);
 			background: var(--core-ai-blue);
 			border: 1px solid var(--core-ai-blue);
 			border-radius: 3px;
@@ -821,7 +825,7 @@ body.core-ai-kiosk-active {
 		left: -11px;
 		width: 26px;
 		height: 26px;
-		color: #fff;
+		color: var(--core-ai-on-accent);
 		font-size: 13px;
 		font-weight: 700;
 		line-height: 26px;
@@ -1158,13 +1162,15 @@ body.core-ai-kiosk-active {
 	/**
 	 * A sidecar takes part without carrying the request: full card, so the
 	 * visitor can read what it holds, with the dashed edge and the dashed line
-	 * up to the path saying which half of the key it belongs to.
+	 * up to the path saying which half of the key it belongs to. This meaningful
+	 * dashed boundary uses Live Blue to clear 3:1 against its participant wash;
+	 * the pale result-chip border remains decorative.
 	 */
 	&__block.is-sidecar {
 
 		.core-ai-map__block-body {
 			background: var(--core-ai-blue-wash);
-			border-color: var(--core-ai-blue-line);
+			border-color: var(--core-ai-blue);
 			border-style: dashed;
 		}
 
@@ -1191,7 +1197,7 @@ body.core-ai-kiosk-active {
 			gap: 6px 10px;
 			padding: 14px;
 			background: var(--core-ai-blue-wash);
-			border-color: var(--core-ai-blue-line);
+			border-color: var(--core-ai-blue);
 			border-style: dashed;
 		}
 
@@ -1579,7 +1585,7 @@ body.core-ai-kiosk-active {
 		}
 
 		.core-ai-map__workbench-apply {
-			color: #fff;
+			color: var(--core-ai-on-accent);
 			background: var(--core-ai-blue);
 			border-color: var(--core-ai-blue);
 		}
@@ -1886,7 +1892,7 @@ body.core-ai-kiosk-active {
 	}
 
 	button.core-ai-map__run-loop-link {
-		color: #fff;
+		color: var(--core-ai-on-accent);
 		background: var(--core-ai-blue);
 		border-color: var(--core-ai-blue);
 	}
@@ -1964,13 +1970,13 @@ body.core-ai-kiosk-active {
 			}
 
 			&.is-active {
-				color: #fff;
+				color: var(--core-ai-on-accent);
 				background: var(--core-ai-blue);
 				border-color: var(--core-ai-blue);
 
 				.core-ai-map__rail-number,
 				.core-ai-map__rail-outcome {
-					color: #fff;
+					color: var(--core-ai-on-accent);
 				}
 			}
 		}
@@ -2121,7 +2127,7 @@ body.core-ai-kiosk-active {
 			place-items: center;
 			width: 30px;
 			height: 30px;
-			color: #fff;
+			color: var(--core-ai-on-accent);
 			font-family: var(--core-ai-mono);
 			font-size: 12px;
 			font-weight: 700;
@@ -2186,6 +2192,7 @@ body.core-ai-kiosk-active {
 
 	&__readiness-recovery {
 		opacity: 0;
+		visibility: hidden;
 		animation: core-ai-map-reveal-recovery 1ms linear 8s forwards;
 
 		a {
@@ -2202,7 +2209,7 @@ body.core-ai-kiosk-active {
 		min-height: 64px;
 		margin: 0;
 		padding: 0 26px;
-		color: #fff;
+		color: var(--core-ai-on-accent);
 		font-size: 17px;
 		font-weight: 650;
 		white-space: nowrap;
@@ -2220,7 +2227,7 @@ body.core-ai-kiosk-active {
 			width: 22px;
 			height: 22px;
 			fill: none;
-			stroke: #fff;
+			stroke: var(--core-ai-on-accent);
 			stroke-linecap: round;
 			stroke-width: 1.7;
 		}
@@ -2392,6 +2399,8 @@ body.core-ai-kiosk-active {
 		border: 1px solid var(--core-ai-line-dormant);
 		border-radius: 999px;
 		box-shadow: 0 -16px 32px 12px var(--core-ai-surface);
+		opacity: 0;
+		visibility: hidden;
 		pointer-events: none;
 		transition:
 			opacity 180ms ease,
@@ -2417,12 +2426,15 @@ body.core-ai-kiosk-active {
 		border-bottom: 1px solid var(--core-ai-line);
 	}
 
-	@supports (container-type: scroll-state) {
+	@supports not (container-type: scroll-state) {
 
-		&__details-continuation {
-			opacity: 0;
-			visibility: hidden;
+		&__details.has-more-content .core-ai-map__details-continuation {
+			opacity: 1;
+			visibility: visible;
 		}
+	}
+
+	@supports (container-type: scroll-state) {
 
 		@container scroll-state(scrollable: bottom) {
 
@@ -3114,7 +3126,7 @@ body.core-ai-kiosk-active {
 			cursor: pointer;
 
 			&.is-active {
-				color: #fff;
+				color: var(--core-ai-on-accent);
 				background: var(--core-ai-ink);
 				border-color: var(--core-ai-ink);
 			}
@@ -3156,7 +3168,7 @@ body.core-ai-kiosk-active {
 		}
 
 		b {
-			color: #fff;
+			color: var(--core-ai-on-accent);
 			background: var(--core-ai-blue);
 			border-radius: 2px;
 		}
@@ -3200,7 +3212,7 @@ body.core-ai-kiosk-active {
 			width: 20px;
 			height: 20px;
 			margin-top: 2px;
-			color: #fff;
+			color: var(--core-ai-on-accent);
 			font-size: 12px;
 			line-height: 20px;
 			text-align: center;
@@ -3389,7 +3401,7 @@ body.core-ai-kiosk-active {
 			left: -11px;
 			width: 26px;
 			height: 26px;
-			color: #fff;
+			color: var(--core-ai-on-accent);
 			font-size: 13px;
 			font-weight: 700;
 			line-height: 26px;
@@ -3755,6 +3767,7 @@ body.core-ai-kiosk-active {
 
 	to {
 		opacity: 1;
+		visibility: visible;
 	}
 }
 
@@ -3998,7 +4011,6 @@ body.core-ai-kiosk-active {
 	.core-ai-map__ability-tab:hover,
 	.core-ai-map__details-next:hover,
 	.core-ai-map__bench-stage:hover,
-	.core-ai-map__bench-header button:hover,
 	.core-ai-map__run-loop-link:hover,
 	.core-ai-map__replay:hover {
 		border-color: var(--core-ai-blue);
@@ -4018,6 +4030,7 @@ body.core-ai-kiosk-active {
 	 * the full-strength boundary is the heaviest meaning-carrying edge.
 	 */
 	.core-ai-map {
+		--core-ai-blue-line: var(--core-ai-blue-dark);
 		--core-ai-line: #646970;
 		--core-ai-line-strong: #1e1e1e;
 		--core-ai-line-config: #3c434a;
@@ -4034,6 +4047,62 @@ body.core-ai-kiosk-active {
 	 */
 	.core-ai-map__hairlines path {
 		stroke-opacity: 1;
+	}
+}
+
+@media (forced-colors: active) {
+
+	.core-ai-map {
+		--core-ai-blue: CanvasText;
+		--core-ai-blue-dark: LinkText;
+		--core-ai-blue-tint: Canvas;
+		--core-ai-blue-line: CanvasText;
+		--core-ai-blue-wash: Canvas;
+		--core-ai-on-accent: Canvas;
+		--core-ai-ink: CanvasText;
+		--core-ai-ink-soft: CanvasText;
+		--core-ai-text-muted: CanvasText;
+		--core-ai-canvas: Canvas;
+		--core-ai-surface: Canvas;
+		--core-ai-line: CanvasText;
+		--core-ai-line-strong: CanvasText;
+		--core-ai-line-config: CanvasText;
+		--core-ai-line-dormant: GrayText;
+		--core-ai-line-ghost: GrayText;
+		--core-ai-warning: CanvasText;
+		--core-ai-warning-ink: CanvasText;
+		--core-ai-warning-tint: Canvas;
+		--core-ai-warning-line: CanvasText;
+	}
+
+	/* Retain the selected state with the user's system-color pairing. */
+	.core-ai-map__rail button[aria-pressed="true"],
+	.core-ai-map__ability-tabs button[aria-selected="true"] {
+		color: HighlightText;
+		background: Highlight;
+		border-color: Highlight;
+	}
+
+	.core-ai-map__rail button[aria-pressed="true"] *,
+	.core-ai-map__rail button[aria-pressed="true"] .core-ai-map__rail-number,
+	.core-ai-map__rail button[aria-pressed="true"] .core-ai-map__rail-outcome {
+		color: HighlightText;
+	}
+
+	/* A heavier edge keeps participation visible when the wash disappears. */
+	.core-ai-map__block.is-active .core-ai-map__block-body,
+	.core-ai-map__block.is-sidecar .core-ai-map__block-body,
+	.core-ai-map__block.is-preview-sidecar .core-ai-map__block-body,
+	.core-ai-map__actor.is-active .core-ai-map__actor-body,
+	.core-ai-map__provider-plugin.is-active .core-ai-map__provider-plugin-body,
+	.core-ai-map__bench-stage.is-active {
+		border-color: Highlight;
+		border-width: 2px;
+	}
+
+	.core-ai-map button:focus-visible,
+	.core-ai-map a:focus-visible {
+		outline-color: Highlight;
 	}
 }
 
@@ -4065,6 +4134,7 @@ body.core-ai-kiosk-active {
 
 	.core-ai-map__readiness-recovery {
 		opacity: 1;
+		visibility: visible;
 		animation: none !important;
 	}
 

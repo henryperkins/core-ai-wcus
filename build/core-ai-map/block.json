@@ -244,7 +244,7 @@
           "notes": [
             {
               "heading": "Under the hood",
-              "text": "The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution arrive in WordPress 7.1 on August 19, 2026. This exhibit runs a 7.1 release candidate, so the Anatomy panel describes the version you are looking at."
+              "text": "The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution arrived in WordPress 7.1 on August 19, 2026. The Anatomy panel describes these 7.1 features."
             }
           ],
           "href": "https://developer.wordpress.org/apis/abilities-api/",

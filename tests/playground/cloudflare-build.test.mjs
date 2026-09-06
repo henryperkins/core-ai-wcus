@@ -41,6 +41,7 @@ const expectedStaticSourceFiles = [
 	'assets/index-fixture.js',
 	'assets/main-fixture.js',
 	'assets/wordpress-fixture.js',
+	'assets/wp-7.1.fixture.zip',
 	'apple-touch-icon.png',
 	'blueprint-schema.json',
 	'favicon.ico',
@@ -86,7 +87,7 @@ test( 'static Playground source fixture preserves the test runtime tree through 
 		expectedStaticSourceFiles
 	);
 	assert.ok(
-		( await stat( join( moduleDirectory, 'wp-beta' ) ) ).isDirectory()
+		( await stat( join( moduleDirectory, 'wp-7.1' ) ) ).isDirectory()
 	);
 	assert.match(
 		await readFile( join( moduleDirectory, 'index.html' ), 'utf8' ),
@@ -103,9 +104,7 @@ test( 'static Playground source fixture preserves the test runtime tree through 
 		await listFixtureFiles( cliDirectory ),
 		expectedStaticSourceFiles
 	);
-	assert.ok(
-		( await stat( join( cliDirectory, 'wp-beta' ) ) ).isDirectory()
-	);
+	assert.ok( ( await stat( join( cliDirectory, 'wp-7.1' ) ) ).isDirectory() );
 } );
 
 test( 'verification workflow runs the complete non-deploying release-build contract', async () => {
@@ -436,7 +435,29 @@ test( 'rejects a stale plug-in ZIP before replacing existing build output', asyn
 } );
 
 test( 'ships the pinned WordPress static fallback tree', () => {
-	assert.deepEqual( requiredRuntimeDirectories, [ 'wp-beta' ] );
+	assert.deepEqual( requiredRuntimeDirectories, [ 'wp-7.1' ] );
+} );
+
+test( 'requires the stable WordPress bundle and excludes beta bundles', async ( t ) => {
+	const temporaryDirectory = await mkdtemp(
+		join( projectDirectory, '.tmp-pinned-runtime-bundle-' )
+	);
+	t.after( () => rm( temporaryDirectory, { recursive: true, force: true } ) );
+	await createStaticSourceFixture( temporaryDirectory );
+	await writeFile(
+		join( temporaryDirectory, 'assets', 'wp-beta.fixture.zip' ),
+		'old beta bundle'
+	);
+
+	const files = await getRuntimeFiles( temporaryDirectory );
+	assert.ok( files.includes( 'assets/wp-7.1.fixture.zip' ) );
+	assert.ok( ! files.includes( 'assets/wp-beta.fixture.zip' ) );
+
+	await rm( join( temporaryDirectory, 'assets', 'wp-7.1.fixture.zip' ) );
+	await assert.rejects(
+		getRuntimeFiles( temporaryDirectory ),
+		/official Playground static build is missing the pinned WordPress 7\.1 bundle/i
+	);
 } );
 
 test( 'drops the runtime archive that exceeds the Pages per-asset ceiling', async ( t ) => {

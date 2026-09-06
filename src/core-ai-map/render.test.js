@@ -61,9 +61,8 @@ describe( 'Living Block Map v3.2.5 server render', () => {
 
 	it( 'uses shipped 7.1 language and a per-channel public default', () => {
 		expect( render ).toContain(
-			'arrive in WordPress 7.1 on August 19, 2026'
+			'arrived in WordPress 7.1 on August 19, 2026'
 		);
-		expect( render ).toContain( 'runs a 7.1 release candidate' );
 		expect( render ).toContain( 'One flag, every client. New in 7.1.' );
 		expect( render ).not.toContain(
 			'One public default, per-channel control. Scheduled for 7.1.'
@@ -340,10 +339,10 @@ describe( 'Living Block Map v3.2.5 server render', () => {
 		);
 		expect( styles ).not.toContain( '.wp-block-core-ai-core-ai-map' );
 		expect( styles ).toMatch(
-			/button\.core-ai-map__prompt[\s\S]*?color:\s*#fff/
+			/button\.core-ai-map__prompt[\s\S]*?color:\s*var\(--core-ai-on-accent\)/
 		);
 		expect( styles ).toMatch(
-			/button\.core-ai-map__run-loop-link[\s\S]*?color:\s*#fff/
+			/button\.core-ai-map__run-loop-link[\s\S]*?color:\s*var\(--core-ai-on-accent\)/
 		);
 		expect( styles ).toMatch( /&__actor-body[\s\S]*?min-height:\s*120px/ );
 		expect( styles ).toMatch(
@@ -364,7 +363,7 @@ describe( 'Living Block Map v3.2.5 server render', () => {
 
 	it( 'keeps active outcome text at AA contrast', () => {
 		expect( styles ).toMatch(
-			/&\.is-active[\s\S]*?core-ai-map__rail-outcome[\s\S]*?color:\s*#fff/
+			/&\.is-active[\s\S]*?core-ai-map__rail-outcome[\s\S]*?color:\s*var\(--core-ai-on-accent\)/
 		);
 		expect( styles ).not.toMatch(
 			/core-ai-map__rail-outcome[\s\S]*?rgba\(255,\s*255,\s*255,\s*0\.7\)/

@@ -24,7 +24,7 @@ test( 'defines a self-contained v2 Playground kiosk Blueprint', () => {
 		blueprint.applicationOptions[ 'wordpress-playground' ].networkAccess,
 		false
 	);
-	assert.equal( blueprint.wordpressVersion, 'beta' );
+	assert.equal( blueprint.wordpressVersion, '7.1' );
 	assert.equal( blueprint.phpVersion, '8.3' );
 	assert.equal( blueprint.blueprintMeta.version, '3.2.5' );
 	assert.deepEqual( blueprint.plugins, [

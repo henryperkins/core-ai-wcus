@@ -1056,6 +1056,22 @@ $panels = $migrate_legacy_defaults(
 	)
 );
 
+// Retire only the exact release-candidate note; retain every authored variant.
+$panels = $migrate_legacy_defaults(
+	$panels,
+	$panel_defaults,
+	array(
+		'abilities' => array(
+			'notes' => array(
+				array(
+					'heading' => 'Under the hood',
+					'text' => 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution arrive in WordPress 7.1 on August 19, 2026. This exhibit runs a 7.1 release candidate, so the Anatomy panel describes the version you are looking at.',
+				),
+			),
+		),
+	)
+);
+
 /**
  * Where the About panel's question QR code points.
  *
@@ -1201,6 +1217,23 @@ $guidance_defaults = array(
 );
 
 $announcement_defaults = array(
+	'welcome' => __( 'The Living Block Map returned to its welcome screen.', 'core-ai-map' ),
+	'aboutOpen' => __( 'About this exhibit open.', 'core-ai-map' ),
+	'aboutClosed' => __( 'About this exhibit closed.', 'core-ai-map' ),
+	/* translators: %1$s: flow title. */
+	'detailsClosedFlow' => __( 'Details closed. Back in %1$s.', 'core-ai-map' ),
+	'detailsClosedMap' => __( 'Details closed. Back on the map.', 'core-ai-map' ),
+	/* translators: %1$s: first WP-Bench stage title. */
+	'benchOpen' => __( 'WP-Bench run loop open. Stage 01, %1$s, selected.', 'core-ai-map' ),
+	'benchClosed' => __( 'WP-Bench run loop closed. Back on the map.', 'core-ai-map' ),
+	/* translators: %1$s: WP-Bench stage title. */
+	'benchStageSelected' => __( 'WP-Bench stage selected: %1$s.', 'core-ai-map' ),
+	/* translators: 1: WP-Bench stage number. 2: stage title. */
+	'benchStageNumberSelected' => __( 'WP-Bench stage %1$s selected: %2$s.', 'core-ai-map' ),
+	'suggestionApplied' => __( 'A person chose Apply. The AI Plugin suggestion is now applied.', 'core-ai-map' ),
+	'resetPostponed' => __( 'Keep exploring. Reset postponed.', 'core-ai-map' ),
+	'inactivityReset' => __( 'The map reset after a period of inactivity.', 'core-ai-map' ),
+	'resetWarning' => __( 'The exhibit will return to the welcome screen in 20 seconds. Continue exploring to stay here.', 'core-ai-map' ),
 	'ready'         => __( 'Core AI Living Block Map ready. Start with WordPress uses AI, or compare components.', 'core-ai-map' ),
 	/* translators: %1$s: flow title. */
 	'flowSelected'  => __( '%1$s.', 'core-ai-map' ),
@@ -1253,6 +1286,9 @@ if ( ( $authored_guidance['cardActionBrowse'] ?? null ) === '%1$s — open its d
 	$authored_guidance['cardActionBrowse'] = $guidance_defaults['cardActionBrowse'];
 }
 
+/* translators: %1$s: flow title. */
+$label_defaults['backToFlow'] = __( 'Back to %1$s', 'core-ai-map' );
+$label_defaults['backToMap'] = __( 'Back to the map', 'core-ai-map' );
 $labels   = array_merge( $label_defaults, $authored_labels );
 $guidance = array_merge( $guidance_defaults, $authored_guidance );
 $inactivity_timeout = isset( $attributes['inactivityTimeout'] ) ? absint( $attributes['inactivityTimeout'] ) : 60;
@@ -1672,6 +1708,7 @@ $render_legend = static function ( $variant ) {
 	?>
 	<div
 		class="core-ai-map__legend core-ai-map__legend--<?php echo esc_attr( $variant ); ?>"
+		role="group"
 		aria-label="<?php esc_attr_e( 'How to read the map', 'core-ai-map' ); ?>"
 		<?php if ( $is_map ) : ?>
 			data-wp-bind--hidden="state.isDiagramKeyHidden"
@@ -1851,7 +1888,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		</header>
 
 		<div class="core-ai-map__reset-warning" role="status" data-wp-bind--hidden="state.isResetWarningHidden" hidden>
-			<span><?php esc_html_e( 'Returning to welcome in 10 seconds.', 'core-ai-map' ); ?></span>
+			<span><?php esc_html_e( 'Returning to welcome in 20 seconds.', 'core-ai-map' ); ?></span>
 			<button type="button" data-wp-on--click="actions.keepExploring"><?php esc_html_e( 'Keep exploring', 'core-ai-map' ); ?></button>
 		</div>
 
@@ -2430,7 +2467,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					<?php esc_html_e( 'Back to the exhibit', 'core-ai-map' ); ?>
 				</button>
 				<div class="core-ai-map__about-reset-warning" role="status" data-wp-bind--hidden="state.isAboutResetWarningHidden" hidden>
-					<span><?php esc_html_e( 'Returning to welcome in 10 seconds.', 'core-ai-map' ); ?></span>
+						<span><?php esc_html_e( 'Returning to welcome in 20 seconds.', 'core-ai-map' ); ?></span>
 					<button type="button" data-wp-on--click="actions.keepExploring"><?php esc_html_e( 'Keep exploring', 'core-ai-map' ); ?></button>
 				</div>
 				<p class="core-ai-map__details-badge"><?php esc_html_e( 'Transparency', 'core-ai-map' ); ?></p>
@@ -2660,7 +2697,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								<span class="core-ai-map__chain-step"><?php esc_html_e( 'Run', 'core-ai-map' ); ?></span><span class="core-ai-map__chain-arrow" aria-hidden="true">&rarr;</span>
 								<span class="core-ai-map__chain-step is-accent"><?php esc_html_e( 'Typed output', 'core-ai-map' ); ?></span>
 							</div>
-							<p class="core-ai-map__details-note"><?php esc_html_e( 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution arrive in WordPress 7.1 on August 19, 2026. This exhibit runs a 7.1 release candidate, so the Anatomy panel describes the version you are looking at.', 'core-ai-map' ); ?></p>
+							<p class="core-ai-map__details-note"><?php esc_html_e( 'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution arrived in WordPress 7.1 on August 19, 2026. The Anatomy panel describes these 7.1 features.', 'core-ai-map' ); ?></p>
 							<p class="core-ai-map__details-note"><strong><?php esc_html_e( 'Reached from both directions.', 'core-ai-map' ); ?></strong> <?php esc_html_e( 'An outside assistant is not the only caller. A request made by the AI Client inside WordPress can name registered abilities a model is allowed to call, and every one of those calls still passes the same permission check.', 'core-ai-map' ); ?></p>
 							<?php $render_qr( $panel_id, $panel ); ?>
 						</div>
@@ -2922,7 +2959,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			</nav>
 
 			<div class="core-ai-map__bench-details">
-				<div class="core-ai-map__bench-navigation" aria-label="<?php esc_attr_e( 'Move through WP-Bench stages', 'core-ai-map' ); ?>">
+				<div class="core-ai-map__bench-navigation" role="group" aria-label="<?php esc_attr_e( 'Move through WP-Bench stages', 'core-ai-map' ); ?>">
 					<button class="core-ai-map__bench-previous" type="button" data-wp-bind--disabled="state.isPreviousBenchStageDisabled" data-wp-on--click="actions.selectPreviousBenchStage"><span aria-hidden="true">&larr;</span><?php esc_html_e( 'Previous', 'core-ai-map' ); ?></button>
 					<span data-wp-text="state.benchProgressLabel"><?php echo esc_html( sprintf( $labels['benchProgress'], '01', '05' ) ); ?></span>
 					<button class="core-ai-map__bench-next" type="button" data-wp-bind--disabled="state.isNextBenchStageDisabled" data-wp-on--click="actions.selectNextBenchStage"><?php esc_html_e( 'Next', 'core-ai-map' ); ?><span aria-hidden="true">&rarr;</span></button>

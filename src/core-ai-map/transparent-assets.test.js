@@ -69,9 +69,8 @@ const decodeRgbaPng = ( bytes ) => {
 			interlace: 0,
 		} )
 	);
-	expect( header.width ).toBe( header.height );
-	expect( header.width ).toBeGreaterThanOrEqual( 1024 );
-	expect( header.width ).toBeLessThanOrEqual( 1536 );
+	expect( header.width ).toBe( 392 );
+	expect( header.height ).toBe( 392 );
 
 	const bytesPerPixel = 4;
 	const rowLength = header.width * bytesPerPixel;
@@ -147,7 +146,7 @@ describe( 'transparent inspector assets', () => {
 			image.rgba.length - 1,
 		];
 
-		expect( statSync( assetPath ).size ).toBeLessThan( 3 * 1024 * 1024 );
+		expect( statSync( assetPath ).size ).toBeLessThan( 100 * 1024 );
 		expect( transparentPixels ).toBeGreaterThan( 0 );
 		expect( nearOpaquePixels ).toBeGreaterThan( 0 );
 		expect( transparentShare ).toBeGreaterThan( 0.35 );

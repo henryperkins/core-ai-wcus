@@ -450,6 +450,332 @@ describe( 'Core AI Living Block Map', () => {
 		cleanupKiosk();
 	} );
 
+	it.each( [ 1, 2 ] )(
+		'preserves enlargement at browser zoom with initial DPR %i',
+		( initialRatio ) => {
+			const effects = [];
+			let viewportWidth = 1366;
+			let viewportHeight = 1024;
+			const originalRatio = window.devicePixelRatio;
+			Object.defineProperties( root, {
+				clientWidth: { configurable: true, get: () => viewportWidth },
+				clientHeight: { configurable: true, get: () => viewportHeight },
+			} );
+			Object.defineProperty( window, 'devicePixelRatio', {
+				configurable: true,
+				writable: true,
+				value: initialRatio,
+			} );
+			useEffect.mockImplementation( ( effect ) =>
+				effects.push( effect )
+			);
+			mapStore.callbacks.useKiosk();
+			const cleanup = effects[ 0 ]();
+			try {
+				expect( root.classList ).not.toContain(
+					'is-pannable-inspection'
+				);
+				viewportWidth = 683;
+				viewportHeight = 512;
+				window.devicePixelRatio = initialRatio * 2;
+				window.dispatchEvent( new Event( 'resize' ) );
+				expect(
+					Number( root.style.getPropertyValue( '--cai-scale' ) )
+				).toBe( 1 );
+				expect( root.classList ).toContain( 'is-pannable-inspection' );
+				expect( root.classList ).not.toContain( 'is-phone-inspection' );
+				const button = root.querySelector( '.core-ai-map__reset' );
+				button.scrollIntoView = jest.fn();
+				button.focus();
+				expect( button.scrollIntoView ).toHaveBeenCalledWith( {
+					block: 'nearest',
+					inline: 'nearest',
+				} );
+				window.devicePixelRatio = initialRatio;
+				viewportWidth = 1366;
+				viewportHeight = 1024;
+				window.dispatchEvent( new Event( 'resize' ) );
+				expect( root.classList ).not.toContain(
+					'is-pannable-inspection'
+				);
+				expect(
+					Number( root.style.getPropertyValue( '--cai-scale' ) )
+				).toBe( 1 );
+			} finally {
+				cleanup();
+				window.devicePixelRatio = originalRatio;
+			}
+		}
+	);
+
+	it.each( [
+		[ 1024, 768, 0.7496339677891655 ],
+		[ 1366, 1024, 1 ],
+	] )(
+		'restores the centered %i by %i viewport after zoom adds scrollbars',
+		( width, height, expectedScale ) => {
+			const effects = [];
+			let zoom = 1;
+			const originalRatio = window.devicePixelRatio;
+			const scrollbar = () =>
+				root.classList.contains( 'is-pannable-inspection' ) ? 15 : 0;
+			Object.defineProperties( root, {
+				offsetWidth: { configurable: true, get: () => width / zoom },
+				offsetHeight: { configurable: true, get: () => height / zoom },
+				clientWidth: {
+					configurable: true,
+					get: () => width / zoom - scrollbar(),
+				},
+				clientHeight: {
+					configurable: true,
+					get: () => height / zoom - scrollbar(),
+				},
+			} );
+			Object.defineProperty( window, 'devicePixelRatio', {
+				configurable: true,
+				writable: true,
+				value: 1,
+			} );
+			useEffect.mockImplementation( ( effect ) =>
+				effects.push( effect )
+			);
+			mapStore.callbacks.useKiosk();
+			const cleanup = effects[ 0 ]();
+			try {
+				zoom = 2;
+				window.devicePixelRatio = 2;
+				window.dispatchEvent( new Event( 'resize' ) );
+				expect( root.classList ).toContain( 'is-pannable-inspection' );
+				root.scrollLeft = 100;
+				root.scrollTop = 60;
+				zoom = 1;
+				window.devicePixelRatio = 1;
+				window.dispatchEvent( new Event( 'resize' ) );
+				expect( root.classList ).not.toContain(
+					'is-pannable-inspection'
+				);
+				expect(
+					Number( root.style.getPropertyValue( '--cai-scale' ) )
+				).toBeCloseTo( expectedScale, 10 );
+				expect( root.scrollLeft ).toBe( 0 );
+				expect( root.scrollTop ).toBe( 0 );
+			} finally {
+				cleanup();
+				window.devicePixelRatio = originalRatio;
+			}
+		}
+	);
+
+	it.each( [
+		[ 1, 2, 1 ],
+		[ 2, 1, 1 ],
+		[ 1, 2, 1.25 ],
+		[ 2, 1, 1.25 ],
+	] )(
+		'preserves a display change from DPR %f to %f at zoom %f',
+		( initialRatio, displayRatio, initialZoom ) => {
+			const effects = [];
+			let width = 1366;
+			let height = 1024;
+			const originalRatio = window.devicePixelRatio;
+			Object.defineProperties( root, {
+				offsetWidth: { configurable: true, get: () => width },
+				offsetHeight: { configurable: true, get: () => height },
+			} );
+			window.devicePixelRatio = initialRatio;
+			useEffect.mockImplementation( ( effect ) =>
+				effects.push( effect )
+			);
+			mapStore.callbacks.useKiosk();
+			const cleanup = effects[ 0 ]();
+			try {
+				width = Math.round( 1366 / initialZoom );
+				height = Math.round( 1024 / initialZoom );
+				window.devicePixelRatio = initialRatio * initialZoom;
+				window.dispatchEvent( new Event( 'resize' ) );
+				window.devicePixelRatio = displayRatio * initialZoom;
+				window.dispatchEvent( new Event( 'resize' ) );
+				expect(
+					Number( root.style.getPropertyValue( '--cai-scale' ) )
+				).toBeCloseTo( 1, 2 );
+				expect( root.classList ).not.toContain( 'is-phone-inspection' );
+				expect(
+					root.classList.contains( 'is-pannable-inspection' )
+				).toBe( initialZoom > 1 );
+
+				// Page zoom must continue to work against the new display density.
+				width = 683;
+				height = 512;
+				window.devicePixelRatio = displayRatio * 2;
+				window.dispatchEvent( new Event( 'resize' ) );
+				expect(
+					Number( root.style.getPropertyValue( '--cai-scale' ) )
+				).toBeCloseTo( 1, 2 );
+				expect( root.classList ).toContain( 'is-pannable-inspection' );
+
+				width = 1366;
+				height = 1024;
+				window.devicePixelRatio = displayRatio;
+				window.dispatchEvent( new Event( 'resize' ) );
+				expect(
+					Number( root.style.getPropertyValue( '--cai-scale' ) )
+				).toBeCloseTo( 1, 2 );
+				expect( root.classList ).not.toContain(
+					'is-pannable-inspection'
+				);
+			} finally {
+				cleanup();
+				window.devicePixelRatio = originalRatio;
+			}
+		}
+	);
+
+	it.each( [
+		[ 1, 2 ],
+		[ 2, 1 ],
+	] )(
+		'refits a resized browser window when display density changes from %i to %i',
+		( initialRatio, displayRatio ) => {
+			const effects = [];
+			let ratio = initialRatio;
+			const originalRatio = window.devicePixelRatio;
+			const originalWidth = Object.getOwnPropertyDescriptor(
+				window,
+				'outerWidth'
+			);
+			const originalHeight = Object.getOwnPropertyDescriptor(
+				window,
+				'outerHeight'
+			);
+			Object.defineProperties( root, {
+				offsetWidth: { configurable: true, get: () => 2732 / ratio },
+				offsetHeight: { configurable: true, get: () => 2048 / ratio },
+			} );
+			Object.defineProperties( window, {
+				outerWidth: { configurable: true, get: () => 2732 / ratio },
+				outerHeight: { configurable: true, get: () => 2200 / ratio },
+			} );
+			window.devicePixelRatio = initialRatio;
+			useEffect.mockImplementation( ( effect ) =>
+				effects.push( effect )
+			);
+			mapStore.callbacks.useKiosk();
+			const cleanup = effects[ 0 ]();
+			try {
+				ratio = displayRatio;
+				window.devicePixelRatio = displayRatio;
+				window.dispatchEvent( new Event( 'resize' ) );
+				expect(
+					Number( root.style.getPropertyValue( '--cai-scale' ) )
+				).toBe( displayRatio === 2 ? 1 : 2 );
+				expect( root.classList ).not.toContain(
+					'is-pannable-inspection'
+				);
+				expect( root.classList ).not.toContain( 'is-phone-inspection' );
+			} finally {
+				cleanup();
+				window.devicePixelRatio = originalRatio;
+				Object.defineProperty( window, 'outerWidth', originalWidth );
+				Object.defineProperty( window, 'outerHeight', originalHeight );
+			}
+		}
+	);
+
+	it( 'rebases display density without a resize before the next page zoom and removes its listener', () => {
+		const effects = [];
+		const queries = [];
+		let width = 1366;
+		let height = 1024;
+		const originalRatio = window.devicePixelRatio;
+		const originalMatchMedia = window.matchMedia;
+		window.matchMedia = ( query ) => {
+			if ( ! query.startsWith( '(resolution:' ) ) {
+				return originalMatchMedia( query );
+			}
+			const result = new EventTarget();
+			queries.push( result );
+			return result;
+		};
+		Object.defineProperties( root, {
+			offsetWidth: { configurable: true, get: () => width },
+			offsetHeight: { configurable: true, get: () => height },
+		} );
+		context.screen = 'map';
+		window.devicePixelRatio = 1;
+		useEffect.mockImplementation( ( effect ) => effects.push( effect ) );
+		mapStore.callbacks.useKiosk();
+		const cleanup = effects[ 0 ]();
+		try {
+			window.devicePixelRatio = 2;
+			queries.at( -1 )?.dispatchEvent( new Event( 'change' ) );
+			width = 683;
+			height = 512;
+			window.devicePixelRatio = 4;
+			window.dispatchEvent( new Event( 'resize' ) );
+			queries.at( -1 )?.dispatchEvent( new Event( 'change' ) );
+			expect(
+				Number( root.style.getPropertyValue( '--cai-scale' ) )
+			).toBe( 1 );
+			expect( root.classList ).toContain( 'is-pannable-inspection' );
+			expect( root.classList ).not.toContain( 'is-phone-inspection' );
+			cleanup();
+			width = 1000;
+			height = 800;
+			window.devicePixelRatio = 1;
+			queries.at( -1 )?.dispatchEvent( new Event( 'change' ) );
+			expect(
+				Number( root.style.getPropertyValue( '--cai-scale' ) )
+			).toBe( 1 );
+		} finally {
+			cleanup();
+			window.devicePixelRatio = originalRatio;
+			window.matchMedia = originalMatchMedia;
+		}
+	} );
+
+	it( 'shows the fallback continuation cue only while content remains below', async () => {
+		const effects = [];
+		const details = root.querySelector( '.core-ai-map__details' );
+		let contentHeight = 400;
+		Object.defineProperties( details, {
+			clientHeight: { configurable: true, value: 400 },
+			scrollHeight: { configurable: true, get: () => contentHeight },
+		} );
+		context.screen = 'inspect';
+		context.inspect = 'client';
+		useEffect.mockImplementation( ( effect ) => effects.push( effect ) );
+		mapStore.callbacks.useKiosk();
+		const cleanup = effects[ 0 ]();
+		try {
+			jest.advanceTimersByTime( 32 );
+			expect( details.classList ).not.toContain( 'has-more-content' );
+			contentHeight = 900;
+			details.appendChild( document.createElement( 'article' ) );
+			await Promise.resolve();
+			jest.advanceTimersByTime( 32 );
+			expect( details.classList ).toContain( 'has-more-content' );
+			details.scrollTop = 500;
+			details.dispatchEvent( new Event( 'scroll' ) );
+			jest.advanceTimersByTime( 32 );
+			expect( details.classList ).not.toContain( 'has-more-content' );
+			details.scrollTop = 200;
+			details.dispatchEvent( new Event( 'scroll' ) );
+			jest.advanceTimersByTime( 32 );
+			expect( details.classList ).toContain( 'has-more-content' );
+			details.hidden = true;
+			await Promise.resolve();
+			jest.advanceTimersByTime( 32 );
+			expect( details.classList ).not.toContain( 'has-more-content' );
+		} finally {
+			cleanup();
+		}
+		details.hidden = false;
+		details.dispatchEvent( new Event( 'scroll' ) );
+		await Promise.resolve();
+		jest.advanceTimersByTime( 32 );
+		expect( details.classList ).not.toContain( 'has-more-content' );
+	} );
+
 	it( 'removes covered theme chrome from the accessibility tree while mounted', () => {
 		const effects = [];
 		const themeHeader = document.querySelector( 'body > header' );
@@ -1678,13 +2004,13 @@ describe( 'Core AI Living Block Map', () => {
 		const cleanupKiosk = effects[ 0 ]();
 		effects[ 1 ]();
 
-		jest.advanceTimersByTime( 79999 );
+		jest.advanceTimersByTime( 69999 );
 		expect( context.resetWarning ).toBe( false );
 		jest.advanceTimersByTime( 1 );
 		expect( context.resetWarning ).toBe( true );
 		expect( context.screen ).toBe( 'map' );
 		expect( context.announcement ).toContain(
-			'return to the welcome screen in 10 seconds'
+			'return to the welcome screen in 20 seconds'
 		);
 
 		currentElement = root;
@@ -1727,7 +2053,7 @@ describe( 'Core AI Living Block Map', () => {
 			expect( mapStore.state.isResetWarningHidden ).toBe( true );
 			expect( mapStore.state.isAboutResetWarningHidden ).toBe( false );
 			expect( context.announcement ).toContain(
-				'return to the welcome screen in 10 seconds'
+				'return to the welcome screen in 20 seconds'
 			);
 
 			jest.advanceTimersByTime( 10040 );
@@ -2649,6 +2975,96 @@ describe( 'Core AI Living Block Map', () => {
 		mapStore.actions.applySuggestion();
 		expect( context.suggestion ).toBe( 1 );
 		expect( context.announcement ).toBe( announcement );
+	} );
+
+	it.each( [ 30000, 60000, 90000, 1000, 0 ] )(
+		'gives twenty seconds to extend a configured %i ms timeout',
+		( configuredTimeout ) => {
+			root.dataset.inactivityTimeout = String( configuredTimeout );
+			context.screen = 'map';
+			context.announcements.resetWarning = 'Aviso: quedan 20 segundos.';
+			context.announcements.inactivityReset = 'Reinicio por inactividad.';
+			const effects = [];
+			useEffect.mockImplementation( ( effect ) =>
+				effects.push( effect )
+			);
+			mapStore.callbacks.useKiosk();
+			const cleanup = effects[ 0 ]();
+			const timeout = Math.max( configuredTimeout, 30000 );
+			try {
+				jest.advanceTimersByTime( timeout - 20001 );
+				expect( context.resetWarning ).toBe( false );
+				jest.advanceTimersByTime( 1 );
+				expect( context.resetWarning ).toBe( true );
+				expect( context.announcement ).toBe(
+					'Aviso: quedan 20 segundos.'
+				);
+				jest.advanceTimersByTime( 19999 );
+				expect( context.screen ).toBe( 'map' );
+				jest.advanceTimersByTime( 1 );
+				expect( context.screen ).toBe( 'attract' );
+				expect( context.announcement ).toBe(
+					'Reinicio por inactividad.'
+				);
+			} finally {
+				cleanup();
+			}
+		}
+	);
+
+	it( 'retains translated navigation and announcements through deep screens', () => {
+		Object.assign( context.labels, {
+			backToFlow: '%1$s: volver',
+			backToMap: 'Volver al mapa',
+		} );
+		Object.assign( context.announcements, {
+			aboutOpen: 'Acerca del mapa.',
+			aboutClosed: 'Acerca cerrado.',
+			detailsClosedFlow: '%1$s: detalles cerrados.',
+			detailsClosedMap: 'Detalles cerrados.',
+			welcome: 'Bienvenido.',
+			resetPostponed: 'Reinicio aplazado.',
+			suggestionApplied: 'Sugerencia aplicada.',
+			benchOpen: '%1$s: banco abierto.',
+			benchClosed: 'Banco cerrado.',
+			benchStageSelected: '%1$s: etapa seleccionada.',
+			benchStageNumberSelected: '%2$s: etapa %1$s.',
+		} );
+		context.screen = 'map';
+		context.story = 'uses-ai';
+		expect( mapStore.state.detailsBackLabel ).toBe(
+			'WordPress uses AI: volver'
+		);
+		mapStore.actions.closeInspect();
+		expect( context.announcement ).toBe(
+			'WordPress uses AI: detalles cerrados.'
+		);
+		context.story = '';
+		expect( mapStore.state.detailsBackLabel ).toBe( 'Volver al mapa' );
+		mapStore.actions.closeInspect();
+		expect( context.announcement ).toBe( 'Detalles cerrados.' );
+		mapStore.actions.openAbout();
+		expect( context.announcement ).toBe( 'Acerca del mapa.' );
+		mapStore.actions.closeAbout();
+		expect( context.announcement ).toBe( 'Acerca cerrado.' );
+		mapStore.actions.keepExploring();
+		expect( context.announcement ).toBe( 'Reinicio aplazado.' );
+		mapStore.actions.applySuggestion();
+		expect( context.announcement ).toBe( 'Sugerencia aplicada.' );
+		context.benchTitles.task = 'Una tarea';
+		mapStore.actions.openBench();
+		expect( context.announcement ).toBe( 'Una tarea: banco abierto.' );
+		context.stageId = 'model';
+		mapStore.actions.selectBenchStage();
+		expect( context.announcement ).toBe(
+			'Whatever the model wrote: etapa seleccionada.'
+		);
+		mapStore.actions.selectPreviousBenchStage();
+		expect( context.announcement ).toBe( 'Una tarea: etapa 01.' );
+		mapStore.actions.closeBench();
+		expect( context.announcement ).toBe( 'Banco cerrado.' );
+		mapStore.actions.reset();
+		expect( context.announcement ).toBe( 'Bienvenido.' );
 	} );
 
 	it( 'keeps translated action and progress labels after hydration', () => {

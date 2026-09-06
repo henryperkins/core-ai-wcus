@@ -3,6 +3,23 @@ import legacyMetadata from './fixtures/block-v0.2.json';
 import { withCurrentDefault, withCurrentDefaults } from './normalize';
 
 describe( 'editor copy normalization', () => {
+	it( 'migrates release-candidate defaults while preserving an authored note', () => {
+		const legacyText =
+			'The PHP API landed in WordPress 6.9. WordPress 7.0 added a client-side counterpart for editor actions such as navigation and block insertion. A public default for client exposure, filtering in wp_get_abilities(), and filters around execution arrive in WordPress 7.1 on August 19, 2026. This exhibit runs a 7.1 release candidate, so the Anatomy panel describes the version you are looking at.';
+		const migrate = ( text ) =>
+			withCurrentDefaults( currentMetadata, 'panels', [
+				{
+					id: 'abilities',
+					notes: [ { heading: 'Under the hood', text } ],
+				},
+			] ).find( ( panel ) => panel.id === 'abilities' ).notes[ 0 ].text;
+		expect( migrate( legacyText ) ).toContain( 'arrived in WordPress 7.1' );
+		expect( migrate( legacyText ) ).not.toContain( 'release candidate' );
+		expect( migrate( `${ legacyText } Operator note.` ) ).toBe(
+			`${ legacyText } Operator note.`
+		);
+	} );
+
 	it( 'upgrades only exact legacy welcome defaults', () => {
 		expect(
 			withCurrentDefault(
@@ -383,7 +400,7 @@ describe( 'editor copy normalization', () => {
 		).toContain( 'provider plugin' );
 		expect(
 			panels.find( ( item ) => item.id === 'abilities' ).notes[ 0 ].text
-		).toContain( 'arrive in WordPress 7.1 on August 19, 2026' );
+		).toContain( 'arrived in WordPress 7.1 on August 19, 2026' );
 		expect(
 			panels.find( ( item ) => item.id === 'client' ).lede
 		).toContain( 'installed provider plugin' );
