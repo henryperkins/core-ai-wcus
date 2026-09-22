@@ -5,6 +5,11 @@ import {
 	useEffect,
 } from '@wordpress/interactivity';
 import { createSurfaceMotion, createSlidingTabs } from './surface-motion';
+import {
+	createTextReveal,
+	createTextSwap,
+	createDisclosureMotion,
+} from './content-motion';
 
 const STAGE_WIDTH = 1366;
 const STAGE_HEIGHT = 1024;
@@ -169,6 +174,21 @@ const focusableAboutControls = ( root ) => {
 
 const activeLayout = ( context ) =>
 	( context.story && context.layout?.[ context.story ] ) || null;
+
+// Caption content outlives selection only while its inert wrapper fades out.
+const captionStory = ( context ) => {
+	if ( context.screen === 'map' ) {
+		return activeLayout( context ) ? context.story : '';
+	}
+	return context.displayedStory;
+};
+
+const retainCaption = ( context ) => {
+	if ( context.screen === 'map' ) {
+		context.displayedStory = captionStory( context );
+		context.displayedStorySettled = context.flowPhase === 'settled';
+	}
+};
 
 const hasLayoutMember = ( layout, id ) =>
 	Boolean( layout?.members && Object.hasOwn( layout.members, id ) );
@@ -681,6 +701,7 @@ const setPreviewPhase = ( context, phase ) => {
 };
 
 const setAttractState = ( context ) => {
+	retainCaption( context );
 	context.screen = 'attract';
 	context.aboutReturnScreen = '';
 	context.story = '';
@@ -861,6 +882,14 @@ const selectBenchStageByOffset = ( context, offset ) => {
 	);
 };
 
+const suggestionLabels = ( context ) => ( {
+	phase: context.phases?.[ context.suggestion % 2 ] || '',
+	action:
+		context.suggestion % 2 === 1
+			? context.labels?.appliedLabel || 'Applied'
+			: context.labels?.applyLabel || 'Apply',
+} );
+
 store( 'core-ai/map', {
 	state: {
 		get isAttract() {
@@ -958,6 +987,23 @@ store( 'core-ai/map', {
 			const context = getContext();
 			return context.storyId !== context.story;
 		},
+		get isCaptionStoryHidden() {
+			const context = getContext();
+			return context.storyId !== captionStory( context );
+		},
+		get isCaptionNextHidden() {
+			const context = getContext();
+			const layout = context.layout?.[ captionStory( context ) ];
+			const settled =
+				context.screen === 'map'
+					? context.flowPhase === 'settled'
+					: context.displayedStorySettled;
+			return ! (
+				layout &&
+				layout.next === context.nextStoryId &&
+				settled
+			);
+		},
 		/*
 		 * Two flows are one story: an agent writes code, then WordPress judges
 		 * it. The handoff is offered only once this flow has settled, so it
@@ -987,10 +1033,7 @@ store( 'core-ai/map', {
 			return getContext().screen !== 'map';
 		},
 		get isBrowseNoteHidden() {
-			const context = getContext();
-			return (
-				context.screen !== 'map' || Boolean( activeLayout( context ) )
-			);
+			return captionStory( getContext() ) !== '';
 		},
 		get isBrowseControlHidden() {
 			const context = getContext();
@@ -1579,16 +1622,13 @@ store( 'core-ai/map', {
 				: '';
 		},
 		get suggestionPhase() {
-			return getContext().phases?.[ getContext().suggestion % 2 ] || '';
+			return suggestionLabels( getContext() ).phase;
 		},
 		get isSuggestionApplied() {
 			return getContext().suggestion % 2 === 1;
 		},
 		get suggestionActionLabel() {
-			const context = getContext();
-			return this.isSuggestionApplied
-				? context.labels?.appliedLabel || 'Applied'
-				: context.labels?.applyLabel || 'Apply';
+			return suggestionLabels( getContext() ).action;
 		},
 		get isSuggestionNotApplied() {
 			return ! this.isSuggestionApplied;
@@ -1764,6 +1804,7 @@ store( 'core-ai/map', {
 			if ( root ) {
 				lastCardTriggers.set( root, ref );
 			}
+			retainCaption( context );
 			context.screen = 'inspect';
 			context.inspect = context.cardId;
 			context.displayedInspect = context.inspect;
@@ -1816,6 +1857,7 @@ store( 'core-ai/map', {
 			if ( root ) {
 				lastAboutTriggers.set( root, ref );
 			}
+			retainCaption( context );
 			context.aboutReturnScreen = context.screen;
 			context.screen = 'about';
 			context.announcement = announcement(
@@ -1895,6 +1937,7 @@ store( 'core-ai/map', {
 					: ref;
 				lastBenchTriggers.set( root, restoreTarget );
 			}
+			retainCaption( context );
 			context.screen = 'bench';
 			context.inspect = '';
 			context.benchStage = 'task';
@@ -2018,9 +2061,69 @@ store( 'core-ai/map', {
 				const abilityTabs = createSlidingTabs(
 					root.querySelector( '.core-ai-map__ability-tabs' )
 				);
+				const mapControls = [ 'story-copy', 'rail' ].map( ( name ) =>
+					createSurfaceMotion(
+						root.querySelector( `.core-ai-map__${ name }` ),
+						{
+							closeToken: '--map-controls-fade-dur',
+							closeMs: 220,
+							onHidden: () => {
+								if (
+									name === 'story-copy' &&
+									context.screen !== 'map'
+								) {
+									context.displayedStory = null;
+									context.displayedStorySettled = false;
+								}
+							},
+						}
+					)
+				);
+				const takeaways = [
+					...root.querySelectorAll( '[data-core-ai-takeaway]' ),
+				].map( ( element ) => ( {
+					story: element.dataset.coreAiTakeaway,
+					motion: createTextReveal( element ),
+				} ) );
+				const textSwaps = [
+					...root.querySelectorAll( '[data-core-ai-text-swap]' ),
+				].map( ( element ) => ( {
+					element,
+					motion: createTextSwap( element ),
+				} ) );
+				const disclosures = [
+					...root.querySelectorAll(
+						'.core-ai-map__about-operations'
+					),
+				].map( createDisclosureMotion );
 				let showingAbilities = false;
 				const syncSurfaces = () => {
 					const reduced = reducedMotion( root, context );
+					retainCaption( context );
+					mapControls.forEach( ( motion ) =>
+						motion.update( context.screen === 'map', reduced )
+					);
+					takeaways.forEach( ( { story, motion } ) =>
+						motion.update(
+							context.screen === 'map' &&
+								context.story === story &&
+								context.flowPhase === 'settled',
+							reduced
+						)
+					);
+					const labels = suggestionLabels( context );
+					textSwaps.forEach( ( { element, motion } ) =>
+						motion.update(
+							labels[ element.dataset.coreAiTextSwap ],
+							reduced ||
+								Boolean(
+									element.closest( '[hidden], [inert]' )
+								)
+						)
+					);
+					disclosures.forEach( ( motion ) =>
+						motion.updateMotion( reduced )
+					);
 					inspector.update(
 						context.screen === 'inspect',
 						reduced ||
@@ -2670,6 +2773,10 @@ store( 'core-ai/map', {
 					inspector.destroy();
 					about.destroy();
 					abilityTabs.destroy();
+					mapControls.forEach( ( motion ) => motion.destroy() );
+					takeaways.forEach( ( { motion } ) => motion.destroy() );
+					textSwaps.forEach( ( { motion } ) => motion.destroy() );
+					disclosures.forEach( ( motion ) => motion.destroy() );
 					surfaceSynchronizers.delete( root );
 					stopObservingDetails();
 					motionQuery?.removeEventListener?.(
@@ -2737,6 +2844,9 @@ store( 'core-ai/map', {
 				context.inspect,
 				context.abilitiesTab,
 				context.motionReduced,
+				context.story,
+				context.flowPhase,
+				context.suggestion,
 			] );
 
 			useEffect( () => {

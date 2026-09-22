@@ -1760,9 +1760,10 @@ describe( 'Core AI map render contract', () => {
 			expect( takeaway.querySelector( 'strong' ).textContent ).toBe(
 				'What this flow shows'
 			);
-			expect( takeaway.getAttribute( 'data-wp-bind--hidden' ) ).toBe(
-				'state.isTakeawayHidden'
-			);
+			expect( takeaway.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+			expect( takeaway.hasAttribute( 'inert' ) ).toBe( true );
+			expect( takeaway.hidden ).toBe( false );
+			expect( takeaway.dataset.coreAiTakeaway ).toBeTruthy();
 		}
 	} );
 
@@ -1833,6 +1834,14 @@ describe( 'Core AI map render contract', () => {
 			( flow ) =>
 				JSON.parse( flow.dataset.testContext ).storyId === 'uses-ai'
 		);
+		expect( firstStoryHandoff.getAttribute( 'data-wp-bind--hidden' ) ).toBe(
+			'state.isCaptionStoryHidden'
+		);
+		expect(
+			firstStoryHandoff
+				.querySelector( '.core-ai-map__story-next' )
+				.getAttribute( 'data-wp-class--is-pending' )
+		).toBe( 'state.isCaptionNextHidden' );
 		expect(
 			firstStoryHandoff.querySelector( '.core-ai-map__story-next' )
 				.textContent

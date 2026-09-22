@@ -201,7 +201,7 @@ describe( 'Living Block Map v3.2.5 server render', () => {
 		expect( render ).toMatch( /'learns'[\s\S]*?'next'\s*=>\s*'tests'/ );
 		expect( render ).toContain( 'core-ai-map__story-next' );
 		expect( render ).toContain(
-			'data-wp-bind--hidden="state.isStoryNextHidden"'
+			'data-wp-bind--inert="state.isStoryNextHidden"'
 		);
 		expect( render ).toContain(
 			'data-wp-on--click="actions.selectNextStory"'
@@ -276,7 +276,7 @@ describe( 'Living Block Map v3.2.5 server render', () => {
 			/class="core-ai-map__details-motion t-panel-slide"[^>]*\binert\b[^>]*\bhidden\b/
 		);
 		expect( render ).toMatch(
-			/class="core-ai-map__rail"[\s\S]*?data-wp-bind--hidden="state\.isRailHidden"[\s\S]*?\bhidden\b/
+			/class="core-ai-map__rail"[^\n]*aria-hidden="true"[^\n]*\binert\b[^\n]*\bhidden\b/
 		);
 		expect( render ).toMatch(
 			/class="core-ai-map__attract"[\s\S]*?data-wp-bind--hidden="state\.isNotAttract"/
@@ -325,7 +325,7 @@ describe( 'Living Block Map v3.2.5 server render', () => {
 			'data-wp-bind--disabled="state.isSuggestionApplied"'
 		);
 		expect( render ).toContain(
-			'data-wp-text="state.suggestionActionLabel"'
+			'data-wp-bind--aria-label="state.suggestionActionLabel"'
 		);
 		expect( render ).toContain( 'data-wp-on--click="actions.replayStory"' );
 	} );
@@ -473,9 +473,9 @@ describe( 'Living Block Map v3.2.5 server render', () => {
 
 	it( 'keeps the band under the map legible in both map modes', () => {
 		// The band carries a flow's takeaway or the explorer's description, so
-		// it is gated on the map screen rather than on having a story.
+		// its controller reveals it in either map mode and preserves its fade.
 		expect( styles ).toMatch(
-			/\.core-ai-map:not\(\.is-map\) \.core-ai-map__story-copy \{\s*opacity: 0;/
+			/&__story-copy,\s*&__rail\s*\{[^}]*opacity: 0;[^}]*&\.is-open\s*\{\s*opacity: 1;/
 		);
 		expect( styles ).not.toMatch(
 			/\.core-ai-map:not\(\.has-story\) \.core-ai-map__story-copy/

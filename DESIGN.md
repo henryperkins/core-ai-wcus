@@ -529,6 +529,19 @@ font loading place it without travel. Reduced motion switches it immediately. Th
 portable recipes and their tunable variables live in `src/core-ai-map/motion.scss`;
 the exhibit's distance, color, and shape overrides remain in `style.scss`.
 
+The story band and flow rail fade over 220ms, become inert on exit, and are hidden
+only after the fade completes. Caption and action content remain painted through
+the exit even when Reset clears the selected story. The two lesson columns and
+next-flow action reserve their space before settlement, so revealing a conclusion does not change the
+situation's reading width. Its heading and supporting text reveal over 500ms with
+a 40ms stagger, 12px rise, and 3px blur; dismissal is a quiet 200ms fade.
+
+Apply changes application state immediately. Its visual status and button label
+swap over 150ms per phase with 4px travel and 2px blur; the button's accessible
+label updates immediately. Kiosk status retains native details/summary semantics
+and expands or collapses over 250ms. These effects cancel stale work on reversal
+and settle immediately when reduced motion is requested.
+
 ## Do's and Don'ts
 
 ### Do:

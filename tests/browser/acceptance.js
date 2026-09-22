@@ -423,6 +423,7 @@ async ( page ) => {
 		const visible = ( element ) =>
 			Boolean( element ) &&
 			! element.hidden &&
+			getComputedStyle( element ).visibility !== 'hidden' &&
 			element.getBoundingClientRect().height > 0;
 		const takeaway = [
 			...document.querySelectorAll( '.core-ai-map__takeaway' ),
@@ -537,7 +538,9 @@ async ( page ) => {
 			...document.querySelectorAll( '.core-ai-map__takeaway' ),
 		].find(
 			( node ) =>
-				! node.hidden && node.getBoundingClientRect().height > 0
+				! node.hidden &&
+				getComputedStyle( node ).visibility !== 'hidden' &&
+				node.getBoundingClientRect().height > 0
 		);
 
 		return takeaway?.textContent.replace( /\s+/g, ' ' ).trim();
@@ -1551,6 +1554,7 @@ async ( page ) => {
 				.find(
 					( node ) =>
 						! node.hidden &&
+						getComputedStyle( node ).visibility !== 'hidden' &&
 						node.getBoundingClientRect().height > 0
 				)
 				?.textContent.replace( /\s+/g, ' ' )

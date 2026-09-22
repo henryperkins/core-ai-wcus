@@ -97,6 +97,7 @@ body.core-ai-kiosk-active {
 	--core-ai-serif: "Core AI EB Garamond", georgia, "Times New Roman", serif;
 	--core-ai-ease: cubic-bezier(0.22, 1, 0.36, 1);
 	--panel-translate-y: 12px;
+	--map-controls-fade-dur: 220ms;
 	--tabs-text-muted: var(--core-ai-ink);
 	--tabs-text-active: var(--core-ai-on-accent);
 	--tabs-pill-bg: var(--core-ai-ink);
@@ -1794,6 +1795,18 @@ body.core-ai-kiosk-active {
 
 	/* Story caption and rail ------------------------------------------- */
 
+	&__story-copy,
+	&__rail {
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity var(--map-controls-fade-dur) ease;
+
+		&.is-open {
+			opacity: 1;
+			pointer-events: auto;
+		}
+	}
+
 	&__story-copy {
 		position: absolute;
 		z-index: 30;
@@ -1805,7 +1818,6 @@ body.core-ai-kiosk-active {
 		line-height: 1.38;
 		text-align: left;
 		text-wrap: pretty;
-		transition: opacity 220ms ease;
 
 		> .core-ai-map__browse-note {
 			display: flex;
@@ -1851,10 +1863,6 @@ body.core-ai-kiosk-active {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 20px;
-
-		&:has(.core-ai-map__takeaway[hidden]) .core-ai-map__situation {
-			grid-column: 1 / -1;
-		}
 	}
 
 	&__situation,
@@ -1862,6 +1870,13 @@ body.core-ai-kiosk-active {
 		min-height: 76px;
 		padding-top: 10px;
 		border-top: 1px solid var(--core-ai-line-dormant);
+	}
+
+	/* Keep the reading measure and action positions stable before settlement. */
+	&__takeaway:not(.is-shown):not(.is-hiding),
+	&__story-next.is-pending {
+		visibility: hidden;
+		pointer-events: none;
 	}
 
 	&__story-actions {
@@ -1921,7 +1936,6 @@ body.core-ai-kiosk-active {
 		align-items: center;
 		grid-template-columns: 112px repeat(4, minmax(0, 1fr));
 		gap: 8px;
-		transition: opacity 220ms ease;
 
 		.core-ai-map__rail-label {
 			margin: 0;
@@ -2624,12 +2638,21 @@ body.core-ai-kiosk-active {
 		border-bottom: 1px solid var(--core-ai-line);
 
 		summary {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
 			min-height: 48px;
 			padding: 14px 0;
 			color: var(--core-ai-ink-soft);
 			font-size: 14px;
 			font-weight: 650;
+			list-style: none;
 			cursor: pointer;
+
+			&::-webkit-details-marker {
+				display: none;
+			}
 		}
 
 		.core-ai-map__about-disclosure {
@@ -3684,9 +3707,7 @@ body.core-ai-kiosk-active {
 .core-ai-map.is-attract {
 
 	.core-ai-map__reset,
-	.core-ai-map__zone--runtime,
-	.core-ai-map__story-copy,
-	.core-ai-map__rail {
+	.core-ai-map__zone--runtime {
 		visibility: hidden;
 		opacity: 0;
 	}
@@ -3713,21 +3734,6 @@ body.core-ai-kiosk-active {
 	.core-ai-map__canvas {
 		transform: translateX(-28px) scale(0.82);
 	}
-
-	.core-ai-map__story-copy,
-	.core-ai-map__rail {
-		pointer-events: none;
-		opacity: 0;
-	}
-}
-
-/**
- * The band under the map always has something to say once the map is on
- * screen: a flow's takeaway, or what the component explorer is for. The
- * attract, inspect and bench screens fade it through their own rules.
- */
-.core-ai-map:not(.is-map) .core-ai-map__story-copy {
-	opacity: 0;
 }
 
 /* Drift ---------------------------------------------------------------- */

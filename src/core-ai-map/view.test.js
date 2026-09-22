@@ -964,6 +964,122 @@ describe( 'Core AI Living Block Map', () => {
 		return { panel, about, modal, cleanup, renderEffects };
 	};
 
+	it( 'keeps the browse caption painted until its surface finishes closing', () => {
+		const surface = document.createElement( 'div' );
+		surface.className = 'core-ai-map__story-copy';
+		root.append( surface );
+		context.screen = 'map';
+		const { cleanup, renderEffects } = mountMotionFixture();
+		try {
+			expect( mapStore.state.isBrowseNoteHidden ).toBe( false );
+			context.screen = 'inspect';
+			renderEffects();
+			expect( surface.hidden ).toBe( false );
+			expect( surface.hasAttribute( 'inert' ) ).toBe( true );
+			expect( mapStore.state.isBrowseNoteHidden ).toBe( false );
+			jest.advanceTimersByTime( 220 );
+			expect( surface.hidden ).toBe( true );
+			expect( mapStore.state.isBrowseNoteHidden ).toBe( true );
+		} finally {
+			cleanup();
+		}
+	} );
+
+	it( 'retains the exiting caption after reset without retaining the active story', () => {
+		const surface = document.createElement( 'div' );
+		surface.className = 'core-ai-map__story-copy';
+		root.append( surface );
+		context.screen = 'map';
+		context.story = 'learns';
+		context.storyId = 'learns';
+		context.nextStoryId = 'tests';
+		const { cleanup, renderEffects } = mountMotionFixture();
+		try {
+			mapStore.actions.reset();
+			renderEffects();
+			expect( context.story ).toBe( '' );
+			expect( mapStore.state.isStoryNotSelected ).toBe( true );
+			expect( mapStore.state.isStoryNextHidden ).toBe( true );
+			expect( surface.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+			expect( mapStore.state.isCaptionStoryHidden ).toBe( false );
+			expect( mapStore.state.isCaptionNextHidden ).toBe( false );
+			jest.advanceTimersByTime( 100 );
+			context.screen = 'map';
+			context.story = 'uses-ai';
+			renderEffects();
+			jest.advanceTimersByTime( 220 );
+			expect( surface.hidden ).toBe( false );
+			expect( mapStore.state.isCaptionStoryHidden ).toBe( true );
+			expect( mapStore.state.isCaptionNextHidden ).toBe( true );
+			context.storyId = 'uses-ai';
+			expect( mapStore.state.isCaptionStoryHidden ).toBe( false );
+			context.screen = 'inspect';
+			renderEffects();
+			jest.advanceTimersByTime( 220 );
+			expect( mapStore.state.isCaptionStoryHidden ).toBe( true );
+		} finally {
+			cleanup();
+		}
+	} );
+
+	it.each( [ 'inspectCard', 'openAbout', 'openBench', 'reset' ] )(
+		'captures the current caption when %s precedes passive synchronization',
+		( action ) => {
+			const surface = document.createElement( 'div' );
+			surface.className = 'core-ai-map__story-copy';
+			root.append( surface );
+			context.screen = 'map';
+			context.story = 'learns';
+			context.nextStoryId = 'tests';
+			const { cleanup, renderEffects } = mountMotionFixture();
+			try {
+				context.storyId = 'uses-wp';
+				mapStore.actions.selectStory();
+				// Leave before useEffect can refresh the previous settled caption.
+				context.cardId = 'mcp';
+				mapStore.actions[ action ]();
+				renderEffects();
+				expect( mapStore.state.isCaptionStoryHidden ).toBe( false );
+				expect( mapStore.state.isCaptionNextHidden ).toBe( true );
+				context.storyId = 'learns';
+				expect( mapStore.state.isCaptionStoryHidden ).toBe( true );
+			} finally {
+				cleanup();
+			}
+		}
+	);
+
+	it.each( [ 'story-copy', 'rail' ] )(
+		'fades the %s out before hiding it and cancels dismissal on return',
+		( name ) => {
+			const surface = document.createElement( 'div' );
+			surface.className = `core-ai-map__${ name }`;
+			surface.hidden = true;
+			root.append( surface );
+			context.screen = 'map';
+			const { cleanup, renderEffects } = mountMotionFixture();
+			try {
+				expect( surface.hidden ).toBe( false );
+				context.screen = 'inspect';
+				renderEffects();
+				expect( surface.hidden ).toBe( false );
+				expect( surface.hasAttribute( 'inert' ) ).toBe( true );
+				jest.advanceTimersByTime( 100 );
+				context.screen = 'map';
+				renderEffects();
+				jest.advanceTimersByTime( 220 );
+				expect( surface.hidden ).toBe( false );
+				expect( surface.hasAttribute( 'inert' ) ).toBe( false );
+				context.screen = 'inspect';
+				renderEffects();
+				jest.advanceTimersByTime( 220 );
+				expect( surface.hidden ).toBe( true );
+			} finally {
+				cleanup();
+			}
+		}
+	);
+
 	it( 'keeps closing inspector content visible but inert until its exit finishes', () => {
 		context.screen = 'map';
 		const { panel, cleanup, renderEffects } = mountMotionFixture();
@@ -986,6 +1102,68 @@ describe( 'Core AI Living Block Map', () => {
 			jest.advanceTimersByTime( 270 );
 			expect( panel.hidden ).toBe( true );
 			expect( mapStore.state.isCardNotInspected ).toBe( true );
+		} finally {
+			cleanup();
+		}
+	} );
+
+	it( 'reveals the conclusion only after settlement and preserves its space during replay', () => {
+		const takeaway = document.createElement( 'p' );
+		takeaway.dataset.coreAiTakeaway = 'uses-ai';
+		takeaway.className = 'core-ai-map__takeaway t-stagger';
+		takeaway.innerHTML =
+			'<strong class="t-stagger-line">Conclusion</strong>';
+		root.append( takeaway );
+		const { cleanup, renderEffects } = mountMotionFixture();
+		try {
+			currentElement = root.querySelector( '.core-ai-map__prompt' );
+			mapStore.actions.start();
+			renderEffects();
+			jest.advanceTimersByTime( 2899 );
+			renderEffects();
+			expect( takeaway.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+			expect( takeaway.hidden ).toBe( false );
+			jest.advanceTimersByTime( 1 );
+			renderEffects();
+			expect( takeaway.getAttribute( 'aria-hidden' ) ).toBe( 'false' );
+			expect( takeaway.classList.contains( 'is-shown' ) ).toBe( true );
+			mapStore.actions.replayStory();
+			renderEffects();
+			expect( takeaway.hidden ).toBe( false );
+			expect( takeaway.hasAttribute( 'inert' ) ).toBe( true );
+			context.motionReduced = true;
+			renderEffects();
+			expect( takeaway.classList.contains( 'is-hiding' ) ).toBe( false );
+		} finally {
+			cleanup();
+		}
+	} );
+
+	it( 'applies immediately while its translated visual labels finish swapping', () => {
+		const workbench = document.createElement( 'div' );
+		workbench.innerHTML = `<em data-core-ai-text-swap="phase">Revisar</em>
+			<span data-core-ai-text-swap="action">Aplicar</span>`;
+		root.append( workbench );
+		context.screen = 'map';
+		context.phases = [ 'Revisar', 'Aplicado' ];
+		context.labels.applyLabel = 'Aplicar';
+		context.labels.appliedLabel = 'Aplicado';
+		const { cleanup, renderEffects } = mountMotionFixture();
+		try {
+			mapStore.actions.applySuggestion();
+			renderEffects();
+			expect( mapStore.state.isSuggestionApplied ).toBe( true );
+			expect( mapStore.state.suggestionActionLabel ).toBe( 'Aplicado' );
+			expect( workbench.querySelector( 'span' ).textContent ).toBe(
+				'Aplicar'
+			);
+			jest.advanceTimersByTime( 150 );
+			expect( workbench.querySelector( 'span' ).textContent ).toBe(
+				'Aplicado'
+			);
+			expect( workbench.querySelector( 'em' ).textContent ).toBe(
+				'Aplicado'
+			);
 		} finally {
 			cleanup();
 		}

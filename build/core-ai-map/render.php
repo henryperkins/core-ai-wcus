@@ -1503,6 +1503,8 @@ $context = array(
 	'labels'         => $labels,
 	'inspect'        => '',
 	'displayedInspect' => '',
+	'displayedStory' => null,
+	'displayedStorySettled' => false,
 	'motionReduced'  => null,
 	'previewIndex'   => 0,
 	'previewPhase'   => 'assembling',
@@ -1618,12 +1620,12 @@ $role_strip = static function ( $id ) use ( $suggestions, $labels ) {
 			>
 				<div class="core-ai-map__workbench-head">
 					<span data-wp-text="state.suggestionLabel"><?php echo esc_html( $suggestions[0]['label'] ?? '' ); ?></span>
-					<em class="core-ai-map__workbench-phase" data-wp-text="state.suggestionPhase"><?php esc_html_e( 'Needs review', 'core-ai-map' ); ?></em>
+					<em class="core-ai-map__workbench-phase t-text-swap" data-core-ai-text-swap="phase"><?php esc_html_e( 'Needs review', 'core-ai-map' ); ?></em>
 				</div>
 				<p class="core-ai-map__workbench-text" data-wp-text="state.suggestionText"><?php echo esc_html( $suggestions[0]['text'] ?? '' ); ?></p>
 				<div class="core-ai-map__workbench-actions">
 					<span class="core-ai-map__workbench-review"><?php esc_html_e( 'A person reviews', 'core-ai-map' ); ?></span>
-					<button class="core-ai-map__workbench-apply" type="button" data-wp-bind--disabled="state.isSuggestionApplied" data-wp-on--click="actions.applySuggestion"><span data-wp-text="state.suggestionActionLabel"><?php echo esc_html( $labels['applyLabel'] ); ?></span></button>
+					<button class="core-ai-map__workbench-apply" type="button" aria-label="<?php echo esc_attr( $labels['applyLabel'] ); ?>" data-wp-bind--disabled="state.isSuggestionApplied" data-wp-bind--aria-label="state.suggestionActionLabel" data-wp-on--click="actions.applySuggestion"><span class="t-text-swap" data-core-ai-text-swap="action" aria-hidden="true"><?php echo esc_html( $labels['applyLabel'] ); ?></span></button>
 				</div>
 				<p class="core-ai-map__workbench-note" data-wp-bind--hidden="state.isSuggestionNotApplied" hidden><?php esc_html_e( 'A person chose Apply. Nothing is applied without that tap.', 'core-ai-map' ); ?></p>
 			</div>
@@ -2290,7 +2292,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		 * visitor can look between the sentence and the path it describes.
 		 */
 		?>
-		<div class="core-ai-map__story-copy" data-wp-bind--hidden="state.isStoryBandHidden" hidden>
+		<div class="core-ai-map__story-copy" aria-hidden="true" inert hidden>
 			<div class="core-ai-map__browse-note" data-wp-bind--hidden="state.isBrowseNoteHidden" hidden>
 				<p>
 					<strong><?php echo esc_html( $labels['browseLabel'] ); ?></strong>
@@ -2301,7 +2303,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				<div
 					class="core-ai-map__story-flow"
 					<?php echo wp_interactivity_data_wp_context( array( 'storyId' => $story_id ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-					data-wp-bind--hidden="state.isStoryNotSelected"
+					data-wp-bind--hidden="state.isCaptionStoryHidden"
 					hidden
 				>
 					<div class="core-ai-map__story-lessons">
@@ -2312,9 +2314,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							</p>
 						<?php endif; ?>
 						<?php if ( '' !== (string) ( $story['takeaway'] ?? '' ) ) : ?>
-							<p class="core-ai-map__takeaway" data-wp-bind--hidden="state.isTakeawayHidden" hidden>
-								<strong><?php echo esc_html( $labels['takeawayHeading'] ); ?></strong>
-								<span><?php echo esc_html( $story['takeaway'] ); ?></span>
+							<p class="core-ai-map__takeaway t-stagger" data-core-ai-takeaway="<?php echo esc_attr( $story_id ); ?>" aria-hidden="true" inert>
+								<strong class="t-stagger-line"><?php echo esc_html( $labels['takeawayHeading'] ); ?></strong>
+								<span class="t-stagger-line t-stagger-line--2"><?php echo esc_html( $story['takeaway'] ); ?></span>
 							</p>
 						<?php endif; ?>
 					</div>
@@ -2329,12 +2331,14 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						?>
 						<?php if ( ! empty( $story_layout[ $story_id ]['next'] ) && isset( $stories[ $story_layout[ $story_id ]['next'] ] ) ) : ?>
 							<button
-								class="core-ai-map__story-next"
+								class="core-ai-map__story-next is-pending"
 								type="button"
 								<?php echo wp_interactivity_data_wp_context( array( 'nextStoryId' => $story_layout[ $story_id ]['next'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-								data-wp-bind--hidden="state.isStoryNextHidden"
+								data-wp-class--is-pending="state.isCaptionNextHidden"
+								data-wp-bind--inert="state.isStoryNextHidden"
+								data-wp-bind--aria-hidden="state.isStoryNextHidden"
 								data-wp-on--click="actions.selectNextStory"
-								hidden
+								inert aria-hidden="true"
 							>
 								<?php echo esc_html( (string) ( $stories[ $story_id ]['nextLabel'] ?? '' ) ); ?><span aria-hidden="true">&rarr;</span>
 							</button>
@@ -2360,7 +2364,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		 * space in a bottom band that is already fully allocated.
 		 */
 		?>
-		<nav class="core-ai-map__rail" aria-labelledby="<?php echo esc_attr( $instance_id . '-rail-label' ); ?>" data-wp-bind--hidden="state.isRailHidden" hidden>
+		<nav class="core-ai-map__rail" aria-labelledby="<?php echo esc_attr( $instance_id . '-rail-label' ); ?>" aria-hidden="true" inert hidden>
 			<p class="core-ai-map__rail-label" id="<?php echo esc_attr( $instance_id . '-rail-label' ); ?>" data-wp-text="state.railLabel"><?php echo esc_html( $labels['railEmptyLabel'] ); ?></p>
 			<?php $step = 0; ?>
 			<?php foreach ( $stories as $story_id => $story ) : ?>
@@ -2506,12 +2510,17 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						<div><dt><?php esc_html_e( 'Used for:', 'core-ai-map' ); ?></dt><dd><?php esc_html_e( 'implementation, tests, and deployment preparation.', 'core-ai-map' ); ?></dd></div>
 					</dl>
 				</section>
-				<details class="core-ai-map__about-operations">
-					<summary><?php esc_html_e( 'Kiosk status', 'core-ai-map' ); ?></summary>
+				<details class="core-ai-map__about-operations t-acc" data-open="false">
+					<summary class="t-acc-head" aria-expanded="false">
+						<?php esc_html_e( 'Kiosk status', 'core-ai-map' ); ?>
+						<span class="t-acc-chevron" aria-hidden="true"><svg viewBox="0 0 16 16" width="16" height="16" focusable="false"><path d="M4 6.5L8 10.5L12 6.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></span>
+					</summary>
+					<div class="t-acc-panel" aria-hidden="true" inert><div class="t-acc-panel-inner">
 					<dl class="core-ai-map__about-disclosure">
 						<div><dt><?php esc_html_e( 'Works offline', 'core-ai-map' ); ?></dt><dd data-wp-text="state.offlineCacheStatus"><?php echo esc_html( $context['offlineCacheStatus'] ); ?></dd></div>
 						<div><dt><?php esc_html_e( 'Screen stays awake', 'core-ai-map' ); ?></dt><dd data-wp-text="state.wakeLockStatus"><?php echo esc_html( $context['wakeLockStatus'] ); ?></dd></div>
 					</dl>
+					</div></div>
 				</details>
 			</div>
 		</aside>
