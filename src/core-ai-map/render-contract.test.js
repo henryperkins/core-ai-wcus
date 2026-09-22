@@ -350,6 +350,29 @@ echo getenv( 'CORE_AI_MAP_TEST_RETURN_PANELS' ) === '1' ? json_encode( $panels )
 };
 
 describe( 'Core AI map render contract', () => {
+	it( 'renders motion surfaces closed and keeps the tab indicator decorative', () => {
+		const container = document.createElement( 'div' );
+		container.innerHTML = renderLegacyMarkup( 'current' );
+		const details = container.querySelector( '.core-ai-map__details' );
+		const panel = details.parentElement;
+		const about = container.querySelector( '.core-ai-map__about' );
+		for ( const surface of [ panel, about ] ) {
+			expect( surface.hidden ).toBe( true );
+			expect( surface.hasAttribute( 'inert' ) ).toBe( true );
+			expect( surface.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+		}
+		expect( panel.classList.contains( 't-panel-slide' ) ).toBe( true );
+		expect( about.querySelector( '.t-modal' ) ).not.toBeNull();
+		const bar = details.querySelector( '[role="tablist"]' );
+		expect(
+			bar.querySelector( '.t-tabs-pill' ).getAttribute( 'aria-hidden' )
+		).toBe( 'true' );
+		expect( bar.querySelectorAll( '[role="tab"]' ) ).toHaveLength( 3 );
+		expect(
+			bar.querySelectorAll( '[role="tab"][aria-selected="true"]' )
+		).toHaveLength( 1 );
+	} );
+
 	it( 'updates saved release-candidate copy without replacing an authored note', () => {
 		const markup = renderLegacyMarkup( 'release-candidate' );
 		expect( markup ).toContain( 'arrived in WordPress 7.1' );

@@ -4,6 +4,7 @@ import {
 	store,
 	useEffect,
 } from '@wordpress/interactivity';
+import { createSurfaceMotion, createSlidingTabs } from './surface-motion';
 
 const STAGE_WIDTH = 1366;
 const STAGE_HEIGHT = 1024;
@@ -27,6 +28,7 @@ const lastCardTriggers = new WeakMap();
 const lastBenchTriggers = new WeakMap();
 const lastAboutTriggers = new WeakMap();
 const aboutSurfaceRestorers = new WeakMap();
+const surfaceSynchronizers = new WeakMap();
 
 const getRoot = ( element ) => element?.closest( '.core-ai-map' );
 
@@ -325,7 +327,8 @@ const activePreview = ( context ) => {
 const isRecomposed = ( context ) =>
 	Boolean( activeLayout( context ) ) && context.recompose !== false;
 
-const reducedMotion = ( root ) =>
+const reducedMotion = ( root, context ) =>
+	context?.motionReduced ??
 	Boolean(
 		root?.ownerDocument?.defaultView?.matchMedia?.(
 			'(prefers-reduced-motion: reduce)'
@@ -354,7 +357,7 @@ const isEdgeLive = ( context, root, storyId, variant ) =>
 	Boolean(
 		isCurrentPathVariant( context, storyId, variant ) &&
 			( context.flowPhase ?? 'transition' ) === 'transition' &&
-			! reducedMotion( root )
+			! reducedMotion( root, context )
 	);
 
 const isPreviewHidden = ( context, previewId = context.previewId ) =>
@@ -364,7 +367,7 @@ const isPreviewHidden = ( context, previewId = context.previewId ) =>
 const isPreviewPathVisible = ( context, root, previewId ) =>
 	Boolean(
 		! isPreviewHidden( context, previewId ) &&
-			( reducedMotion( root ) ||
+			( reducedMotion( root, context ) ||
 				[ 'drawing', 'signalling', 'settled' ].includes(
 					context.previewPhase
 				) )
@@ -373,7 +376,7 @@ const isPreviewPathVisible = ( context, root, previewId ) =>
 const isPreviewTextVisible = ( context, root, previewId ) =>
 	Boolean(
 		! isPreviewHidden( context, previewId ) &&
-			( reducedMotion( root ) ||
+			( reducedMotion( root, context ) ||
 				[ 'signalling', 'settled' ].includes( context.previewPhase ) )
 	);
 
@@ -381,7 +384,7 @@ const isPreviewSignalLive = ( context, root, previewId ) =>
 	Boolean(
 		! isPreviewHidden( context, previewId ) &&
 			context.previewPhase === 'signalling' &&
-			! reducedMotion( root )
+			! reducedMotion( root, context )
 	);
 
 const isProviderConfigPathHidden = ( context, storyId, variant ) =>
@@ -470,18 +473,16 @@ const focusElement = ( element, delay = 40 ) => {
 	if ( ! element ) {
 		return;
 	}
-	window.setTimeout( () => element.focus( { preventScroll: true } ), delay );
+	window.setTimeout( () => {
+		if ( element.isConnected && ! element.closest( '[hidden], [inert]' ) ) {
+			element.focus( { preventScroll: true } );
+		}
+	}, delay );
 };
 
 const focusWithin = ( root, selector, delay = 40 ) => {
 	if ( root ) {
-		window.setTimeout(
-			() =>
-				root
-					.querySelector( selector )
-					?.focus( { preventScroll: true } ),
-			delay
-		);
+		focusElement( root.querySelector( selector ), delay );
 	}
 };
 
@@ -710,7 +711,7 @@ const startAttractCycle = ( root, context ) => {
 			return;
 		}
 
-		const motionReduced = reducedMotion( root );
+		const motionReduced = reducedMotion( root, context );
 		setPreviewPhase( context, motionReduced ? 'settled' : 'assembling' );
 		if ( motionReduced ) {
 			return;
@@ -779,11 +780,46 @@ const startAttractCycle = ( root, context ) => {
 	run();
 };
 
-const runFlow = ( root, context, { bench = false } = {} ) => {
+const settleFlow = ( context, storyId = context.story ) => {
+	if ( context.story !== storyId ) {
+		return;
+	}
+	context.flowPhase = 'settled';
+	context.storyMotionPhase = 'settled';
+	context.benchPathsLive = false;
+	const takeaway = context.storyTakeaways?.[ storyId ] || '';
+	if ( ! takeaway ) {
+		return;
+	}
+	if ( context.screen === 'map' ) {
+		context.announcement = describeCurrentTakeaway( context );
+		context.pendingTakeawayStory = '';
+	} else {
+		context.pendingTakeawayStory = storyId;
+	}
+};
+
+const restartLiveFlow = ( root ) => {
+	const live = root?.querySelectorAll(
+		'.core-ai-map__flow .is-live, .core-ai-map__tokens.is-live, .core-ai-map__spark.is-live, .core-ai-map__bench-flow.is-live'
+	);
+	if ( ! live?.length ) {
+		return;
+	}
+	// Commit the animation-free style before restoring the same live classes.
+	// Setting flowPhase to "transition" again does not restart a CSS animation.
+	live.forEach( ( element ) => element.classList.remove( 'is-live' ) );
+	void root.offsetWidth;
+	live.forEach( ( element ) => element.classList.add( 'is-live' ) );
+};
+
+const runFlow = ( root, context, { bench = false, replay = false } = {} ) => {
 	if ( root ) {
 		clearTimers( flowTimers, root );
 	}
-	context.flowPhase = reducedMotion( root ) ? 'settled' : 'transition';
+	context.flowPhase = reducedMotion( root, context )
+		? 'settled'
+		: 'transition';
 	context.storyMotionPhase = context.flowPhase;
 	context.pendingTakeawayStory = '';
 	context.benchPathsLive = Boolean(
@@ -793,32 +829,14 @@ const runFlow = ( root, context, { bench = false } = {} ) => {
 	if ( context.flowPhase !== 'transition' || ! root ) {
 		return;
 	}
+	if ( replay ) {
+		restartLiveFlow( root );
+	}
 	const storyId = context.story;
 	addTimer(
 		flowTimers,
 		root,
-		() => {
-			context.flowPhase = 'settled';
-			context.storyMotionPhase = 'settled';
-			context.benchPathsLive = false;
-			if ( context.story !== storyId ) {
-				return;
-			}
-			const takeaway = context.storyTakeaways?.[ storyId ] || '';
-			if ( ! takeaway ) {
-				return;
-			}
-			if ( context.screen === 'map' ) {
-				context.announcement = format(
-					context.announcements?.takeaway || '%1$s: %2$s',
-					context.labels?.takeawayHeading || 'What this flow shows',
-					takeaway
-				);
-				context.pendingTakeawayStory = '';
-			} else {
-				context.pendingTakeawayStory = storyId;
-			}
-		},
+		() => settleFlow( context, storyId ),
 		FLOW_SETTLE_DELAY
 	);
 };
@@ -1226,7 +1244,10 @@ store( 'core-ai/map', {
 		},
 		get isCardNotInspected() {
 			const context = getContext();
-			return context.cardId !== context.inspect;
+			return (
+				context.cardId !==
+				( context.inspect || context.displayedInspect )
+			);
 		},
 
 		/*
@@ -1683,7 +1704,7 @@ store( 'core-ai/map', {
 			context.story = context.storyId;
 			context.suggestion =
 				Math.floor( ( context.suggestion || 0 ) / 2 ) * 2;
-			runFlow( root, context );
+			runFlow( root, context, { replay: isCurrent } );
 			context.announcement = describeFlowSelection(
 				context,
 				context.storyId,
@@ -1720,7 +1741,7 @@ store( 'core-ai/map', {
 				context.suggestion =
 					( Math.floor( context.suggestion / 2 ) + 1 ) * 2;
 			}
-			runFlow( root, context );
+			runFlow( root, context, { replay: true } );
 			context.announcement = `${ describeFlowSelection(
 				context,
 				context.story,
@@ -1745,6 +1766,7 @@ store( 'core-ai/map', {
 			}
 			context.screen = 'inspect';
 			context.inspect = context.cardId;
+			context.displayedInspect = context.inspect;
 			if ( context.inspect === 'abilities' ) {
 				context.abilitiesTab = 'overview';
 			}
@@ -1777,6 +1799,7 @@ store( 'core-ai/map', {
 				lastCardTriggers.set( root, nextTrigger );
 			}
 			context.inspect = nextCardId;
+			context.displayedInspect = context.inspect;
 			if ( nextCardId === 'abilities' ) {
 				context.abilitiesTab = 'overview';
 			}
@@ -1970,6 +1993,72 @@ store( 'core-ai/map', {
 				document.body.classList.add( 'core-ai-kiosk-active' );
 				const restorePage = isolateKioskPage( root );
 				const stopObservingDetails = observeDetailsOverflow( root );
+				const inspector = createSurfaceMotion(
+					root.querySelector( '.core-ai-map__details-motion' ),
+					{
+						closeToken: '--panel-close-dur',
+						closeMs: 350,
+						onHidden: () => {
+							if ( context.screen !== 'inspect' ) {
+								context.displayedInspect = '';
+							}
+						},
+					}
+				);
+				const about = createSurfaceMotion(
+					root.querySelector( '.core-ai-map__about' ),
+					{
+						target: root.querySelector(
+							'.core-ai-map__about-content'
+						),
+						closeToken: '--modal-close-dur',
+						closeMs: 150,
+					}
+				);
+				const abilityTabs = createSlidingTabs(
+					root.querySelector( '.core-ai-map__ability-tabs' )
+				);
+				let showingAbilities = false;
+				const syncSurfaces = () => {
+					const reduced = reducedMotion( root, context );
+					inspector.update(
+						context.screen === 'inspect',
+						reduced ||
+							! [ 'inspect', 'map' ].includes( context.screen )
+					);
+					about.update( context.screen === 'about', reduced );
+					const abilities =
+						context.screen === 'inspect' &&
+						context.inspect === 'abilities';
+					if ( abilities ) {
+						abilityTabs.update(
+							context.abilitiesTab,
+							showingAbilities && ! reduced
+						);
+					}
+					showingAbilities = abilities;
+				};
+				surfaceSynchronizers.set( root, syncSurfaces );
+				const motionQuery = window.matchMedia?.(
+					'(prefers-reduced-motion: reduce)'
+				);
+				context.motionReduced = Boolean( motionQuery?.matches );
+				const handleMotionChange = () => {
+					context.motionReduced = Boolean( motionQuery?.matches );
+					if ( context.motionReduced ) {
+						clearTimers( attractTimers, root );
+						clearTimers( flowTimers, root );
+						setPreviewPhase( context, 'settled' );
+						if ( context.flowPhase === 'transition' ) {
+							settleFlow( context );
+						}
+					} else if ( context.screen === 'attract' ) {
+						startAttractCycle( root, context );
+					}
+					syncSvgState( root, context );
+					syncSurfaces();
+				};
+				motionQuery?.addEventListener?.( 'change', handleMotionChange );
 				let previousViewport;
 				let zoom = 1;
 				const timeout = Number.parseInt(
@@ -2578,7 +2667,15 @@ store( 'core-ai/map', {
 				}
 
 				return () => {
+					inspector.destroy();
+					about.destroy();
+					abilityTabs.destroy();
+					surfaceSynchronizers.delete( root );
 					stopObservingDetails();
+					motionQuery?.removeEventListener?.(
+						'change',
+						handleMotionChange
+					);
 					resolutionQuery?.removeEventListener?.(
 						'change',
 						handlePixelRatioChange
@@ -2634,6 +2731,15 @@ store( 'core-ai/map', {
 			] );
 
 			useEffect( () => {
+				surfaceSynchronizers.get( getElement().ref )?.();
+			}, [
+				context.screen,
+				context.inspect,
+				context.abilitiesTab,
+				context.motionReduced,
+			] );
+
+			useEffect( () => {
 				const { ref: root } = getElement();
 				syncSvgState( root, getContext() );
 			}, [
@@ -2644,6 +2750,7 @@ store( 'core-ai/map', {
 				context.previewIndex,
 				context.previewPhase,
 				context.shapes,
+				context.motionReduced,
 			] );
 		},
 	},

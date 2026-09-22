@@ -936,6 +936,149 @@ describe( 'Core AI Living Block Map', () => {
 		document.body.className = '';
 	} );
 
+	const mountMotionFixture = () => {
+		const details = root.querySelector( '.core-ai-map__details' );
+		const panel = document.createElement( 'div' );
+		panel.className = 'core-ai-map__details-motion t-panel-slide';
+		panel.hidden = true;
+		details.before( panel );
+		panel.append( details );
+		const about = root.querySelector( '.core-ai-map__about' );
+		const modal = document.createElement( 'div' );
+		modal.className = 'core-ai-map__about-content t-modal';
+		modal.append( ...about.childNodes );
+		about.append( modal );
+		about.hidden = true;
+		const effects = [];
+		useEffect.mockImplementation( ( callback ) =>
+			effects.push( callback )
+		);
+		currentElement = root;
+		mapStore.callbacks.useKiosk();
+		const cleanup = effects[ 0 ]();
+		const renderEffects = () => {
+			currentElement = root;
+			effects.slice( 1 ).forEach( ( effect ) => effect() );
+		};
+		renderEffects();
+		return { panel, about, modal, cleanup, renderEffects };
+	};
+
+	it( 'keeps closing inspector content visible but inert until its exit finishes', () => {
+		context.screen = 'map';
+		const { panel, cleanup, renderEffects } = mountMotionFixture();
+		const card = root.querySelector( '.core-ai-map__block--client button' );
+		try {
+			currentElement = card;
+			context.cardId = 'client';
+			mapStore.actions.inspectCard();
+			renderEffects();
+			expect( panel.hidden ).toBe( false );
+			expect( panel.dataset.open ).toBe( 'true' );
+			mapStore.actions.closeInspect();
+			renderEffects();
+			expect( panel.hidden ).toBe( false );
+			expect( panel.hasAttribute( 'inert' ) ).toBe( true );
+			expect( panel.getAttribute( 'aria-hidden' ) ).toBe( 'true' );
+			expect( mapStore.state.isCardNotInspected ).toBe( false );
+			jest.advanceTimersByTime( 80 );
+			expect( document.activeElement ).toBe( card );
+			jest.advanceTimersByTime( 270 );
+			expect( panel.hidden ).toBe( true );
+			expect( mapStore.state.isCardNotInspected ).toBe( true );
+		} finally {
+			cleanup();
+		}
+	} );
+
+	it.each( [ 'inspect', 'about' ] )(
+		'cancels stale %s exits when reopened and settles closing under reduced motion',
+		( screen ) => {
+			context.screen = 'map';
+			const fixture = mountMotionFixture();
+			const { cleanup, renderEffects } = fixture;
+			const surface =
+				screen === 'inspect' ? fixture.panel : fixture.about;
+			const open = screen === 'inspect' ? 'inspectCard' : 'openAbout';
+			const close = screen === 'inspect' ? 'closeInspect' : 'closeAbout';
+			try {
+				context.cardId = 'client';
+				mapStore.actions[ open ]();
+				renderEffects();
+				expect( surface.hidden ).toBe( false );
+				mapStore.actions[ close ]();
+				renderEffects();
+				jest.advanceTimersByTime( 50 );
+				mapStore.actions[ open ]();
+				renderEffects();
+				jest.advanceTimersByTime( 400 );
+				expect( surface.hidden ).toBe( false );
+				expect( surface.hasAttribute( 'inert' ) ).toBe( false );
+				mapStore.actions[ close ]();
+				renderEffects();
+				context.motionReduced = true;
+				renderEffects();
+				expect( surface.hidden ).toBe( true );
+			} finally {
+				cleanup();
+			}
+			jest.advanceTimersByTime( 500 );
+			expect( surface.hidden ).toBe( true );
+		}
+	);
+
+	it.each( [ 'ltr', 'rtl' ] )(
+		'positions the %s Abilities highlight in local coordinates and refits after resize',
+		( direction ) => {
+			root.setAttribute( 'dir', direction );
+			const bar = document.createElement( 'div' );
+			bar.className = 'core-ai-map__ability-tabs t-tabs';
+			bar.innerHTML = `<span class="t-tabs-pill" aria-hidden="true"></span>
+			<button role="tab" data-core-ai-abilities-tab="overview">Overview</button>
+			<button role="tab" data-core-ai-abilities-tab="anatomy">Anatomy</button>`;
+			root.querySelector( '.core-ai-map__details' ).append( bar );
+			const tabs = bar.querySelectorAll( 'button' );
+			let secondLeft = 130;
+			Object.defineProperties( tabs[ 0 ], {
+				offsetLeft: { value: 0 },
+				offsetWidth: { value: 124 },
+				offsetHeight: { value: 60 },
+			} );
+			Object.defineProperties( tabs[ 1 ], {
+				offsetLeft: { get: () => secondLeft },
+				offsetWidth: { value: 142 },
+				offsetHeight: { value: 60 },
+			} );
+			context.screen = 'map';
+			const { cleanup, renderEffects } = mountMotionFixture();
+			const pill = bar.querySelector( '.t-tabs-pill' );
+			try {
+				context.cardId = 'abilities';
+				mapStore.actions.inspectCard();
+				renderEffects();
+				expect( pill.style.transform ).toBe( 'translateX(0px)' );
+				expect( pill.style.left ).toBe( '0px' );
+				expect( pill.style.right ).toBe( 'auto' );
+				expect( pill.style.width ).toBe( '124px' );
+				currentElement = tabs[ 1 ];
+				context.tabId = 'anatomy';
+				mapStore.actions.selectAbilityTab();
+				renderEffects();
+				expect( pill.style.transform ).toBe( 'translateX(130px)' );
+				expect( pill.style.width ).toBe( '142px' );
+				secondLeft = 150;
+				window.dispatchEvent( new Event( 'resize' ) );
+				expect( pill.style.transform ).toBe( 'translateX(150px)' );
+				expect( tabs[ 1 ].tabIndex ).toBe( 0 );
+			} finally {
+				cleanup();
+			}
+			secondLeft = 170;
+			window.dispatchEvent( new Event( 'resize' ) );
+			expect( pill.style.transform ).toBe( 'translateX(150px)' );
+		}
+	);
+
 	it( 'opens directly into the first flow and focuses step one', () => {
 		currentElement = root.querySelector( '.core-ai-map__prompt' );
 
@@ -1095,6 +1238,129 @@ describe( 'Core AI Living Block Map', () => {
 			'The MCP Adapter is a plugin at the WordPress boundary'
 		);
 	} );
+
+	it( 'restarts a live replay and gives its new run the full teaching interval', () => {
+		root.insertAdjacentHTML(
+			'beforeend',
+			`<svg><g class="core-ai-map__flow"><path data-core-ai-story="uses-wp" data-core-ai-variant="edges" class="is-live"></path></g></svg>
+			<div class="core-ai-map__tokens is-live"><span class="core-ai-map__token"></span></div>
+			<span class="core-ai-map__spark is-live"></span>`
+		);
+		context.storyId = 'uses-wp';
+		mapStore.actions.selectStory();
+		jest.advanceTimersByTime( 1000 );
+		const live = [
+			...root.querySelectorAll(
+				'.core-ai-map__flow path, .core-ai-map__tokens, .core-ai-map__spark'
+			),
+		];
+		let resetAtLayout = false;
+		Object.defineProperty( root, 'offsetWidth', {
+			get: () => {
+				resetAtLayout = live.every(
+					( element ) => ! element.classList.contains( 'is-live' )
+				);
+				return 1366;
+			},
+		} );
+
+		mapStore.actions.replayStory();
+
+		expect( resetAtLayout ).toBe( true );
+		expect(
+			live.every( ( element ) => element.classList.contains( 'is-live' ) )
+		).toBe( true );
+		jest.advanceTimersByTime( 1900 );
+		expect( context.flowPhase ).toBe( 'transition' );
+		jest.advanceTimersByTime( 1000 );
+		expect( context.flowPhase ).toBe( 'settled' );
+		expect( context.announcement ).toContain( 'What this flow shows' );
+	} );
+
+	it( 'settles an active preview immediately when the motion preference changes', () => {
+		const effects = [];
+		const motion = new EventTarget();
+		motion.matches = false;
+		window.matchMedia.mockImplementation( ( query ) =>
+			query.includes( 'prefers-reduced-motion' )
+				? motion
+				: { matches: false }
+		);
+		useEffect.mockImplementation( ( callback ) =>
+			effects.push( callback )
+		);
+		mapStore.callbacks.useKiosk();
+		const cleanup = effects[ 0 ]();
+		try {
+			jest.advanceTimersByTime( 2000 );
+			motion.matches = true;
+			motion.dispatchEvent( new Event( 'change' ) );
+			expect( context.previewPhase ).toBe( 'settled' );
+			jest.advanceTimersByTime( 20000 );
+			expect( context.previewIndex ).toBe( 0 );
+			expect( context.previewPhase ).toBe( 'settled' );
+
+			motion.matches = false;
+			motion.dispatchEvent( new Event( 'change' ) );
+			expect( context.previewPhase ).toBe( 'assembling' );
+			jest.advanceTimersByTime( 6500 );
+			expect( context.previewIndex ).toBe( 1 );
+		} finally {
+			cleanup();
+			window.matchMedia.mockImplementation( () => ( {
+				matches: false,
+			} ) );
+		}
+		motion.matches = true;
+		motion.dispatchEvent( new Event( 'change' ) );
+		expect( context.previewPhase ).toBe( 'assembling' );
+	} );
+
+	it.each( [ 'map', 'inspect', 'bench' ] )(
+		'settles an interrupted flow without losing its conclusion on %s',
+		( screen ) => {
+			const effects = [];
+			const motion = new EventTarget();
+			motion.matches = false;
+			window.matchMedia.mockImplementation( ( query ) =>
+				query.includes( 'prefers-reduced-motion' )
+					? motion
+					: { matches: false }
+			);
+			useEffect.mockImplementation( ( callback ) =>
+				effects.push( callback )
+			);
+			mapStore.callbacks.useKiosk();
+			const cleanup = effects[ 0 ]();
+			try {
+				mapStore.actions.start();
+				jest.advanceTimersByTime( 1000 );
+				context.screen = screen;
+				context.benchPathsLive = screen === 'bench';
+				motion.matches = true;
+				motion.dispatchEvent( new Event( 'change' ) );
+				expect( context.flowPhase ).toBe( 'settled' );
+				expect( context.benchPathsLive ).toBe( false );
+				expect( context.announcement ).toContain(
+					screen === 'map'
+						? 'What this flow shows'
+						: 'WordPress uses AI'
+				);
+				expect( context.pendingTakeawayStory ).toBe(
+					screen === 'map' ? '' : 'uses-ai'
+				);
+				motion.matches = false;
+				motion.dispatchEvent( new Event( 'change' ) );
+				jest.advanceTimersByTime( 3000 );
+				expect( context.flowPhase ).toBe( 'settled' );
+			} finally {
+				cleanup();
+				window.matchMedia.mockImplementation( () => ( {
+					matches: false,
+				} ) );
+			}
+		}
+	);
 
 	it( 'announces a conclusion once after an early inspector visit', () => {
 		const prompt = root.querySelector( '.core-ai-map__prompt' );

@@ -1,5 +1,7 @@
 /* stylelint-disable no-descending-specificity */
 
+@use "./motion";
+
 @font-face {
 	font-family: "Core AI Inter";
 	font-style: normal;
@@ -94,6 +96,11 @@ body.core-ai-kiosk-active {
 		monospace;
 	--core-ai-serif: "Core AI EB Garamond", georgia, "Times New Roman", serif;
 	--core-ai-ease: cubic-bezier(0.22, 1, 0.36, 1);
+	--panel-translate-y: 12px;
+	--tabs-text-muted: var(--core-ai-ink);
+	--tabs-text-active: var(--core-ai-on-accent);
+	--tabs-pill-bg: var(--core-ai-ink);
+	--tabs-bar-bg: transparent;
 	--cai-scale: 1;
 	position: fixed;
 	z-index: 999999;
@@ -622,10 +629,11 @@ body.core-ai-kiosk-active {
 		stroke-linecap: round;
 		stroke-width: 3.4;
 		opacity: 0;
-		transition: opacity 260ms ease 260ms;
+		transition: opacity 260ms ease;
 
 		&.is-visible {
 			opacity: 1;
+			transition-delay: 260ms;
 		}
 	}
 
@@ -2344,6 +2352,15 @@ body.core-ai-kiosk-active {
 
 	/* Inspect panel ----------------------------------------------------- */
 
+	&__details-motion {
+		position: absolute;
+		z-index: 50;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		width: 520px;
+	}
+
 	&__details {
 		position: absolute;
 		z-index: 50;
@@ -2456,6 +2473,15 @@ body.core-ai-kiosk-active {
 		place-items: center;
 		padding: 80px 24px 24px;
 		background: rgba(30, 30, 30, 0.22);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity var(--modal-close-dur) var(--modal-ease);
+
+		&.is-open {
+			opacity: 1;
+			pointer-events: auto;
+			transition-duration: var(--modal-open-dur);
+		}
 	}
 
 	&__about[hidden] {
@@ -3111,11 +3137,21 @@ body.core-ai-kiosk-active {
 
 	&__ability-tabs {
 		display: flex;
+		align-items: stretch;
 		gap: 6px;
 		margin-top: 24px;
+		padding: 0;
+		border-radius: 0;
+
+		.t-tabs-pill {
+			top: 0;
+			height: 60px;
+			border-radius: 3px;
+		}
 
 		button {
 			flex: 1;
+			height: auto;
 			min-height: 60px;
 			padding: 0 8px;
 			font-size: 14px;
@@ -3129,6 +3165,18 @@ body.core-ai-kiosk-active {
 				color: var(--core-ai-on-accent);
 				background: var(--core-ai-ink);
 				border-color: var(--core-ai-ink);
+			}
+
+			&:not([aria-selected="true"]):hover {
+				color: var(--core-ai-ink);
+			}
+		}
+
+		&.has-indicator button {
+			background: transparent;
+
+			&.is-active {
+				border-color: transparent;
 			}
 		}
 	}
@@ -4113,6 +4161,7 @@ body.core-ai-kiosk-active {
 	.core-ai-map *::after {
 		scroll-behavior: auto !important;
 		transition-duration: 0.01ms !important;
+		transition-delay: 0ms !important;
 	}
 
 	.core-ai-map__block-float,

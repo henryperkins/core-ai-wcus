@@ -1502,6 +1502,8 @@ $context = array(
 	'announcements'  => $announcement_defaults,
 	'labels'         => $labels,
 	'inspect'        => '',
+	'displayedInspect' => '',
+	'motionReduced'  => null,
 	'previewIndex'   => 0,
 	'previewPhase'   => 'assembling',
 	'attractPhase'   => 'assembling',
@@ -2458,10 +2460,11 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="<?php echo esc_attr( $instance_id . '-about-title' ); ?>"
-			data-wp-bind--hidden="state.isNotAbout"
+			aria-hidden="true"
+			inert
 			hidden
 		>
-			<div class="core-ai-map__about-content">
+			<div class="core-ai-map__about-content t-modal">
 				<button class="core-ai-map__about-close" type="button" data-wp-on--click="actions.closeAbout">
 					<span aria-hidden="true">&larr;</span>
 					<?php esc_html_e( 'Back to the exhibit', 'core-ai-map' ); ?>
@@ -2513,13 +2516,12 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			</div>
 		</aside>
 
+		<div class="core-ai-map__details-motion t-panel-slide" data-open="false" aria-hidden="true" inert hidden>
 		<aside
 			class="core-ai-map__details"
 			role="region"
 			aria-label="<?php esc_attr_e( 'Component details', 'core-ai-map' ); ?>"
 			data-screen-label="<?php esc_attr_e( 'Component details', 'core-ai-map' ); ?>"
-			data-wp-bind--hidden="state.isNotInspect"
-			hidden
 		>
 			<div class="core-ai-map__details-header">
 				<button class="core-ai-map__details-close" type="button" data-wp-on--click="actions.closeInspect">
@@ -2670,7 +2672,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					<?php endif; ?>
 
 					<?php if ( 'abilities' === $panel_id ) : ?>
-						<div class="core-ai-map__ability-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Abilities API detail', 'core-ai-map' ); ?>">
+						<div class="core-ai-map__ability-tabs t-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Abilities API detail', 'core-ai-map' ); ?>">
+							<span class="t-tabs-pill" aria-hidden="true"></span>
 							<?php
 							$ability_tabs = array(
 								'overview'    => __( 'Overview', 'core-ai-map' ),
@@ -2678,9 +2681,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 								'permissions' => __( 'Who is allowed', 'core-ai-map' ),
 							);
 							?>
-							<button type="button" role="tab" tabindex="0" id="<?php echo esc_attr( $instance_id . '-abilities-tab-overview' ); ?>" aria-controls="<?php echo esc_attr( $instance_id . '-abilities-panel-overview' ); ?>" aria-selected="true" data-core-ai-abilities-tab="overview" <?php echo wp_interactivity_data_wp_context( array( 'tabId' => 'overview' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-bind--aria-selected="state.isAbilityTabSelected" data-wp-bind--tabindex="state.abilityTabIndex" data-wp-class--is-active="state.isAbilityTabSelected" data-wp-on--click="actions.selectAbilityTab"><?php echo esc_html( $ability_tabs['overview'] ); ?></button>
-							<button type="button" role="tab" tabindex="-1" id="<?php echo esc_attr( $instance_id . '-abilities-tab-anatomy' ); ?>" aria-controls="<?php echo esc_attr( $instance_id . '-abilities-panel-anatomy' ); ?>" aria-selected="false" data-core-ai-abilities-tab="anatomy" <?php echo wp_interactivity_data_wp_context( array( 'tabId' => 'anatomy' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-bind--aria-selected="state.isAbilityTabSelected" data-wp-bind--tabindex="state.abilityTabIndex" data-wp-class--is-active="state.isAbilityTabSelected" data-wp-on--click="actions.selectAbilityTab"><?php echo esc_html( $ability_tabs['anatomy'] ); ?></button>
-							<button type="button" role="tab" tabindex="-1" id="<?php echo esc_attr( $instance_id . '-abilities-tab-permissions' ); ?>" aria-controls="<?php echo esc_attr( $instance_id . '-abilities-panel-permissions' ); ?>" aria-selected="false" data-core-ai-abilities-tab="permissions" <?php echo wp_interactivity_data_wp_context( array( 'tabId' => 'permissions' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-bind--aria-selected="state.isAbilityTabSelected" data-wp-bind--tabindex="state.abilityTabIndex" data-wp-class--is-active="state.isAbilityTabSelected" data-wp-on--click="actions.selectAbilityTab"><?php echo esc_html( $ability_tabs['permissions'] ); ?></button>
+							<button class="t-tab" type="button" role="tab" tabindex="0" id="<?php echo esc_attr( $instance_id . '-abilities-tab-overview' ); ?>" aria-controls="<?php echo esc_attr( $instance_id . '-abilities-panel-overview' ); ?>" aria-selected="true" data-core-ai-abilities-tab="overview" <?php echo wp_interactivity_data_wp_context( array( 'tabId' => 'overview' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-bind--aria-selected="state.isAbilityTabSelected" data-wp-bind--tabindex="state.abilityTabIndex" data-wp-class--is-active="state.isAbilityTabSelected" data-wp-on--click="actions.selectAbilityTab"><?php echo esc_html( $ability_tabs['overview'] ); ?></button>
+							<button class="t-tab" type="button" role="tab" tabindex="-1" id="<?php echo esc_attr( $instance_id . '-abilities-tab-anatomy' ); ?>" aria-controls="<?php echo esc_attr( $instance_id . '-abilities-panel-anatomy' ); ?>" aria-selected="false" data-core-ai-abilities-tab="anatomy" <?php echo wp_interactivity_data_wp_context( array( 'tabId' => 'anatomy' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-bind--aria-selected="state.isAbilityTabSelected" data-wp-bind--tabindex="state.abilityTabIndex" data-wp-class--is-active="state.isAbilityTabSelected" data-wp-on--click="actions.selectAbilityTab"><?php echo esc_html( $ability_tabs['anatomy'] ); ?></button>
+							<button class="t-tab" type="button" role="tab" tabindex="-1" id="<?php echo esc_attr( $instance_id . '-abilities-tab-permissions' ); ?>" aria-controls="<?php echo esc_attr( $instance_id . '-abilities-panel-permissions' ); ?>" aria-selected="false" data-core-ai-abilities-tab="permissions" <?php echo wp_interactivity_data_wp_context( array( 'tabId' => 'permissions' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> data-wp-bind--aria-selected="state.isAbilityTabSelected" data-wp-bind--tabindex="state.abilityTabIndex" data-wp-class--is-active="state.isAbilityTabSelected" data-wp-on--click="actions.selectAbilityTab"><?php echo esc_html( $ability_tabs['permissions'] ); ?></button>
 						</div>
 
 						<div
@@ -2798,6 +2801,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				</article>
 			<?php endforeach; ?>
 		</aside>
+		</div>
 
 		<?php
 		$bench_stages = array(

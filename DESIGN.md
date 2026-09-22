@@ -26,42 +26,35 @@ typography:
   display:
     fontFamily: "Core AI EB Garamond, georgia, Times New Roman, serif"
     fontSize: "54px"
-    fontSizes: ["54px", "52px"]
     fontWeight: 500
     lineHeight: 0.98
     letterSpacing: "-0.045em"
   headline:
     fontFamily: "Core AI EB Garamond, georgia, Times New Roman, serif"
     fontSize: "34px"
-    fontSizes: ["34px"]
     fontWeight: 500
     lineHeight: 1.02
     letterSpacing: "-0.035em"
   title:
     fontFamily: "Core AI Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
     fontSize: "22px"
-    fontSizes: ["22px", "20px", "18px", "17px", "15px", "14px"]
     fontWeight: 620
     lineHeight: 1.05
     letterSpacing: "-0.02em"
   body:
     fontFamily: "Core AI Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
     fontSize: "15px"
-    fontSizes: ["19px", "18px", "16px", "15px", "14px", "13px"]
     fontWeight: 400
     lineHeight: 1.5
-    letterSpacing: "normal"
   label:
     fontFamily: "Core AI Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
     fontSize: "12px"
-    fontSizes: ["12px", "11px", "10px"]
     fontWeight: 650
     lineHeight: 1.3
     letterSpacing: "0.1em"
   numeral:
     fontFamily: "Core AI IBM Plex Mono, ui-monospace, sfmono-regular, menlo, monospace"
     fontSize: "12px"
-    fontSizes: ["13px", "12px", "11px", "10px"]
     fontWeight: 650
     lineHeight: 1.25
     letterSpacing: "0.035em"
@@ -137,7 +130,7 @@ components:
   result-chip:
     backgroundColor: "{colors.blue-tint}"
     textColor: "{colors.blue-dark}"
-    rounded: "{rounded.sm}"
+    rounded: "{rounded.xs}"
     padding: "2px 6px"
   offline-pill:
     backgroundColor: "{colors.warning-tint}"
@@ -468,6 +461,11 @@ smaller than a fingertip, or when it reports state and therefore takes a pill.
 - **Internal padding:** 14px on a parked or actor card, 16px on a full card, 24/32 in the
   panel, 36/42 in the About dialog.
 
+Card status uses the same two-line taxonomy as the inspector: type at 16px/700,
+uppercase with 0.06em tracking, then maturity or subtype at 14px/520 in muted text.
+For example, AI Client reads **Core API / Since 7.0**, and the external provider reads
+**External / AI service**. Numbered flow steps remain separate from that status.
+
 ### Navigation
 
 The flow rail is the primary navigation on the map screen: a `112px + 4×1fr` grid with
@@ -497,10 +495,39 @@ dormant hairlines (1px `line-dormant` at 62%, faded out when a flow takes over).
 `cubic-bezier(0.22, 1, 0.36, 1)` — a hard expo-out — governs everything that moves in
 space: 620ms for a card taking its position, 520ms for the canvas, 320ms for a card
 resizing. Color and opacity use plain `ease` at 180–420ms. On the attract screen, cards
-drift on three staggered 6–7.9s float keyframes; the drift stops on engagement and never
-returns. `prefers-reduced-motion` collapses every duration to 0.01ms, cancels all
-animation, and snaps paths and tokens to their end state — the settled composition, not
-a degraded one.
+drift on three 6–7.9s float keyframes; the drift stops on engagement and resumes only
+when the exhibit returns to welcome. The live path draws in 600ms, request tokens
+take 2.8s, and the flow reaches its settled teaching state after 2.9s. These timings
+describe the diagram's lesson and are not generic control-transition tokens.
+Replay restarts the live path, sparks, and request tokens even during an active run;
+the conclusion waits for the latest run's full 2.9s interval.
+
+The learning flow's boundary marker fades over 260ms. Its 260ms entry delay sequences
+the marker with the path; dismissal has no delay. `prefers-reduced-motion` reduces
+transitions to 0.01ms, clears transition delays, and cancels the map's keyframe motion.
+When a flow starts with reduced motion enabled, its situation, path, and conclusion
+appear together, with request tokens at their final positions. The welcome preview
+stays composed, and a compact list names all four available flows. Enabling reduced
+motion during a visit cancels pending motion timers and settles the current flow or
+preview immediately. Disabling it resumes the welcome loop only; a settled teaching
+flow remains settled. Conclusions reached while a detail surface is open are
+announced when the visitor returns to the map.
+
+The component inspector opens over 400ms and closes over 350ms, with 12px of vertical
+travel, a fade, and 2px of blur. Its wrapper carries the motion so the scrollable
+details and fixed continuation cue retain their own geometry. The canvas still
+shifts over 520ms when inspection opens or closes. About opens over 250ms and closes
+over 150ms, scaling between 0.96 and 1 while its backdrop fades. Both use the stage
+easing. A closing surface becomes inert and leaves the accessibility tree immediately;
+its visual content stays until the exit finishes. Reopening cancels pending cleanup.
+Reduced motion makes both surfaces appear and disappear immediately.
+
+Abilities keeps its rectangular, 60px controls and keyboard tab behavior. The selected
+background slides over 250ms using the stage easing. Its position and width are
+measured in local CSS pixels, independent of stage scaling; opening, resizing, and
+font loading place it without travel. Reduced motion switches it immediately. The
+portable recipes and their tunable variables live in `src/core-ai-map/motion.scss`;
+the exhibit's distance, color, and shape overrides remain in `style.scss`.
 
 ## Do's and Don'ts
 

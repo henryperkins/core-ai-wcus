@@ -273,7 +273,7 @@ describe( 'Living Block Map v3.2.5 server render', () => {
 			/data-core-ai-screen="bench"[\s\S]*?\bhidden\b/
 		);
 		expect( render ).toMatch(
-			/class="core-ai-map__details"[\s\S]*?\bhidden\b/
+			/class="core-ai-map__details-motion t-panel-slide"[^>]*\binert\b[^>]*\bhidden\b/
 		);
 		expect( render ).toMatch(
 			/class="core-ai-map__rail"[\s\S]*?data-wp-bind--hidden="state\.isRailHidden"[\s\S]*?\bhidden\b/
