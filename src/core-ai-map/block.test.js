@@ -6,10 +6,10 @@ const metadata = JSON.parse(
 );
 const { attributes } = metadata;
 
-describe( 'Living Block Map v3.2.5 metadata', () => {
-	it( 'identifies the block as Living Block Map v3.2.5', () => {
+describe( 'Living Block Map v3.2.6 metadata', () => {
+	it( 'identifies the block as Living Block Map v3.2.6', () => {
 		expect( metadata.title ).toBe( 'Core AI Living Block Map' );
-		expect( metadata.version ).toBe( '3.2.5' );
+		expect( metadata.version ).toBe( '3.2.6' );
 	} );
 
 	it( 'sets the reviewed date used by the About panel', () => {

@@ -74,6 +74,10 @@ Remaining work is factual accuracy, release gates, and physical device sign-off.
   there, so authored control sizes render at three quarters. Phone viewports retain
   that scale in a two-axis pannable inspection view for map verification; they do not
   reflow the exhibit. See Accessibility & Inclusion for the figures.
+- Normal desktop browsing uses the same composition, fitted to the available
+  width up to 1600px, with vertical scrolling and selectable text. Mouse/trackpad
+  browsers do not reset after inactivity. Narrow windows keep the 1024px
+  compatibility width; the inspector and About stay within the window height.
 - Attract loop runs assemble → path → signal → caption → release. Reduced-motion
   visitors see a settled preview. After engagement, motion settles rather than looping.
   Sixty seconds of inactivity returns the kiosk to the attract screen after a visible,

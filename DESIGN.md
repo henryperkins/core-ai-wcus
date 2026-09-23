@@ -303,7 +303,7 @@ staging.
 ## Layout
 
 One authored composition at 1366 × 1024, centered and scaled by `--cai-scale`, which
-`view.js` recomputes on resize. Nothing inside the stage is responsive: cards are
+`view.js` recomputes on resize. Diagram geometry stays fixed: cards are
 absolutely placed via `--cai-x` / `--cai-y`, the SVG wire layer is a 1366 × 1024
 coordinate space, and there are no breakpoints below the stage boundary. 1024 × 768 is
 the same composition at a smaller scale, not a different layout: `--cai-scale` is
@@ -321,6 +321,15 @@ permits native pinch zoom. Saved initial browser zoom remains the document basel
 pixel density alone does not identify absolute zoom. The pannable stage keeps a
 transform so fixed inspector cues retain their anchor while the stage moves.
 
+Mouse/trackpad browsers use a desktop variant of that same composition: fit to
+the available width, capped at 1600px, and scroll vertically rather than shrinking
+to the window height. The 1024px compatibility width remains the minimum. The
+stage uses layout zoom in normal flow; its inspector and About share a sticky
+overlay layer constrained to the visible height. Text is selectable and idle
+reading does not trigger a reset. Touch-only kiosks retain the centered fit and
+inactivity timer. This changes the stage boundary and reading surfaces, not the
+diagram coordinates or flow controls.
+
 The stage divides into four bands. A 60px top bar inset 24px left and right, 18px from
 the top, laid out in flow — identity, the one instruction that applies right now, then
 mode controls — so a longer instruction cannot collide with either end. The canvas
@@ -336,9 +345,10 @@ which is decorative rather than a layout grid.
 
 ### Named Rules
 
-**The Fixed Stage Rule.** Never add a media query inside the stage. If something doesn't
-fit, re-author the composition or change the scale — the geometry below `__stage` is
-allowed to assume 1366 × 1024 forever.
+**The Fixed Stage Rule.** Keep diagram geometry in the authored coordinate space.
+If something doesn't fit, re-author the composition or change the scale. Desktop
+reading panels may fit the visible window; diagram coordinates still assume
+1366 × 1024.
 
 **The Allocated Band Rule.** The bottom band's vertical budget is spent. The rail label
 takes a grid column rather than a line, and the colophon's line-height and padding are

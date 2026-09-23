@@ -44,6 +44,8 @@
  * recomputes it on resize so the geometry below never has to be responsive.
  * Phone-sized viewports hold the 1024px compatibility width and expose that
  * unchanged stage through a two-axis touch-scroll inspection view.
+ * Mouse/trackpad browsing fits the available width up to 1600px and scrolls
+ * vertically. Its reading panels stay within the visible window height.
  *
  * Every size below is authored-space and shrinks with that factor. At the
  * 1024x768 compatibility size the factor is 0.7496, so `min-height: 60px`
@@ -131,12 +133,19 @@ body.core-ai-kiosk-active {
 	-webkit-touch-callout: none;
 	user-select: none;
 
+	&.is-desktop-view,
 	&.is-phone-inspection,
 	&.is-pannable-inspection {
 		overflow: auto;
 		overscroll-behavior: contain;
 		touch-action: pan-x pan-y pinch-zoom;
 		-webkit-overflow-scrolling: touch;
+	}
+
+	&.is-desktop-view {
+		scrollbar-gutter: stable;
+		scroll-padding: 16px;
+		user-select: text;
 	}
 
 	*,
@@ -178,6 +187,45 @@ body.core-ai-kiosk-active {
 		// Keep fixed inspector cues anchored to the stage while zoom scales layout.
 		transform: translate(0, 0);
 		zoom: var(--cai-scale);
+	}
+
+	&.is-desktop-view &__stage {
+		position: relative;
+		top: 0;
+		left: 0;
+		display: grid;
+		grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+		margin-inline: auto;
+		// Clip the diagram without creating a scrollport for the sticky panels.
+		overflow: clip;
+		transform: none;
+		zoom: var(--cai-scale);
+	}
+
+	&.is-desktop-view &__details-motion,
+	&.is-desktop-view &__about {
+		position: sticky;
+		grid-area: 1 / 1;
+		align-self: start;
+		top: 0;
+		right: auto;
+		bottom: auto;
+		left: auto;
+		height: min(1024px, var(--cai-viewport-height, 1024px));
+	}
+
+	&.is-desktop-view &__details-motion {
+		justify-self: end;
+	}
+
+	&.is-desktop-view &__about {
+		grid-template-rows: minmax(0, 1fr);
+		padding: 24px;
+	}
+
+	&.is-desktop-view &__about-content {
+		min-height: 0;
+		max-height: 100%;
 	}
 
 	&__grid {

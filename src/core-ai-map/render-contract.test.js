@@ -16,7 +16,7 @@ const renderDefaultContext = ( translations = {} ) => {
 	const harness = `
 define( 'ABSPATH', __DIR__ );
 define( 'CORE_AI_MAP_URL', 'https://example.test/plugin/' );
-define( 'CORE_AI_MAP_VERSION', '3.2.5' );
+define( 'CORE_AI_MAP_VERSION', '3.2.6' );
 function __( $text ) { return ( json_decode( getenv( 'CORE_AI_MAP_TEST_TRANSLATIONS' ), true ) ?? array() )[ $text ] ?? $text; }
 function sanitize_key( $key ) { return strtolower( $key ); }
 function absint( $number ) { return abs( (int) $number ); }
@@ -292,7 +292,7 @@ const renderLegacyMarkup = ( profile = 'legacy', returnPanels = false ) => {
 	const harness = `
 define( 'ABSPATH', __DIR__ );
 define( 'CORE_AI_MAP_URL', 'https://example.test/plugin/' );
-define( 'CORE_AI_MAP_VERSION', '3.2.5' );
+define( 'CORE_AI_MAP_VERSION', '3.2.6' );
 function __( $text ) { return $text; }
 function sanitize_key( $key ) { return strtolower( $key ); }
 function absint( $number ) { return abs( (int) $number ); }
@@ -1183,7 +1183,7 @@ describe( 'Core AI map render contract', () => {
 		const kiosk = container.querySelector( '[data-core-ai-map-version]' );
 
 		expect( kiosk ).not.toBeNull();
-		expect( kiosk.dataset.coreAiMapVersion ).toBe( '3.2.5' );
+		expect( kiosk.dataset.coreAiMapVersion ).toBe( '3.2.6' );
 	} );
 
 	it( 'exposes operational status without adding another persistent float', () => {

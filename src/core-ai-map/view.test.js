@@ -450,6 +450,178 @@ describe( 'Core AI Living Block Map', () => {
 		cleanupKiosk();
 	} );
 
+	describe( 'desktop browsing', () => {
+		let originalMatchMedia;
+		let desktopQuery;
+		let viewportWidth;
+		let viewportHeight;
+		let fixture;
+
+		beforeEach( () => {
+			originalMatchMedia = window.matchMedia;
+			desktopQuery = new EventTarget();
+			desktopQuery.matches = true;
+			window.matchMedia = jest.fn( ( query ) =>
+				query === '(hover: hover) and (pointer: fine)'
+					? desktopQuery
+					: { matches: false }
+			);
+			viewportWidth = 1440;
+			viewportHeight = 800;
+			fixture = undefined;
+			Object.defineProperties( root, {
+				offsetWidth: { configurable: true, get: () => viewportWidth },
+				clientWidth: {
+					configurable: true,
+					get: () => viewportWidth - 15,
+				},
+				clientHeight: { configurable: true, get: () => viewportHeight },
+			} );
+		} );
+
+		afterEach( () => {
+			fixture?.cleanup();
+			window.matchMedia = originalMatchMedia;
+		} );
+
+		it( 'fits the available width without shrinking for a short window', () => {
+			fixture = mountMotionFixture();
+			expect( root.classList ).toContain( 'is-desktop-view' );
+			expect(
+				Number( root.style.getPropertyValue( '--cai-scale' ) )
+			).toBeCloseTo( 1425 / 1366 );
+
+			root.scrollTop = 250;
+			viewportHeight = 500;
+			window.dispatchEvent( new Event( 'resize' ) );
+			expect(
+				Number( root.style.getPropertyValue( '--cai-scale' ) )
+			).toBeCloseTo( 1425 / 1366 );
+			expect( root.scrollTop ).toBe( 250 );
+			expect( root.classList ).not.toContain( 'is-phone-inspection' );
+			expect( root.classList ).not.toContain( 'is-pannable-inspection' );
+
+			viewportWidth = 2560;
+			window.dispatchEvent( new Event( 'resize' ) );
+			expect(
+				Number( root.style.getPropertyValue( '--cai-scale' ) )
+			).toBeCloseTo( 1600 / 1366 );
+
+			viewportWidth = 800;
+			window.dispatchEvent( new Event( 'resize' ) );
+			expect( root.classList ).toContain( 'is-desktop-view' );
+			expect(
+				Number( root.style.getPropertyValue( '--cai-scale' ) )
+			).toBeCloseTo( 1024 / 1366 );
+		} );
+
+		it( 'keeps the current component open while a desktop reader is inactive', () => {
+			context.screen = 'inspect';
+			context.story = 'uses-wp';
+			context.inspect = 'mcp';
+			fixture = mountMotionFixture();
+
+			jest.advanceTimersByTime( 300000 );
+			expect( context.screen ).toBe( 'inspect' );
+			expect( context.story ).toBe( 'uses-wp' );
+			expect( context.inspect ).toBe( 'mcp' );
+			expect( context.resetWarning ).toBe( false );
+		} );
+
+		it( 'preserves enlargement when a desktop reader zooms the browser', () => {
+			const originalProperties = Object.fromEntries(
+				[ 'devicePixelRatio', 'outerWidth', 'outerHeight' ].map(
+					( key ) => [
+						key,
+						Object.getOwnPropertyDescriptor( window, key ),
+					]
+				)
+			);
+			let pixelRatio = 1;
+			Object.defineProperties( window, {
+				devicePixelRatio: { configurable: true, get: () => pixelRatio },
+				outerWidth: { configurable: true, value: 1440 },
+				outerHeight: { configurable: true, value: 900 },
+			} );
+			try {
+				fixture = mountMotionFixture();
+				const initialScale = Number(
+					root.style.getPropertyValue( '--cai-scale' )
+				);
+				viewportWidth = 720;
+				viewportHeight = 400;
+				pixelRatio = 2;
+				window.dispatchEvent( new Event( 'resize' ) );
+				const zoomedScale = Number(
+					root.style.getPropertyValue( '--cai-scale' )
+				);
+				expect( root.classList ).toContain( 'is-desktop-view' );
+				// The page magnifies the map instead of fitting it back down.
+				expect( zoomedScale * pixelRatio ).toBeGreaterThan(
+					initialScale * 1.9
+				);
+				expect(
+					Number.parseFloat(
+						root.style.getPropertyValue( '--cai-viewport-height' )
+					) * zoomedScale
+				).toBeCloseTo( 400 );
+
+				viewportWidth = 1440;
+				viewportHeight = 800;
+				pixelRatio = 1;
+				window.dispatchEvent( new Event( 'resize' ) );
+				expect(
+					Number( root.style.getPropertyValue( '--cai-scale' ) )
+				).toBeCloseTo( initialScale );
+			} finally {
+				Object.defineProperties( window, originalProperties );
+			}
+		} );
+
+		it( 'reveals keyboard focus in the scrollable desktop map', () => {
+			context.screen = 'map';
+			fixture = mountMotionFixture();
+			const button = root.querySelector( '.core-ai-map__browse' );
+			button.scrollIntoView = jest.fn();
+			button.focus();
+			expect( document.activeElement ).toBe( button );
+			expect( button.scrollIntoView ).toHaveBeenCalledWith( {
+				block: 'nearest',
+				inline: 'nearest',
+			} );
+		} );
+
+		it( 'cancels a kiosk warning when a mouse becomes primary and restores touch inactivity', () => {
+			desktopQuery.matches = false;
+			context.screen = 'map';
+			fixture = mountMotionFixture();
+			jest.advanceTimersByTime( 70000 );
+			expect( context.resetWarning ).toBe( true );
+
+			desktopQuery.matches = true;
+			desktopQuery.dispatchEvent( new Event( 'change' ) );
+			expect( root.classList ).toContain( 'is-desktop-view' );
+			expect( context.resetWarning ).toBe( false );
+			jest.advanceTimersByTime( 300000 );
+			expect( context.screen ).toBe( 'map' );
+			expect( context.resetWarning ).toBe( false );
+
+			desktopQuery.matches = false;
+			desktopQuery.dispatchEvent( new Event( 'change' ) );
+			expect( root.classList ).not.toContain( 'is-desktop-view' );
+			jest.advanceTimersByTime( 70000 );
+			expect( context.resetWarning ).toBe( true );
+			jest.advanceTimersByTime( 20000 );
+			expect( context.screen ).toBe( 'attract' );
+
+			fixture.cleanup();
+			fixture = undefined;
+			desktopQuery.matches = true;
+			desktopQuery.dispatchEvent( new Event( 'change' ) );
+			expect( root.classList ).not.toContain( 'is-desktop-view' );
+		} );
+	} );
+
 	it.each( [ 1, 2 ] )(
 		'preserves enlargement at browser zoom with initial DPR %i',
 		( initialRatio ) => {

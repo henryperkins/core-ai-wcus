@@ -1,6 +1,6 @@
 # Core AI Living Block Map
 
-Version and design: **3.2.5**. Core AI Living Block Map is one dynamic,
+Version and design: **3.2.6**. Core AI Living Block Map is one dynamic,
 server-rendered `core-ai/core-ai-map` block for explaining how WordPress and AI
 building blocks fit together on a kiosk. Its server markup is enhanced by the
 WordPress Interactivity API. The repository also contains a reproducible,
@@ -21,15 +21,24 @@ by comparing viewport and browser-window dimensions, preserving the current
 zoom when moving between displays. Saved initial browser zoom remains the
 document's baseline; it cannot be inferred from pixel density alone.
 Phone inspection permits pinch zoom, and keyboard focus reveals controls
-outside the visible part of a pannable stage. The inspector's continuation cue
-moves with the stage during panning and stays fixed while its text scrolls.
-The browser acceptance contract includes `tests/browser/inspection-geometry.js`
-for these geometry checks at desktop and phone inspection sizes.
+outside the visible part of a pannable stage. In touch/kiosk inspection, the
+inspector's continuation cue moves with the stage during panning and stays fixed
+while its text scrolls. The browser acceptance contract includes
+`tests/browser/inspection-geometry.js` for those touch/kiosk geometry checks.
+In desktop browsing, the panel and cue instead stay within the visible window
+while the map scrolls.
 
 The transparent illustration is now a 392px RGBA PNG (70,431 bytes), and the
 two variable fonts receive kiosk-only preload hints. Repository lint commands
 check authored files. These local changes require a rebuilt, verified release
 artifact and the browser/device gates below before deployment.
+
+## 3.2.6 release notes
+
+Desktop browsing fits the map to the available width up to 1600px, with normal
+scrolling and selectable text. Component details and About fit the visible
+window height, keyboard focus is brought into view, and inactivity never resets
+a desktop reader's place. Touch kiosks keep their fitted stage and reset timer.
 
 ## 3.2.5 release notes
 
@@ -167,6 +176,13 @@ Phone-sized viewports stop at that compatibility scale and expose the unchanged
 1024 x 768 canvas through two-axis touch scrolling. This is a map-verification
 view, not a mobile reflow; the iPad kiosk fitting behavior is unchanged.
 
+Mouse and trackpad browsers use the same map at a readable width, capped at
+1600px. Short windows scroll vertically instead of shrinking the map to their
+height; narrow windows retain the 1024px compatibility width and can pan
+horizontally. Component details and About fit the window height, and keyboard
+focus is brought into view. Desktop browsing has no inactivity reset. Touch
+kiosks retain their fitted stage and configured reset timer.
+
 | Control | Authored | Rendered at 1024 x 768 |
 | --- | --- | --- |
 | Story rail buttons | 68 px | 51 px |
@@ -238,7 +254,7 @@ channel's static fallback tree. It validates Cloudflare Pages Free's 20,000-file
 and 25 MiB-per-asset limits, removes upstream Google Fonts and analytics, and
 uses a local Blueprint and plugin ZIP. `npm run plugin-zip` creates the local
 `core-ai-map.zip`; the Pages build copies those exact bytes to the release URL
-`/kiosk-blueprint/core-ai-map-3.2.5.zip`. It also emits a deployment manifest
+`/kiosk-blueprint/core-ai-map-3.2.6.zip`. It also emits a deployment manifest
 with that path, its byte count, and its SHA-256, plus a Pages rewrite that keeps
 the Playground runtime's literal `/remote.html` endpoint from being redirected
 to Cloudflare's extensionless route. The build owns the accessible outer
@@ -349,7 +365,7 @@ $dist = (Resolve-Path -LiteralPath 'dist-playground').Path
 $manifestPath = Join-Path $dist 'deployment-manifest.json'
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $artifactRelative = [string] $manifest.pluginArtifact.path
-$expectedArtifact = 'kiosk-blueprint/core-ai-map-3.2.5.zip'
+$expectedArtifact = 'kiosk-blueprint/core-ai-map-3.2.6.zip'
 
 if ($artifactRelative -ne $expectedArtifact) {
     throw "Expected $expectedArtifact; manifest has $artifactRelative."
@@ -418,13 +434,13 @@ foreach ($hostName in $hosts) {
 
     $remoteBlueprint = Invoke-RestMethod `
         -Uri "$hostName/kiosk-blueprint/blueprint.json?probe=$probe"
-    if ($remoteBlueprint.plugins.Count -ne 1 -or $remoteBlueprint.plugins[0].source -ne './core-ai-map-3.2.5.zip') {
+    if ($remoteBlueprint.plugins.Count -ne 1 -or $remoteBlueprint.plugins[0].source -ne './core-ai-map-3.2.6.zip') {
         throw "Blueprint plugin source mismatch on $hostName."
     }
 
     $originName = ([Uri] $hostName).Host
     $downloadPath = [IO.Path]::GetFullPath(
-        (Join-Path ([IO.Path]::GetTempPath()) "core-ai-map-${originName}-3.2.5-${PID}.zip")
+        (Join-Path ([IO.Path]::GetTempPath()) "core-ai-map-${originName}-3.2.6-${PID}.zip")
     )
     if (Test-Path -LiteralPath $downloadPath) {
         throw "Refusing to overwrite existing verification file: $downloadPath"
@@ -587,6 +603,17 @@ npm run plugin-zip
 
 `npm run generate:qr` deterministically refreshes the eight committed local
 SVGs. `build/` remains committed so the ZIP is installable without a build step.
+
+For browser QA, mouse/trackpad contexts must report
+`(hover: hover) and (pointer: fine)`. Check 1366 x 768, 1440 x 900, and
+1920 x 1080: the map uses the available width up to 1600px; shorter windows
+scroll vertically; all four flows, their controls, and About remain reachable.
+Open a component after scrolling, then scroll its details: the panel, Back
+control, and continuation cue must stay within the window. Repeat with About,
+keyboard navigation, and 200% browser zoom. Leave a component open beyond the
+configured inactivity timeout and confirm it remains open without a warning.
+Run `tests/browser/acceptance.js` in a touch-primary context for the kiosk gates;
+resizing a mouse browser alone intentionally retains desktop behavior.
 
 Local unit, lint, and build results prove local source and package state only.
 Browser verification is a separate gate. Safari, Add to Home Screen, Guided

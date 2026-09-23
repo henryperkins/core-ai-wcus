@@ -13,6 +13,7 @@ import {
 
 const STAGE_WIDTH = 1366;
 const STAGE_HEIGHT = 1024;
+const DESKTOP_MAX_WIDTH = 1600;
 const PHONE_MAX_SHORT_SIDE = 600;
 const PHONE_INSPECTION_SCALE = 1024 / STAGE_WIDTH;
 const FLOW_SETTLE_DELAY = 2900;
@@ -2164,6 +2165,10 @@ store( 'core-ai/map', {
 				motionQuery?.addEventListener?.( 'change', handleMotionChange );
 				let previousViewport;
 				let zoom = 1;
+				const desktopQuery = window.matchMedia?.(
+					'(hover: hover) and (pointer: fine)'
+				);
+				let isDesktop = Boolean( desktopQuery?.matches );
 				const timeout = Number.parseInt(
 					root.dataset.inactivityTimeout,
 					10
@@ -2179,6 +2184,7 @@ store( 'core-ai/map', {
 				);
 
 				const fitStage = () => {
+					root.classList.toggle( 'is-desktop-view', isDesktop );
 					// Scrollbars from inspection must not shrink the next fit and
 					// keep an otherwise fitting stage permanently in scroll mode.
 					const viewportWidth = root.offsetWidth || root.clientWidth;
@@ -2229,22 +2235,35 @@ store( 'core-ai/map', {
 						pixelRatio,
 					};
 					const isPhone =
+						! isDesktop &&
 						Math.min( viewportWidth, viewportHeight ) * zoom <=
-						PHONE_MAX_SHORT_SIDE;
-					const scale = isPhone
-						? PHONE_INSPECTION_SCALE
-						: Math.max(
-								PHONE_INSPECTION_SCALE,
-								Math.min(
-									viewportWidth / STAGE_WIDTH,
-									viewportHeight / STAGE_HEIGHT
-								) * zoom
-						  );
+							PHONE_MAX_SHORT_SIDE;
+					let scale = PHONE_INSPECTION_SCALE;
+					if ( isDesktop ) {
+						// Use the width inside the scrollbar gutter. Short browser
+						// windows scroll vertically instead of shrinking the text.
+						scale = Math.max(
+							PHONE_INSPECTION_SCALE,
+							Math.min(
+								( root.clientWidth || viewportWidth ) * zoom,
+								DESKTOP_MAX_WIDTH
+							) / STAGE_WIDTH
+						);
+					} else if ( ! isPhone ) {
+						scale = Math.max(
+							PHONE_INSPECTION_SCALE,
+							Math.min(
+								viewportWidth / STAGE_WIDTH,
+								viewportHeight / STAGE_HEIGHT
+							) * zoom
+						);
+					}
 					if ( Number.isFinite( scale ) && scale > 0 ) {
 						root.classList.toggle( 'is-phone-inspection', isPhone );
 						root.classList.toggle(
 							'is-pannable-inspection',
-							! isPhone &&
+							! isDesktop &&
+								! isPhone &&
 								( STAGE_WIDTH * scale > viewportWidth + 1 ||
 									STAGE_HEIGHT * scale > viewportHeight + 1 )
 						);
@@ -2252,7 +2271,17 @@ store( 'core-ai/map', {
 							'--cai-scale',
 							String( scale )
 						);
+						if ( isDesktop ) {
+							root.style.setProperty(
+								'--cai-viewport-height',
+								`${
+									( root.clientHeight || viewportHeight ) /
+									scale
+								}px`
+							);
+						}
 						if (
+							! isDesktop &&
 							! isPhone &&
 							! root.classList.contains(
 								'is-pannable-inspection'
@@ -2281,6 +2310,7 @@ store( 'core-ai/map', {
 				};
 				const resetForInactivity = () => {
 					if (
+						! isDesktop &&
 						document.visibilityState === 'visible' &&
 						context.screen !== 'attract'
 					) {
@@ -2305,7 +2335,7 @@ store( 'core-ai/map', {
 					window.clearTimeout( resetTimer );
 					window.clearTimeout( resetWarningTimer );
 					context.resetWarning = false;
-					if ( context.screen === 'attract' ) {
+					if ( isDesktop || context.screen === 'attract' ) {
 						return;
 					}
 					const base = Number.isFinite( timeout )
@@ -2327,9 +2357,15 @@ store( 'core-ai/map', {
 					resetTimer = window.setTimeout( resetForInactivity, base );
 				};
 				resetSchedulers.set( root, scheduleReset );
+				const handleDesktopChange = () => {
+					isDesktop = Boolean( desktopQuery?.matches );
+					fitStage();
+					scheduleReset();
+				};
 				const handleFocus = ( event ) => {
 					scheduleReset();
 					if (
+						isDesktop ||
 						root.classList.contains( 'is-pannable-inspection' ) ||
 						root.classList.contains( 'is-phone-inspection' )
 					) {
@@ -2755,6 +2791,10 @@ store( 'core-ai/map', {
 				);
 				window.addEventListener( 'resize', fitStage );
 				window.addEventListener( 'orientationchange', fitStage );
+				desktopQuery?.addEventListener?.(
+					'change',
+					handleDesktopChange
+				);
 				document.addEventListener(
 					'visibilitychange',
 					handleVisibility
@@ -2787,6 +2827,11 @@ store( 'core-ai/map', {
 						'change',
 						handlePixelRatioChange
 					);
+					desktopQuery?.removeEventListener?.(
+						'change',
+						handleDesktopChange
+					);
+					root.classList.remove( 'is-desktop-view' );
 					window.clearTimeout( resetTimer );
 					window.clearTimeout( resetWarningTimer );
 					window.clearTimeout( cacheStatusTimer );
